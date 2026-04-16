@@ -64,13 +64,17 @@ async function assertCooldown(phoneNumber: string) {
   const snapshot = await adminDb
     .collection("mobileOtpRequests")
     .where("phoneNumber", "==", phoneNumber)
-    .orderBy("createdAtMs", "desc")
-    .limit(1)
     .get();
 
   if (snapshot.empty) return;
 
-  const latest = snapshot.docs[0].data();
+  const latest = snapshot.docs
+    .map((doc) => doc.data())
+    .reduce((currentLatest, item) => {
+      const latestCreatedAtMs = Number(currentLatest.createdAtMs || 0);
+      const itemCreatedAtMs = Number(item.createdAtMs || 0);
+      return itemCreatedAtMs > latestCreatedAtMs ? item : currentLatest;
+    });
   const createdAtMs = Number(latest.createdAtMs || 0);
   const elapsed = Date.now() - createdAtMs;
 

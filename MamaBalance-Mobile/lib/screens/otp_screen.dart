@@ -76,7 +76,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
   }
 
-  Future<void> _resendOtp(String phoneNumber) async {
+  Future<void> _resendOtp(OtpSession session) async {
     setState(() {
       _isResending = true;
       _errorMessage = null;
@@ -84,8 +84,8 @@ class _OtpScreenState extends State<OtpScreen> {
 
     try {
       final otpSession = await AuthService.instance.sendMotherOtp(
-        phoneNumber,
-        purpose: otpSession.purpose,
+        session.phoneNumber,
+        purpose: session.purpose,
         signOutFirst: true,
         onAutoVerify: (user) {
           if (mounted) {
@@ -220,7 +220,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       onPressed:
                           otpSession == null || _isSubmitting || _isResending || _secondsRemaining > 0
                               ? null
-                              : () => _resendOtp(otpSession.phoneNumber),
+                              : () => _resendOtp(otpSession),
                       child: Text(
                         _isResending 
                             ? 'Sending code...' 

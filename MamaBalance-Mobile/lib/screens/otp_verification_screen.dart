@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../widgets/otp_code_field.dart';
+import 'reset_password_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final OtpSession? session;
@@ -23,6 +24,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   bool _isResending = false;
   String? _errorMessage;
   String _otpCode = '';
+
+  bool get _isForgotPasswordFlow => widget.session?.purpose == 'forgot-password';
 
   @override
   void initState() {
@@ -72,7 +75,16 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      if (_isForgotPasswordFlow) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ResetPasswordScreen(),
+          ),
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      }
     } on AppAuthException catch (error) {
       setState(() => _errorMessage = error.message);
     } finally {
@@ -94,9 +106,17 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         purpose: session.purpose,
         signOutFirst: true,
         onAutoVerify: (user) {
-           if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-           }
+          if (!mounted) return;
+          if (session.purpose == 'forgot-password') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ResetPasswordScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          }
         },
       );
 
@@ -156,7 +176,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 child: Text(
                   session == null
                       ? 'Your reset session has expired. Please go back and request a new OTP.'
-                      : 'Enter the verification code sent to ${session.phoneNumber} so we can safely sign you in.',
+                      : _isForgotPasswordFlow
+                          ? 'Enter the verification code sent to ${session.phoneNumber} so we can let you reset your password.'
+                          : 'Enter the verification code sent to ${session.phoneNumber} so we can safely sign you in.',
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,

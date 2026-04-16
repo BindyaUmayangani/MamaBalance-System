@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import 'otp_verification_screen.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -45,7 +46,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         signOutFirst: true,
         onAutoVerify: (user) {
           if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ResetPasswordScreen(),
+              ),
+            );
           }
         },
       );
@@ -101,7 +107,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const Padding(
                 padding: EdgeInsets.only(left: 48),
                 child: Text(
-                  'Enter your mobile number and we will guide you through verifying your account and signing in with an OTP.',
+                  'Enter your mobile number and we will guide you through verifying your account and resetting your password.',
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.5,
