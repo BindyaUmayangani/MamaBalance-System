@@ -1,0 +1,11 @@
+/* Search + Add button same row */
+.region-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 0 22px;
+}
+
+.region-controls .search-box {
+    width: 360px;
+}

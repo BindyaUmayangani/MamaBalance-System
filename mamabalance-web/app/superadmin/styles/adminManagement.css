@@ -1,0 +1,146 @@
+/* ================= PASSWORD STRENGTH ================= */
+
+.password-strength {
+  margin-top: 8px;
+}
+
+.strength-bar {
+  height: 6px;
+  border-radius: 6px;
+  background: #e5e7eb;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.strength-bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Weak */
+.level-1::after {
+  width: 33%;
+  background: #dc2626;
+}
+
+/* Medium */
+.level-2::after {
+  width: 66%;
+  background: #f97316;
+}
+
+/* Strong */
+.level-3::after {
+  width: 100%;
+  background: #22c55e;
+}
+
+.strength-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.strength-text.weak {
+  color: #dc2626;
+}
+
+.strength-text.medium {
+  color: #f97316;
+}
+
+.strength-text.strong {
+  color: #22c55e;
+}
+
+/* ================= PASSWORD INPUT WITH EYE ================= */
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper input {
+  padding-right: 44px;
+  /* space for eye icon */
+}
+
+.eye-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+}
+
+.eye-icon:hover {
+  color: #499d85;
+}
+
+/* ================= ADMIN CONTROLS ROW ================= */
+
+.admin-controls {
+  display: flex;
+  justify-content: space-between;
+  /* 🔥 left + right */
+  align-items: center;
+  margin: 20px 0 26px;
+}
+
+/* Search width */
+.admin-controls .search-box {
+  width: 340px;
+}
+
+/* ================= PASSWORD FIELD WITH EYE ================= */
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 42px;
+  /* space for eye icon */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+}
+
+.password-toggle:hover {
+  color: #499d85;
+}
+
+/* ================= REGENERATE PASSWORD ICON ================= */
+
+.password-regenerate {
+  position: absolute;
+  right: 42px;
+  /* sits left of eye icon */
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.password-regenerate:hover {
+  color: #499d85;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+/* Optional: active click feedback */
+.password-regenerate:active {
+  transform: translateY(-50%) rotate(180deg) scale(0.95);
+}

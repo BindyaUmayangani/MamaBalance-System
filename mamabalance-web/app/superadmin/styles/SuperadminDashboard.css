@@ -1,0 +1,29 @@
+.superadmin-dashboard-page .checkup-card {
+  min-height: 430px;
+}
+
+.superadmin-chart-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.superadmin-risk-chart {
+  min-height: 260px;
+}
+
+.superadmin-risk-list {
+  display: grid;
+  gap: 14px;
+}
+
+.recent-mother-item.compact {
+  min-height: auto;
+}
+
+@media (max-width: 900px) {
+  .superadmin-chart-row {
+    grid-template-columns: 1fr;
+  }
+}

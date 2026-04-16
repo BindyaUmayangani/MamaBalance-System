@@ -1,0 +1,86 @@
+.high-risk-actions {
+  min-width: 230px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.assign-doctor-btn {
+  background: #499d85;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  width: 138px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assign-doctor-btn:hover {
+  background: #3f8c77;
+}
+
+.assign-doctor-btn.reassign {
+  background: #f28c38;
+}
+
+.assign-doctor-btn.reassign:hover {
+  background: #de7c2d;
+}
+
+.assign-doctor-modal {
+  width: 460px;
+}
+
+.assign-doctor-modal label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.assign-doctor-modal select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #9ca3af;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.assign-doctor-modal select:focus {
+  outline: none;
+  border-color: #499d85;
+}
+
+.assign-doctor-modal .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.assign-mother-name {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  color: #1f2937;
+}
+
+.high-risk-action-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 46px;
+  justify-content: space-between;
+}
+
+.high-risk-action-icons svg {
+  flex-shrink: 0;
+}

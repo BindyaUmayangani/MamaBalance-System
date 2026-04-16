@@ -1,0 +1,210 @@
+.analytics-page {
+  padding: 32px 40px;
+  background: #f0fff9;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.analytics-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.analytics-header p {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.analytics-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.analytics-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  min-width: 170px;
+  padding: 10px 46px 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #d1eae0;
+  background: white;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.95rem;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: border-color 0.2s;
+}
+
+.analytics-filter {
+  position: relative;
+}
+
+.analytics-select:focus {
+  border-color: #499d85;
+}
+
+.export-btn {
+  background: #499d85;
+  border: none;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(73, 157, 133, 0.25);
+  transition: all 0.2s ease;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: #3c826e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(73, 157, 133, 0.3);
+}
+
+.export-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* STAT CARDS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  padding: 24px;
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.stat-info p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  opacity: 0.9;
+}
+
+.stat-info h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.teal { background: #60a5fa; } /* Standardized to a calmer blue for monitored stats */
+.red { background: #ef4444; } /* Punchier red */
+.green { background: #10b981; } /* Emerald */
+.blue { background: #499d85; } /* Theme primary */
+
+
+/* CHARTS */
+.charts-grid {
+  display: grid;
+  gap: 26px;
+  margin-bottom: 26px;
+}
+
+.top-charts {
+  grid-template-columns: 1fr 1fr;
+}
+
+.bottom-charts {
+  grid-template-columns: 1fr;
+}
+
+.chart-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 26px;
+  border: 1px solid #ecf1ee;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.03);
+}
+
+.chart-card h3 {
+  margin: 0 0 4px 0;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #1f2937;
+}
+
+.chart-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 24px 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* RISK PIE CHART */
+.risk-chart-wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.risk-summary {
+  flex: 1;
+}
+
+.risk-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.risk-row:last-child {
+  border-bottom: none;
+}
+
+.risk-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.risk-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}

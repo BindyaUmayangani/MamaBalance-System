@@ -1,0 +1,569 @@
+/* ================= DASHBOARD LAYOUT ================= */
+
+.doctor-dashboard {
+  padding: 10px 20px;
+  background: #f0fff9;
+  min-height: 100vh;
+}
+
+/* ================= HEADER ================= */
+
+.doctor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.doctor-header h1 {
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.doctor-notification {
+  background: #e8faf4;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.doctor-notification:hover {
+  background: #7ccfb2;
+  color: white;
+}
+
+/* ================= TOP GRID ================= */
+
+.doctor-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+/* ================= CARD ================= */
+
+.dashboard-card {
+  background: #f6fffb;
+  border-radius: 22px;
+  padding: 20px 24px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+}
+
+.dashboard-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.mothers-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(73, 157, 133, 0.18);
+  background: linear-gradient(180deg, #f8fffc 0%, #eefaf5 100%);
+}
+
+.mothers-card::before {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(92, 185, 161, 0.16) 0%, rgba(92, 185, 161, 0) 70%);
+  top: -95px;
+  right: -80px;
+}
+
+.mothers-card::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(73, 157, 133, 0.1) 0%, rgba(73, 157, 133, 0) 70%);
+  bottom: -90px;
+  left: -80px;
+}
+
+.doctor-mothers-subtitle {
+  margin: 2px 0 10px;
+  color: #587082;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+}
+
+.doctor-mothers-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+  height: calc(100% - 72px);
+  position: relative;
+  z-index: 1;
+}
+
+.doctor-total-card {
+  border-radius: 14px;
+  padding: 16px 18px;
+  min-height: 118px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(132deg, #63bda5 0%, #499d85 56%, #3b7f6f 100%);
+  box-shadow: 0 14px 24px rgba(73, 157, 133, 0.34);
+}
+
+.doctor-total-card p {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+.doctor-total-card h2 {
+  margin: 6px 0 8px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+.doctor-total-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+}
+
+.doctor-total-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+}
+
+.doctor-risk-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  flex: 1;
+}
+
+.doctor-risk-mini-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 14px 13px 12px;
+  min-height: 140px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.doctor-risk-mini-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 20px rgba(17, 24, 39, 0.16);
+}
+
+.doctor-risk-mini-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.doctor-risk-mini-card.high {
+  background: linear-gradient(140deg, #e06767 0%, #c93d3d 100%);
+}
+
+.doctor-risk-mini-card.moderate {
+  background: linear-gradient(140deg, #f2ac5e 0%, #e48b2b 100%);
+}
+
+.doctor-risk-mini-card.low {
+  background: linear-gradient(140deg, #59c985 0%, #2ea65f 100%);
+}
+
+.doctor-risk-mini-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.doctor-risk-mini-top svg {
+  opacity: 0.95;
+}
+
+.doctor-risk-mini-card strong {
+  font-size: 1.55rem;
+  line-height: 1;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
+.doctor-risk-mini-card small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+/* ================= RISK GRID ================= */
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.risk-box {
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 150px;
+  color: white;
+  text-align: center;
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.risk-box:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.risk-box p {
+  font-size: 0.9rem;
+}
+
+.risk-box h2 {
+  font-size: 1.7rem;
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.green { background: #6bbfa7; }
+.red { background: #d93030; }
+.orange { background: #f28c38; }
+.lime { background: #2ecc40; }
+
+/* ================= CHECKUP SECTION ================= */
+
+.checkup-content {
+  margin-top: 14px;
+}
+
+/* ================= TODAY CHECKUPS ================= */
+
+.today-checkups {
+  display: flex;
+  flex-direction: column;
+  background: #edf8f4;
+  border: 1px solid #d6ebe3;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.today-checkups h4 {
+  margin: 0 0 10px;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.today-checkups-list {
+  max-height: 126px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.today-checkups-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.today-checkups-list::-webkit-scrollbar-thumb {
+  background: #b9d8ce;
+  border-radius: 999px;
+}
+
+.checkup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #deebe5;
+  margin-bottom: 8px;
+}
+
+.checkup-item:last-child {
+  margin-bottom: 0;
+}
+
+.checkup-item-name {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.checkup-item-meta {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.checkup-item-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.checkup-pill {
+  text-transform: capitalize;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 9px;
+}
+
+.checkup-pill.upcoming {
+  background: #22c55e;
+}
+
+.checkup-pill.overdue {
+  background: #dc2626;
+}
+
+/* ================= CHECKUP HEADER ================= */
+
+.checkup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.checkup-header h3 {
+  margin: 0;
+}
+
+.checkup-subtitle {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.checkup-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.checkup-summary-card {
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 98px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.checkup-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.checkup-summary-card strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.checkup-summary-card.tone-mint {
+  background: #5bbba0;
+}
+
+.checkup-summary-card.tone-red {
+  background: #d25151;
+}
+
+.checkup-summary-card.tone-green {
+  background: #37ad67;
+}
+
+/* ================= BUTTON ================= */
+
+.btn-primary {
+  background: #499d85;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #3f8c77;
+}
+
+/* ================= TABLE CARD ================= */
+
+.table-card {
+  background: #f6fffb;
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  overflow-x: auto;
+}
+
+/* ================= TABLE HEADER ================= */
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+/* ================= TABLE TITLE ================= */
+
+.table-header h3 {
+  font-size: 1.3rem;   /* increase size */
+  font-weight: 700;    /* bold */
+  color: #1f2937;
+  margin-left: 10px;
+}
+
+/* ================= TABLE ================= */
+
+table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  table-layout: auto;
+}
+
+thead th,
+tbody td {
+  padding: 16px 32px;
+  white-space: nowrap;
+  text-align: left;
+  vertical-align: middle;
+  min-width: 150px;
+}
+
+thead th {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+tbody td {
+  font-size: 0.85rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+  background: #edf8f4;
+}
+
+/* ================= RISK INDICATOR ================= */
+
+.risk {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.risk.low { background: #22c55e; }
+.risk.moderate { background: #f97316; }
+.risk.high { background: #dc2626; }
+
+/* ================= ACTION ICON ================= */
+
+.actions {
+  width: 80px;
+  text-align: center;
+}
+
+.actions svg {
+  cursor: pointer;
+  color: #9ca3af;
+  transition: 0.2s;
+}
+
+.actions svg:hover {
+  color: #6b7280;
+  transform: scale(1.1);
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1200px) {
+
+  .doctor-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-risk-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkup-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+}

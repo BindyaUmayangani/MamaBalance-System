@@ -1,0 +1,271 @@
+/* ================= ADMIN LAYOUT ================= */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f0fff9;
+}
+
+/* Sidebar (fixed width) */
+
+.admin-layout .sidebar {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+/* Main wrapper */
+
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Content area */
+
+.admin-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 8px;
+}
+
+
+/* ================= TABLE CARD ================= */
+
+.table-card {
+  background: #f6fffb;
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  width: 100%;
+  overflow-x: auto; /* prevents layout breaking */
+}
+
+/* Table */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Table cells */
+
+thead th,
+tbody td {
+  padding: 14px 20px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+thead th {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+tbody td {
+  font-size: 0.85rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+  background: #edf8f4;
+}
+
+
+/* ================= ACTION ICONS ================= */
+
+.actions {
+  width: 120px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.actions svg {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+/* View */
+
+.actions svg:first-child {
+  color: #9ca3af;
+}
+
+.actions svg:first-child:hover {
+  color: #6b7280;
+}
+
+/* Edit */
+
+.actions svg:nth-child(2) {
+  color: #7ccfb2;
+}
+
+.actions svg:nth-child(2):hover {
+  color: #499d85;
+}
+
+/* Delete */
+
+.actions svg:last-child {
+  color: #dc2626;
+}
+
+.actions svg:last-child:hover {
+  color: #b91c1c;
+}
+
+
+/* ================= PAGINATION ================= */
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding: 0 8px;
+}
+
+.table-card + .pagination {
+  margin-top: 10px;
+}
+
+.pagination-enhanced {
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: #4b5563;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pagination-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Previous / Next buttons */
+
+.page-btn {
+  background: white;
+  color: #499d85;
+  border: 1.5px solid #499d85;
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page-btn:hover {
+  background: #499d85;
+  color: white;
+}
+
+.page-btn:active {
+  background: #3f8c77;
+  border-color: #3f8c77;
+}
+
+/* Disabled state */
+
+.page-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.page-btn.disabled:hover {
+  background: white;
+  color: #499d85;
+}
+
+/* Page numbers wrapper */
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Individual page */
+
+.page-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: white;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+
+.page-number:hover {
+  border-color: #499d85;
+  color: #499d85;
+}
+
+/* Active page */
+
+.page-number.active {
+  background: #499d85;
+  border-color: #499d85;
+  color: white;
+}
+
+/* Ellipsis */
+
+.page-dots {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  padding: 0 4px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 640px) {
+
+  .pagination {
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .pagination-controls {
+    margin-left: 0;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .admin-content {
+    padding: 20px;
+  }
+
+}
+
+/* ================= TABLE ACTION ICON SIZE FIX ================= */
+
+.actions svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px;
+  min-height: 18px;
+}

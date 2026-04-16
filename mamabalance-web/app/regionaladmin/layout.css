@@ -1,0 +1,18 @@
+/* ================= LAYOUT ================= */
+
+.regional-layout {
+  display: flex;
+}
+
+/* ================= CONTENT ================= */
+
+.regional-content {
+  margin-left: 260px;          /* pushes content beside sidebar */
+  width: calc(100% - 260px);   /* prevents overflow */
+  min-height: 100vh;
+
+  padding: 1px;
+  background: #f0fff9;
+
+  overflow-y: auto;            /* page scroll */
+}

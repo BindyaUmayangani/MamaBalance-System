@@ -1,0 +1,528 @@
+/* ================= SIDEBAR ================= */
+
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: #a8e6cf;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1200;
+
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+.superadmin-sidebar {
+  overflow-y: hidden;
+}
+
+/* ================= LAYOUT ================= */
+
+.admin-layout {
+  display: flex;
+}
+
+.admin-content {
+  margin-left: 260px;
+  width: calc(100% - 260px);
+  min-height: 100vh;
+}
+
+/* LOGO */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+/* MENU */
+.sidebar-menu a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: #1f2937;
+  text-decoration: none;
+  font-weight: 450;
+  margin-bottom: 4px;
+}
+
+.sidebar-menu a:hover {
+  background: #7ccfb2;
+  color: white;
+}
+
+.sidebar-menu a.active {
+  background: #499d85;
+  color: white;
+}
+
+/* ================= USER DROPDOWN WRAPPER ================= */
+
+.user-dropdown-wrapper {
+  position: relative;
+  z-index: 1;
+  margin-top: auto; /* 🔥 pins user section to bottom */
+}
+
+/* USER CARD */
+.sidebar-user {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #2f6f60;
+  padding: 12px;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+}
+
+/* Avatar image */
+.user-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Avatar fallback */
+.user-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #499d85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* User text */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-info strong {
+  font-size: 0.95rem;
+}
+
+.user-info span {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* ================= DROPDOWN (OPENS UPWARD) ================= */
+
+.user-dropdown {
+  position: absolute;
+  bottom: calc(100% + 10px); /* 🔥 opens ABOVE user card */
+  right: 0;
+  left: auto;
+  width: 220px;
+  max-width: calc(100vw - 32px);
+  background: #f6fffb;
+  border-radius: 14px;
+  border: 1.5px solid #7ccfb2;
+  box-shadow: 0 12px 28px rgba(73, 157, 133, 0.18);
+  overflow: hidden;
+  z-index: 1300;
+}
+
+.user-dropdown button {
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2f6f60;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.user-dropdown button:hover {
+  background: #499d85;
+  color: #ffffff;
+}
+
+.user-dropdown .logout {
+  color: #dc2626;
+}
+
+.user-dropdown .logout:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* ================= MODAL BASE ================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal {
+  background: #ffffff;
+  padding: 28px 24px 24px;
+  border-radius: 20px;
+  width: 500px;
+  height: auto;
+  position: relative;
+  z-index: 10000;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Close icon */
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f3f4f6;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ================= BUTTONS ================= */
+
+.btn-primary {
+  background: #499d85;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #499d85;
+  color: #499d85;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+/* ================= PROFILE MODAL ================= */
+
+.profile-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.profile-avatar-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 0 14px;
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  border: 3px solid #7ccfb2;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.avatar-edit {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #7ccfb2;
+  color: white;
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.profile-name {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.profile-email {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.profile-role {
+  font-size: 0.85rem;
+  margin-top: 4px;
+  color: #374151;
+}
+
+.profile-actions {
+  width: 100%;
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ================= PROFILE DETAILS ================= */
+
+.profile-details-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.profile-details {
+  width: 100%;
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.profile-details label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.profile-details p {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* ================= CHANGE PASSWORD MODAL ================= */
+
+.change-password-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title */
+.change-password-modal .modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+/* Labels */
+.change-password-modal label {
+  margin-top: 14px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* ================= PASSWORD FIELD WITH EYE ================= */
+
+.password-field {
+  position: relative;
+  margin-top: 6px;
+}
+
+.password-field input {
+  width: 100%;
+  padding: 10px 42px 10px 12px; /* space for eye icon */
+  border-radius: 10px;
+  border: 1px solid #9ca3af;
+  font-size: 0.95rem;
+}
+
+.password-field input:focus {
+  outline: none;
+  border-color: #499d85;
+}
+
+/* Eye icon */
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle:hover {
+  color: #499d85;
+}
+
+/* ================= ACTION BUTTONS ================= */
+
+.modal-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 🔥 Make buttons equal size */
+.modal-actions button {
+  min-width: 120px;   /* same visual width */
+  height: 42px;       /* same height */
+}
+
+.modal-overlay {
+  isolation: isolate;
+}
+
+/* ================= PROFILE IMAGE SAVE BUTTON ================= */
+
+.save-image-btn {
+  margin: 12px auto 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.profile-message {
+  width: 100%;
+  margin-top: 12px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.profile-message.error {
+  color: #dc2626;
+}
+
+.profile-message.success {
+  color: #15803d;
+}
+
+.password-success-state {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 18px 12px;
+}
+
+.password-success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.password-success-state .modal-title {
+  margin: 0;
+}
+
+.password-success-state .profile-message.success {
+  width: auto;
+  max-width: 320px;
+  margin: 0;
+  text-align: center;
+  line-height: 1.55;
+}
+
+/* ================= CHANGE PASSWORD HEADER ================= */
+
+.change-password-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Back button */
+.modal-back {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #374151;
+}
+
+.modal-back:hover {
+  color: #499d85;
+}
+
+/* Title */
+.change-password-header .modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ================= MODAL HEADER (BACK + TITLE) ================= */
+
+.modal-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  align-self: flex-start;   /* 🔥 THIS FIXES IT */
+  text-align: left;
+}
+
+/* Back button */
+.modal-back {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+}
+
+.modal-back:hover {
+  color: #499d85;
+}
+
+/* Modal title */
+.modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profile-details-modal .modal-title {
+  flex: 1;
+  text-align: left;
+}
