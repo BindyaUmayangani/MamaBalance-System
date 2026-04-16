@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6379301020",
+    "project_id": "mamabalance",
+    "storage_bucket": "mamabalance.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6379301020:android:15b2e1c8c610816e502559",
+        "android_client_info": {
+          "package_name": "com.mamabalance.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAh-t2SfJdhP94peqDnlAH58JbgIpqGfho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

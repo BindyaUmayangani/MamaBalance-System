@@ -1,0 +1,362 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userRole() {
+      return hasUserProfile() ? userDoc().data.role : null;
+    }
+
+    function isActive() {
+      return hasUserProfile() && userDoc().data.status == "active";
+    }
+
+    function isMother() {
+      return userRole() == "mother" && isActive();
+    }
+
+    function isDoctor() {
+      return userRole() == "doctor" && isActive();
+    }
+
+    function matchesMotherIdentity(data) {
+      return signedIn()
+        && data.role == "mother"
+        && data.status == "active"
+        && (
+          request.auth.uid == data.uid
+          || request.auth.uid == data.userUid
+          || (
+            request.auth.token.email != null
+            && (
+              data.email == request.auth.token.email
+              || data.personalEmail == request.auth.token.email
+            )
+          )
+          || (
+            request.auth.token.phone_number != null
+            && data.phoneNumber == request.auth.token.phone_number
+          )
+        );
+    }
+
+    function matchesMotherRecord(data, motherId) {
+      return signedIn()
+        && (
+          request.auth.uid == motherId
+          || request.auth.uid == data.uid
+          || request.auth.uid == data.userUid
+          || (
+            request.auth.token.email != null
+            && (
+              data.email == request.auth.token.email
+              || data.personalEmail == request.auth.token.email
+            )
+          )
+          || (
+            request.auth.token.phone_number != null
+            && data.phoneNumber == request.auth.token.phone_number
+          )
+        );
+    }
+
+    function motherDocById(motherId) {
+      return get(/databases/$(database)/documents/mothers/$(motherId));
+    }
+
+    function canAccessMotherRecord(motherId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/mothers/$(motherId))
+        && matchesMotherRecord(motherDocById(motherId).data, motherId);
+    }
+
+    function isAssignedDoctorForMother(motherId) {
+      return isDoctor()
+        && exists(/databases/$(database)/documents/mothers/$(motherId))
+        && motherDocById(motherId).data.assignedDoctorUid == request.auth.uid;
+    }
+
+    function canAccessConversation(data) {
+      return data.motherUid is string
+        && (
+          data.doctorUid is string
+          || data.midwifeUid is string
+        )
+        && (
+          canAccessMotherRecord(data.motherUid)
+          || (isDoctor() && data.doctorUid == request.auth.uid)
+          || (userRole() == "midwife" && isActive() && data.midwifeUid == request.auth.uid)
+        )
+        && exists(/databases/$(database)/documents/mothers/$(data.motherUid))
+        && (
+          (
+            data.doctorUid is string
+            && motherDocById(data.motherUid).data.assignedDoctorUid == data.doctorUid
+          )
+          || (
+            data.midwifeUid is string
+            && motherDocById(data.motherUid).data.assignedMidwifeUid == data.midwifeUid
+          )
+        );
+    }
+
+    function validConversationWrite(data) {
+      return canAccessConversation(data)
+        && data.participantUids is list
+        && (
+          (
+            data.doctorUid is string
+            && data.participantUids.hasAll([data.motherUid, data.doctorUid])
+          )
+          || (
+            data.midwifeUid is string
+            && data.participantUids.hasAll([data.motherUid, data.midwifeUid])
+          )
+        )
+        && data.lastMessageText is string
+        && data.lastMessageText.size() <= 2000
+        && (data.lastMessageSenderUid == request.auth.uid || data.lastMessageSenderUid == "");
+    }
+
+    function validMessageCreate(conversationId) {
+      let conversation = getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data;
+      return canAccessConversation(conversation)
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.senderRole in ["mother", "doctor", "midwife"]
+        && request.resource.data.algorithm == "AES-256-GCM"
+        && request.resource.data.keyVersion is string
+        && request.resource.data.ciphertext is string
+        && request.resource.data.ciphertext.size() > 0
+        && request.resource.data.ciphertext.size() <= 8000
+        && request.resource.data.iv is string
+        && request.resource.data.iv.size() > 0
+        && request.resource.data.iv.size() <= 128
+        && request.resource.data.authTag is string
+        && request.resource.data.authTag.size() > 0
+        && request.resource.data.authTag.size() <= 128
+        && request.resource.data.attachments is list
+        && request.resource.data.readBy is list
+        && request.resource.data.readBy.hasAll([request.auth.uid])
+        && request.resource.data.createdAt is timestamp
+        && (
+          (request.resource.data.senderRole == "mother" && canAccessMotherRecord(conversation.motherUid))
+          || (request.resource.data.senderRole == "doctor" && conversation.doctorUid == request.auth.uid && isDoctor())
+          || (request.resource.data.senderRole == "midwife" && conversation.midwifeUid == request.auth.uid && userRole() == "midwife" && isActive())
+        );
+    }
+
+    function validMotherCheckInUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        "latestEpdsScore",
+        "latestEpdsAttemptId",
+        "latestEpdsLanguage",
+        "latestEpdsSubmittedAt",
+        "riskLevel",
+        "isHighRisk",
+        "updatedAt",
+      ]);
+    }
+
+    function validMotherProfileUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        "fullName",
+        "personalEmail",
+        "phoneNumber",
+        "birthdate",
+        "address",
+        "guardianName",
+        "guardianContact",
+        "deliveryDate",
+        "noOfChildren",
+        "profileImage",
+        "profileImagePath",
+        "updatedAt"
+      ])
+      && (!request.resource.data.keys().hasAny(["fullName"]) || request.resource.data.fullName is string)
+      && (!request.resource.data.keys().hasAny(["personalEmail"]) || request.resource.data.personalEmail is string)
+      && (!request.resource.data.keys().hasAny(["phoneNumber"]) || request.resource.data.phoneNumber is string)
+      && (!request.resource.data.keys().hasAny(["birthdate"]) || request.resource.data.birthdate is string)
+      && (!request.resource.data.keys().hasAny(["address"]) || request.resource.data.address is string)
+      && (!request.resource.data.keys().hasAny(["guardianName"]) || request.resource.data.guardianName is string)
+      && (!request.resource.data.keys().hasAny(["guardianContact"]) || request.resource.data.guardianContact is string)
+      && (!request.resource.data.keys().hasAny(["deliveryDate"]) || request.resource.data.deliveryDate is string)
+      && (!request.resource.data.keys().hasAny(["noOfChildren"]) || request.resource.data.noOfChildren is int)
+      && (!request.resource.data.keys().hasAny(["profileImage"]) || request.resource.data.profileImage is string)
+      && (!request.resource.data.keys().hasAny(["profileImagePath"]) || request.resource.data.profileImagePath is string);
+    }
+
+    function validEpdsAttemptCreate(motherId) {
+      return canAccessMotherRecord(motherId)
+        && request.resource.data.motherUid == motherId
+        && request.resource.data.answers is list
+        && request.resource.data.answers.size() == 10
+        && request.resource.data.language is string
+        && request.resource.data.score is int
+        && request.resource.data.riskLevel in ["low", "moderate", "high"]
+        && request.resource.data.attemptedAt is timestamp;
+    }
+
+    function validMidwifeRiskNotification() {
+      return request.resource.data.recipientRole == "midwife"
+        && request.resource.data.type == "high-risk-epds"
+        && request.resource.data.title == "High-risk mother identified"
+        && request.resource.data.motherUid is string
+        && request.resource.data.motherName is string
+        && request.resource.data.score is int
+        && request.resource.data.riskLevel == "high"
+        && request.resource.data.priority == "high"
+        && request.resource.data.read == false
+        && request.resource.data.attemptId is string
+        && request.resource.data.attemptedAt is timestamp
+        && exists(/databases/$(database)/documents/mothers/$(request.resource.data.motherUid))
+        && matchesMotherRecord(
+          get(/databases/$(database)/documents/mothers/$(request.resource.data.motherUid)).data,
+          request.resource.data.motherUid
+        )
+        && request.resource.data.recipientUid
+          == get(/databases/$(database)/documents/mothers/$(request.resource.data.motherUid)).data.assignedMidwifeUid;
+    }
+
+    function isStaff() {
+      return userRole() in ["superadmin", "regionaladmin", "doctor", "midwife"] && isActive();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn()
+        && (
+          request.auth.uid == uid
+          || matchesMotherIdentity(resource.data)
+          || (signedIn() && resource.data.role in ["doctor", "midwife"])
+        );
+      allow create: if false;
+      allow update: if signedIn() && (request.auth.uid == uid || matchesMotherIdentity(resource.data))
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status;
+      allow delete: if false;
+    }
+
+    match /mothers/{motherId} {
+      allow read: if signedIn() && matchesMotherRecord(resource.data, motherId);
+      allow update: if signedIn()
+        && matchesMotherRecord(resource.data, motherId)
+        && (validMotherCheckInUpdate() || validMotherProfileUpdate());
+      allow read: if signedIn() && isStaff();
+      allow create, delete: if false;
+
+      match /epdsAttempts/{attemptId} {
+        allow read: if canAccessMotherRecord(motherId) || (signedIn() && isStaff());
+        allow create: if validEpdsAttemptCreate(motherId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow create: if signedIn() && isMother() && validMidwifeRiskNotification();
+      allow read: if signedIn() && isStaff();
+      allow update, delete: if false;
+    }
+
+    match /educationalContents/{contentId} {
+      allow read: if signedIn()
+        && (
+          isStaff()
+          || resource.data.visibility == "visible"
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /careMedications/{medicationId} {
+      allow read: if signedIn()
+        && resource.data.motherUid is string
+        && (
+          resource.data.motherUid == request.auth.uid
+          || canAccessMotherRecord(resource.data.motherUid)
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /medications/{medicationId} {
+      allow read: if signedIn()
+        && resource.data.motherUid is string
+        && (
+          resource.data.motherUid == request.auth.uid
+          || canAccessMotherRecord(resource.data.motherUid)
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /midwifeVisits/{visitId} {
+      allow read: if signedIn()
+        && resource.data.motherUid is string
+        && (
+          canAccessMotherRecord(resource.data.motherUid)
+          || (
+            userRole() == "midwife"
+            && isActive()
+            && resource.data.midwifeUid == request.auth.uid
+          )
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /doctorCheckups/{checkupId} {
+      allow read: if signedIn()
+        && resource.data.motherUid is string
+        && (
+          canAccessMotherRecord(resource.data.motherUid)
+          || (
+            isDoctor()
+            && resource.data.doctorUid == request.auth.uid
+          )
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      allow get: if signedIn()
+        && (
+          !exists(/databases/$(database)/documents/conversations/$(conversationId))
+          || canAccessConversation(resource.data)
+        );
+      allow list: if signedIn() && canAccessConversation(resource.data);
+      allow create, update: if signedIn() && validConversationWrite(request.resource.data);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && exists(/databases/$(database)/documents/conversations/$(conversationId))
+          && canAccessConversation(
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data
+          );
+        allow create: if signedIn()
+          && validMessageCreate(conversationId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /staff/{staffId} {
+      allow read: if signedIn() && isStaff();
+      allow create, update, delete: if false;
+    }
+
+    match /regions/{regionId} {
+      allow read: if signedIn() && isStaff();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

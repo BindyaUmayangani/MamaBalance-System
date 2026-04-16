@@ -1,0 +1,375 @@
+{
+  "generatedAt": "2026-04-12T17:10:41.590Z",
+  "regions": [
+    {
+      "id": "RG001",
+      "name": "Kaduwela"
+    },
+    {
+      "id": "RG002",
+      "name": "Homagama"
+    },
+    {
+      "id": "RG003",
+      "name": "Maharagama"
+    },
+    {
+      "id": "RG004",
+      "name": "Kesbewa"
+    },
+    {
+      "id": "RG005",
+      "name": "Moratuwa"
+    }
+  ],
+  "counts": {
+    "regionalAdmins": 5,
+    "doctors": 6,
+    "midwives": 7,
+    "mothers": 12
+  },
+  "credentials": [
+    {
+      "uid": "n0OBAT9osMeLoj2movp5nXDMajz2",
+      "userId": "ADMIN-N0OBAT",
+      "fullName": "Uma Perera",
+      "role": "regionaladmin",
+      "regionId": "RG001",
+      "loginEmail": "uma.perera.admin01@mamabalance.lk",
+      "temporaryPassword": "UmaAdmin@123",
+      "personalEmail": "umaperera1230@gmail.com",
+      "username": "uma.perera.admin01"
+    },
+    {
+      "uid": "55Jf1mZUBugr1ygkvarRxOfHFa52",
+      "userId": "ADMIN-55JF1M",
+      "fullName": "Dilani Fernando",
+      "role": "regionaladmin",
+      "regionId": "RG002",
+      "loginEmail": "dilani.fernando.admin02@mamabalance.lk",
+      "temporaryPassword": "DilaniAdmin@123",
+      "personalEmail": "regionaladmin02@example.com",
+      "username": "dilani.fernando.admin02"
+    },
+    {
+      "uid": "JECGD8suuEN2TpxVG8sYJ3aRkZr1",
+      "userId": "ADMIN-JECGD8",
+      "fullName": "Nadeeka Silva",
+      "role": "regionaladmin",
+      "regionId": "RG003",
+      "loginEmail": "nadeeka.silva.admin03@mamabalance.lk",
+      "temporaryPassword": "NadeekaAdmin@123",
+      "personalEmail": "regionaladmin03@example.com",
+      "username": "nadeeka.silva.admin03"
+    },
+    {
+      "uid": "TpJylvhCucea5ORQNllChc0Iyoq2",
+      "userId": "ADMIN-TPJYLV",
+      "fullName": "Kanishka Jayasuriya",
+      "role": "regionaladmin",
+      "regionId": "RG004",
+      "loginEmail": "kanishka.jayasuriya.admin04@mamabalance.lk",
+      "temporaryPassword": "KanishkaAdmin@123",
+      "personalEmail": "regionaladmin04@example.com",
+      "username": "kanishka.jayasuriya.admin04"
+    },
+    {
+      "uid": "4oHb3cMhvFc2CF6LTMugR4RfX6t2",
+      "userId": "ADMIN-4OHB3C",
+      "fullName": "Hasini Peris",
+      "role": "regionaladmin",
+      "regionId": "RG005",
+      "loginEmail": "hasini.peris.admin05@mamabalance.lk",
+      "temporaryPassword": "HasiniAdmin@123",
+      "personalEmail": "regionaladmin05@example.com",
+      "username": "hasini.peris.admin05"
+    },
+    {
+      "uid": "lKr6ZvfaLbaj8JnhsCjzDqgNv452",
+      "userId": "DOCTOR-LKR6ZV",
+      "fullName": "Iresha Tharangani",
+      "role": "doctor",
+      "regionId": "RG001",
+      "loginEmail": "iresha.tharangani.doctor01@mamabalance.lk",
+      "temporaryPassword": "IreshaDoctor@123",
+      "personalEmail": "ireshatharangani11@gmail.com",
+      "username": "iresha.tharangani.doctor01"
+    },
+    {
+      "uid": "zuMBQ32E5Uh0soOulq4nTWPRQab2",
+      "userId": "DOCTOR-ZUMBQ3",
+      "fullName": "Kasuni Wickramasinghe",
+      "role": "doctor",
+      "regionId": "RG001",
+      "loginEmail": "kasuni.wickramasinghe.doctor02@mamabalance.lk",
+      "temporaryPassword": "KasuniDoctor@123",
+      "personalEmail": "doctor02@example.com",
+      "username": "kasuni.wickramasinghe.doctor02"
+    },
+    {
+      "uid": "piruF4Wq24X0QnAjBldgSDjzVcB3",
+      "userId": "DOCTOR-PIRUF4",
+      "fullName": "Chathura Perera",
+      "role": "doctor",
+      "regionId": "RG002",
+      "loginEmail": "chathura.perera.doctor03@mamabalance.lk",
+      "temporaryPassword": "ChathuraDoctor@123",
+      "personalEmail": "doctor03@example.com",
+      "username": "chathura.perera.doctor03"
+    },
+    {
+      "uid": "Z0NJdvt4gzVLkEAqmkawyR4cEjf1",
+      "userId": "DOCTOR-Z0NJDV",
+      "fullName": "Malsha Fernando",
+      "role": "doctor",
+      "regionId": "RG003",
+      "loginEmail": "malsha.fernando.doctor04@mamabalance.lk",
+      "temporaryPassword": "MalshaDoctor@123",
+      "personalEmail": "doctor04@example.com",
+      "username": "malsha.fernando.doctor04"
+    },
+    {
+      "uid": "gbsjrrz3oIYHyv1R8Ouxu44Ccno1",
+      "userId": "DOCTOR-GBSJRR",
+      "fullName": "Dinithi Silva",
+      "role": "doctor",
+      "regionId": "RG004",
+      "loginEmail": "dinithi.silva.doctor05@mamabalance.lk",
+      "temporaryPassword": "DinithiDoctor@123",
+      "personalEmail": "doctor05@example.com",
+      "username": "dinithi.silva.doctor05"
+    },
+    {
+      "uid": "agftYnGg4DXmeedIri6LHbCbjDS2",
+      "userId": "DOCTOR-AGFTYN",
+      "fullName": "Harshani Jayawardena",
+      "role": "doctor",
+      "regionId": "RG005",
+      "loginEmail": "harshani.jayawardena.doctor06@mamabalance.lk",
+      "temporaryPassword": "HarshaniDoctor@123",
+      "personalEmail": "doctor06@example.com",
+      "username": "harshani.jayawardena.doctor06"
+    },
+    {
+      "uid": "Fh0PYNQA0jTy8PYeFOUPLnaC9lf2",
+      "userId": "MIDWIFE-FH0PYN",
+      "fullName": "Bindya Umayangani",
+      "role": "midwife",
+      "regionId": "RG001",
+      "loginEmail": "bindya.umayangani.midwife01@mamabalance.lk",
+      "temporaryPassword": "BindyaMidwife@123",
+      "personalEmail": "bindyaumayangani2005@gmail.com",
+      "username": "bindya.umayangani.midwife01"
+    },
+    {
+      "uid": "OHh6mcalScgASLaF5KCJUFpGcD73",
+      "userId": "MIDWIFE-OHH6MC",
+      "fullName": "Sachini Perera",
+      "role": "midwife",
+      "regionId": "RG001",
+      "loginEmail": "sachini.perera.midwife02@mamabalance.lk",
+      "temporaryPassword": "SachiniMidwife@123",
+      "personalEmail": "midwife02@example.com",
+      "username": "sachini.perera.midwife02"
+    },
+    {
+      "uid": "m5wOq7L8MgeanHdcYl5eARg2Oir1",
+      "userId": "MIDWIFE-M5WOQ7",
+      "fullName": "Nethmi Silva",
+      "role": "midwife",
+      "regionId": "RG002",
+      "loginEmail": "nethmi.silva.midwife03@mamabalance.lk",
+      "temporaryPassword": "NethmiMidwife@123",
+      "personalEmail": "midwife03@example.com",
+      "username": "nethmi.silva.midwife03"
+    },
+    {
+      "uid": "Zqj1zbTYPteZsFq2ToOnOvpoy5r2",
+      "userId": "MIDWIFE-ZQJ1ZB",
+      "fullName": "Dilki Fernando",
+      "role": "midwife",
+      "regionId": "RG003",
+      "loginEmail": "dilki.fernando.midwife04@mamabalance.lk",
+      "temporaryPassword": "DilkiMidwife@123",
+      "personalEmail": "midwife04@example.com",
+      "username": "dilki.fernando.midwife04"
+    },
+    {
+      "uid": "RDr39vNXZBWOGcGh25wj3dTyct72",
+      "userId": "MIDWIFE-RDR39V",
+      "fullName": "Sewwandi Perera",
+      "role": "midwife",
+      "regionId": "RG003",
+      "loginEmail": "sewwandi.perera.midwife05@mamabalance.lk",
+      "temporaryPassword": "SewwandiMidwife@123",
+      "personalEmail": "midwife05@example.com",
+      "username": "sewwandi.perera.midwife05"
+    },
+    {
+      "uid": "rkhjJv64xCNlzlbykHnQEX7k7Rx1",
+      "userId": "MIDWIFE-RKHJJV",
+      "fullName": "Amaya Jayasinghe",
+      "role": "midwife",
+      "regionId": "RG004",
+      "loginEmail": "amaya.jayasinghe.midwife06@mamabalance.lk",
+      "temporaryPassword": "AmayaMidwife@123",
+      "personalEmail": "midwife06@example.com",
+      "username": "amaya.jayasinghe.midwife06"
+    },
+    {
+      "uid": "rRi74WVX27er3eQzq9DcvlddFI83",
+      "userId": "MIDWIFE-RRI74W",
+      "fullName": "Rashmi Fernando",
+      "role": "midwife",
+      "regionId": "RG005",
+      "loginEmail": "rashmi.fernando.midwife07@mamabalance.lk",
+      "temporaryPassword": "RashmiMidwife@123",
+      "personalEmail": "midwife07@example.com",
+      "username": "rashmi.fernando.midwife07"
+    },
+    {
+      "uid": "LuTch3YokPMCCxC0NZi0AyxTo7e2",
+      "userId": "MOTHER-LUTCH3",
+      "fullName": "Dusantha Sampath",
+      "role": "mother",
+      "regionId": "RG001",
+      "loginEmail": "dusantha.sampath.mother01@mamabalance.lk",
+      "temporaryPassword": "DusanthaMother@123",
+      "personalEmail": "dusanthasampath14@gmail.com",
+      "username": "dusantha.sampath.mother01",
+      "phoneNumber": "+94771000101"
+    },
+    {
+      "uid": "KYYxrzowivMSyvH3edFvp58MnpP2",
+      "userId": "MOTHER-KYYXRZ",
+      "fullName": "Nimali Perera",
+      "role": "mother",
+      "regionId": "RG001",
+      "loginEmail": "nimali.perera.mother02@mamabalance.lk",
+      "temporaryPassword": "NimaliMother@123",
+      "personalEmail": "mother02@example.com",
+      "username": "nimali.perera.mother02",
+      "phoneNumber": "+94771000102"
+    },
+    {
+      "uid": "F2yMs4psCgTJf942dyeGcucHAHs2",
+      "userId": "MOTHER-F2YMS4",
+      "fullName": "Suhani Silva",
+      "role": "mother",
+      "regionId": "RG001",
+      "loginEmail": "suhani.silva.mother03@mamabalance.lk",
+      "temporaryPassword": "SuhaniMother@123",
+      "personalEmail": "mother03@example.com",
+      "username": "suhani.silva.mother03",
+      "phoneNumber": "+94771000103"
+    },
+    {
+      "uid": "QhMSy20KIHOKdQ94UcVyeHPLF0g1",
+      "userId": "MOTHER-QHMSY2",
+      "fullName": "Tharushi Fernando",
+      "role": "mother",
+      "regionId": "RG002",
+      "loginEmail": "tharushi.fernando.mother04@mamabalance.lk",
+      "temporaryPassword": "TharushiMother@123",
+      "personalEmail": "mother04@example.com",
+      "username": "tharushi.fernando.mother04",
+      "phoneNumber": "+94771000104"
+    },
+    {
+      "uid": "OhEOxQIWpcMshSXvIbL0Dnzfn933",
+      "userId": "MOTHER-OHEOXQ",
+      "fullName": "Ashani Karunarathne",
+      "role": "mother",
+      "regionId": "RG002",
+      "loginEmail": "ashani.karunarathne.mother05@mamabalance.lk",
+      "temporaryPassword": "AshaniMother@123",
+      "personalEmail": "mother05@example.com",
+      "username": "ashani.karunarathne.mother05",
+      "phoneNumber": "+94771000105"
+    },
+    {
+      "uid": "ErEapTzTidXfZDaI8rQsXbFsk2o1",
+      "userId": "MOTHER-EREAPT",
+      "fullName": "Dinusha Perera",
+      "role": "mother",
+      "regionId": "RG003",
+      "loginEmail": "dinusha.perera.mother06@mamabalance.lk",
+      "temporaryPassword": "DinushaMother@123",
+      "personalEmail": "mother06@example.com",
+      "username": "dinusha.perera.mother06",
+      "phoneNumber": "+94771000106"
+    },
+    {
+      "uid": "Qh0guWPlrZcntwKCZjmzcEdA4062",
+      "userId": "MOTHER-QH0GUW",
+      "fullName": "Madhavi Silva",
+      "role": "mother",
+      "regionId": "RG003",
+      "loginEmail": "madhavi.silva.mother07@mamabalance.lk",
+      "temporaryPassword": "MadhaviMother@123",
+      "personalEmail": "mother07@example.com",
+      "username": "madhavi.silva.mother07",
+      "phoneNumber": "+94771000107"
+    },
+    {
+      "uid": "yJYLZx5iChMYjaKhiN8uSmec1Ur2",
+      "userId": "MOTHER-YJYLZX",
+      "fullName": "Rashika Fernando",
+      "role": "mother",
+      "regionId": "RG003",
+      "loginEmail": "rashika.fernando.mother08@mamabalance.lk",
+      "temporaryPassword": "RashikaMother@123",
+      "personalEmail": "mother08@example.com",
+      "username": "rashika.fernando.mother08",
+      "phoneNumber": "+94771000108"
+    },
+    {
+      "uid": "98OJvf065GPjRkhJ8mOtWdhtmRa2",
+      "userId": "MOTHER-98OJVF",
+      "fullName": "Dilani Perera",
+      "role": "mother",
+      "regionId": "RG004",
+      "loginEmail": "dilani.perera.mother09@mamabalance.lk",
+      "temporaryPassword": "DilaniMother@123",
+      "personalEmail": "mother09@example.com",
+      "username": "dilani.perera.mother09",
+      "phoneNumber": "+94771000109"
+    },
+    {
+      "uid": "RgsRGcLyBCUHVZ70SQTf8bL0NOD2",
+      "userId": "MOTHER-RGSRGC",
+      "fullName": "Nisansala Silva",
+      "role": "mother",
+      "regionId": "RG004",
+      "loginEmail": "nisansala.silva.mother10@mamabalance.lk",
+      "temporaryPassword": "NisansalaMother@123",
+      "personalEmail": "mother10@example.com",
+      "username": "nisansala.silva.mother10",
+      "phoneNumber": "+94771000110"
+    },
+    {
+      "uid": "ZkuMLAPRD7b3PdIzMW0vcYdW3F73",
+      "userId": "MOTHER-ZKUMLA",
+      "fullName": "Chamodi Fernando",
+      "role": "mother",
+      "regionId": "RG005",
+      "loginEmail": "chamodi.fernando.mother11@mamabalance.lk",
+      "temporaryPassword": "ChamodiMother@123",
+      "personalEmail": "mother11@example.com",
+      "username": "chamodi.fernando.mother11",
+      "phoneNumber": "+94771000111"
+    },
+    {
+      "uid": "ZnhDdReHGUVXx8wUReKSzNPFRdF3",
+      "userId": "MOTHER-ZNHDDR",
+      "fullName": "Piumi Jayasinghe",
+      "role": "mother",
+      "regionId": "RG005",
+      "loginEmail": "piumi.jayasinghe.mother12@mamabalance.lk",
+      "temporaryPassword": "PiumiMother@123",
+      "personalEmail": "mother12@example.com",
+      "username": "piumi.jayasinghe.mother12",
+      "phoneNumber": "+94771000112"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# Node
+node_modules/
+.next/
+
+# Flutter
+build/
+.dart_tool/
+.packages
+.pub-cache/
+
+# Firebase / ENV
+.env.local
+.env
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
