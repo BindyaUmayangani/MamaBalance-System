@@ -295,7 +295,7 @@ export default function DoctorObservationWorkspace() {
         <div className="search-box observation-search">
           <Search size={18} />
           <input
-            placeholder="Search mothers, titles, notes, or tags"
+            placeholder="Search by mother, title, note, or tag"
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value);
@@ -438,7 +438,7 @@ export default function DoctorObservationWorkspace() {
             <div className="observation-modal-grid">
               <div>
                 <label>Mother (name, username, or user ID)</label>
-                <input value={form.motherQuery} onChange={(event) => setForm((current) => ({ ...current, motherQuery: event.target.value }))} placeholder="Search assigned mother" />
+                <input value={form.motherQuery} onChange={(event) => setForm((current) => ({ ...current, motherQuery: event.target.value }))} placeholder="Search mother by name, username, or ID" />
 
                 <div className="matched-mother-inline">
                   {matchedMother ? (

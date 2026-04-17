@@ -35,6 +35,8 @@ async function readUserProfile(uid: string): Promise<UserProfile | null> {
     displayName: data.displayName ?? null,
     username: data.username ?? null,
     regionId: data.regionId ?? null,
+    profileImage: data.profileImage ?? null,
+    coverImage: data.coverImage ?? null,
     createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? null,
     updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() ?? null,
   } as UserProfile;

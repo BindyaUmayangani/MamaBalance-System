@@ -25,14 +25,15 @@ const SETTINGS_OPTIONS: Record<StaffRole, SettingsFieldConfig[]> = {
     { key: "educationalContentUpdates", label: "Educational content updates" },
   ],
   doctor: [
+    { key: "assignmentAlerts", label: "Mother assignment alerts" },
     { key: "overdueCheckupAlerts", label: "Overdue checkup alerts" },
-    { key: "highRiskEscalationAlerts", label: "High-risk escalation alerts" },
-    { key: "weeklyAnalyticsSummary", label: "Weekly analytics summary" },
+    { key: "midwifeObservationAlerts", label: "New midwife observation alerts" },
   ],
   midwife: [
-    { key: "upcomingVisitReminders", label: "Upcoming visit reminders" },
+    { key: "motherAssignmentAlerts", label: "Mother assignment alerts" },
+    { key: "highRiskMotherAlerts", label: "High-risk mother alerts" },
     { key: "overdueVisitAlerts", label: "Overdue visit alerts" },
-    { key: "doctorReassignmentUpdates", label: "Doctor reassignment updates" },
+    { key: "doctorObservationAlerts", label: "New doctor observation alerts" },
   ],
 };
 

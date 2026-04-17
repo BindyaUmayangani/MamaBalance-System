@@ -11,32 +11,25 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  const userSnapshot = await adminDb.collection("users").doc(user.uid).get();
-  const userData = userSnapshot.data();
-
   let regionName: string | null = null;
 
-  if (userData?.regionId) {
+  if (user.regionId) {
     const regionSnapshot = await adminDb
       .collection("regions")
-      .doc(String(userData.regionId))
+      .doc(String(user.regionId))
       .get();
 
     if (regionSnapshot.exists) {
       regionName =
         (regionSnapshot.data()?.name as string | undefined) ||
-        String(userData.regionId);
+        String(user.regionId);
     }
   }
 
   return NextResponse.json({
     user: {
       ...user,
-      username: (userData?.username as string | undefined) || null,
-      personalEmail: (userData?.personalEmail as string | undefined) || null,
       regionName,
-      profileImage: (userData?.profileImage as string | undefined) || null,
-      coverImage: (userData?.coverImage as string | undefined) || null,
     },
   });
 }

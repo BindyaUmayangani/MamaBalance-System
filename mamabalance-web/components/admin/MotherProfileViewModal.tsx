@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import type { ManagedMotherRow } from "@/lib/admin/types";
+import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/superadmin/styles/userManagement.css";
 
 type Props = {
@@ -36,6 +37,7 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [detailError, setDetailError] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const displayMother = details;
   const motherRiskClass = riskClass(displayMother.riskStatus);
@@ -129,6 +131,26 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
       isMounted = false;
     };
   }, [mother.uid]);
+
+  async function handleDownloadSummary() {
+    try {
+      setIsDownloading(true);
+      const response = await fetch(`/api/admin/mothers/${encodeURIComponent(mother.uid)}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to generate patient summary report.");
+      }
+
+      generatePatientSummaryPdf(payload);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to generate patient summary report.");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
     <div className="mother-profile-modal">
@@ -249,6 +271,9 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
       </div>
 
       <div className="modal-actions">
+        <button className="btn-outline" onClick={() => void handleDownloadSummary()} disabled={isDownloading}>
+          {isDownloading ? "Generating..." : "Download Summary Report"}
+        </button>
         <button className="btn-outline" onClick={onClose}>
           Close
         </button>

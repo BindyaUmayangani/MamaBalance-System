@@ -82,6 +82,7 @@ export default function UpcomingCheckupsPage() {
   const [showEdit, setShowEdit] = useState<CheckupItem | null>(null);
   const [showDelete, setShowDelete] = useState<CheckupItem | null>(null);
   const [showReschedule, setShowReschedule] = useState<CheckupItem | null>(null);
+  const [showComplete, setShowComplete] = useState<CheckupItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const addDateInputRef = useRef<HTMLInputElement>(null);
@@ -320,16 +321,18 @@ export default function UpcomingCheckupsPage() {
     }
   };
 
-  const handleComplete = async (item: CheckupItem) => {
+  const handleComplete = async () => {
+    if (!showComplete) return;
     try {
       setIsSaving(true);
       const resp = await fetch("/api/doctor/checkups", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: item.id, status: "Completed" }),
+        body: JSON.stringify({ id: showComplete.id, status: "Completed" }),
       });
       if (!resp.ok) throw new Error("Failed to complete.");
       await loadCheckups();
+      setShowComplete(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete.");
     } finally {
@@ -523,7 +526,7 @@ export default function UpcomingCheckupsPage() {
             <div className="search-box visit-search">
               <Search size={18} />
               <input
-                placeholder="Search"
+                placeholder="Search by mother, note, risk level, or status"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
@@ -617,7 +620,7 @@ export default function UpcomingCheckupsPage() {
                       <td className="visit-action-cell">
                         {item.status === "Overdue" || item.status === "Upcoming" ? (
                           <div className="visit-actions">
-                            <button className="complete-btn" onClick={() => handleComplete(item)} disabled={isSaving}>
+                            <button className="complete-btn" onClick={() => setShowComplete(item)} disabled={isSaving}>
                               Mark Completed
                             </button>
                             <button className="reschedule-btn" onClick={() => { setShowReschedule(item); setRescheduleForm({ dateTime: `${item.date}T${item.time}`, notes: item.notes }); }}>
@@ -685,7 +688,7 @@ export default function UpcomingCheckupsPage() {
             <input 
               value={addForm.motherQuery} 
               onChange={(e) => setAddForm(prev => ({ ...prev, motherQuery: e.target.value }))}
-              placeholder="Search assigned mother"
+              placeholder="Search mother by name or user ID"
             />
 
             <div className="matched-mother-inline">
@@ -798,7 +801,7 @@ export default function UpcomingCheckupsPage() {
       {showReschedule && (
         <div className="modal-overlay">
           <div className="modal-card checkup-modal">
-            <h2 className="modal-title">RESCHEDULE OVERDUE CHECKUP</h2>
+            <h2 className="modal-title">RESCHEDULE CHECKUP</h2>
 
             <p className="modal-name-text">
               Name: <strong>{showReschedule.motherName}</strong>
@@ -838,6 +841,27 @@ export default function UpcomingCheckupsPage() {
               </button>
               <button className="btn-primary" onClick={handleSaveReschedule} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showComplete && (
+        <div className="modal-overlay">
+          <div className="modal-card checkup-modal delete-modal">
+            <h2 className="modal-title">MARK CHECKUP AS COMPLETED</h2>
+
+            <p className="modal-name-text">
+              Mark the checkup for <strong>{showComplete.motherName}</strong> as completed?
+            </p>
+
+            <div className="modal-actions">
+              <button className="btn-outline" onClick={() => setShowComplete(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleComplete} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Confirm"}
               </button>
             </div>
           </div>

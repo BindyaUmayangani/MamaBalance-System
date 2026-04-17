@@ -10,6 +10,10 @@ import ProfileModal from "./modals/ProfileModal";
 import ViewProfileDetailsModal from "./modals/ViewProfileDetailsModal";
 import ChangePasswordModal from "./modals/ChangePasswordModal";
 import LogoutModal from "./modals/LogoutModal";
+import {
+  clearCurrentUserClientCache,
+  getCurrentUserClient,
+} from "@/lib/auth/client";
 import { firebaseAuth } from "@/lib/firebase/client";
 
 type UserType = {
@@ -85,12 +89,23 @@ export default function UserDropdown({ user: fallbackUser }: Props) {
   }, []);
 
   useEffect(() => {
+    setUser({
+      name: fallbackUser?.name || "MamaBalance User",
+      role: fallbackUser?.role || "",
+      username: fallbackUser?.username,
+      email: fallbackUser?.email || "",
+      region: fallbackUser?.region,
+      phone: fallbackUser?.phone,
+      image: fallbackUser?.image || "/images/profile.png",
+    });
+
     async function loadUser() {
       try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        const payload = (await response.json()) as SessionUserResponse;
+        const payload = (await getCurrentUserClient({
+          forceRefresh: true,
+        })) as SessionUserResponse;
 
-        if (!response.ok || !payload.user) {
+        if (!payload.user) {
           return;
         }
 
@@ -128,6 +143,7 @@ export default function UserDropdown({ user: fallbackUser }: Props) {
     setIsLoggingOut(true);
 
     try {
+      clearCurrentUserClientCache();
       await fetch("/api/auth/logout", { method: "POST" });
       await signOut(firebaseAuth);
       router.replace("/login");

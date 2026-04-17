@@ -715,7 +715,7 @@ export default function MidwifeAnalyticsPage() {
       )}
 
       {showExportModal ? (
-        <ModalWrapper onClose={() => setShowExportModal(false)}>
+        <ModalWrapper variant="export" onClose={() => setShowExportModal(false)}>
           <div className="analytics-export-modal">
             <div className="analytics-export-header">
               <span className="analytics-export-eyebrow">PDF Export</span>

@@ -1,7 +1,7 @@
 type Props = {
   children: React.ReactNode;
   onClose: () => void;
-  variant?: "mother" | "content";
+  variant?: "mother" | "content" | "export";
 };
 
 export default function ModalWrapper({ children, onClose, variant }: Props) {
@@ -13,6 +13,8 @@ export default function ModalWrapper({ children, onClose, variant }: Props) {
             ? "mother-modal"
             : variant === "content"
             ? "content-modal"
+            : variant === "export"
+            ? "export-modal-shell"
             : ""
         }`}
         onClick={(e) => e.stopPropagation()}

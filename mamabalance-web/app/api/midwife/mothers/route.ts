@@ -176,13 +176,18 @@ async function loadRegionMap() {
 }
 
 async function loadDoctorOptions(regionId: string | null | undefined) {
-  const snapshot = await adminDb.collection("users").where("role", "==", "doctor").get();
+  let query = adminDb
+    .collection("users")
+    .where("role", "==", "doctor")
+    .where("status", "==", "active");
+
+  if (regionId) {
+    query = query.where("regionId", "==", regionId);
+  }
+
+  const snapshot = await query.get();
 
   return snapshot.docs
-    .filter((doc) => {
-      const data = doc.data();
-      return data.status === "active" && (!regionId || data.regionId === regionId);
-    })
     .map((doc) => ({
       uid: doc.id,
       name: (doc.data().displayName as string | undefined) || "Unknown Doctor",

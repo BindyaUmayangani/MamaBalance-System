@@ -66,7 +66,7 @@ function LegacyMedicationManagement() {
       {/* SEARCH */}
       <div className="search-box">
         <Search size={18} />
-        <input placeholder="Search" />
+        <input placeholder="Search by medication, mother, or prescription ID" />
       </div>
 
       <p className="mother-name">

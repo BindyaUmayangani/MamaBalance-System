@@ -32,12 +32,17 @@
 .search-box {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #f6fffb;
-  padding: 10px 14px;
+  padding: 0 16px;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
-  width: 320px;
+  width: 420px;
+  min-width: 420px;
+  max-width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
   margin-bottom: 16px;
 }
 
@@ -46,6 +51,7 @@
   outline: none;
   background: transparent;
   width: 100%;
+  font-size: 1rem;
 }
 
 .mother-name {
@@ -377,6 +383,9 @@
 
   .search-box {
     width: 100%;
+    min-width: 0;
+    height: 52px;
+    flex: 1 1 auto;
   }
 
   .med-grid {
@@ -422,6 +431,7 @@
   width: 420px;
   border: 3px solid #7ccfb2;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
 }
 
 /* sizes */
@@ -432,14 +442,21 @@
 }
 
 .medication-modal-large {
-  width: 840px;
-  max-width: 92vw;
+  width: 800px;
+  min-width: 800px;
+  max-width: calc(100vw - 48px);
   max-height: 80vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 28px 32px;
+  flex: 0 0 auto;
 }
 
-.medication-add-modal {}
+.medication-add-modal {
+  width: 800px;
+  min-width: 800px;
+  max-width: calc(100vw - 48px);
+}
 
 .medication-update-modal {}
 
@@ -472,10 +489,13 @@
   column-gap: 40px;
   row-gap: 8px;
   margin-top: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-span-2 {
   grid-column: span 2;
+  min-width: 0;
 }
 
 /* inputs */
@@ -483,10 +503,12 @@
 .modal-card textarea,
 .modal-card select {
   width: 100%;
+  max-width: 100%;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid #9ca3af;
   margin-top: 6px;
+  box-sizing: border-box;
 }
 
 .modal-card label {
@@ -711,18 +733,24 @@
 }
 
 .medication-view-modal {
-  width: 840px;
-  max-width: 92vw;
+  width: 860px;
+  min-width: 860px;
+  max-width: calc(100vw - 48px);
   border: 2px solid #7ccfb2;
   padding: 28px 32px;
   max-height: 80vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
 .med-view-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 .med-view-grid-2 {
@@ -772,6 +800,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .med-view-summary-card {
@@ -779,6 +809,8 @@
   background: #f8fffc;
   border-radius: 16px;
   padding: 14px 16px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .med-view-summary-card strong {
@@ -809,6 +841,8 @@
   background: #ffffff;
   border-radius: 14px;
   padding: 14px 16px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .med-view-block-full {
@@ -1072,6 +1106,8 @@
   background: #f8fffc;
   border-radius: 14px;
   padding: 14px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .medicine-entry-head {
@@ -1091,6 +1127,15 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 22px;
+  width: 100%;
+  min-width: 0;
+}
+
+.medicine-grid > div,
+.history-modal-item,
+.history-modal-meta,
+.mother-history-item {
+  min-width: 0;
 }
 
 .remove-med-btn {
@@ -1230,6 +1275,15 @@
 }
 
 @media (max-width: 768px) {
+  .medication-modal-large,
+  .medication-add-modal,
+  .medication-view-modal {
+    width: calc(100vw - 24px);
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 24px 20px;
+  }
+
   .med-toolbar {
     flex-direction: column;
     align-items: stretch;

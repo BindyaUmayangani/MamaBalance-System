@@ -11,6 +11,7 @@
   position: fixed;      /* sidebar stays static */
   left: 0;
   top: 0;
+  z-index: 10;
 
   overflow-y: auto;     /* enable scroll if menu is long */
 }

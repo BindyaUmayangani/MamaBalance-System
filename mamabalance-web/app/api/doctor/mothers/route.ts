@@ -149,6 +149,22 @@ function buildVisitLookup(visitDocs: Array<{ id: string; data: DocumentData }>) 
   return lookup;
 }
 
+function chunkValues(values: string[], size: number) {
+  const chunks: string[][] = [];
+
+  values.forEach((value, index) => {
+    const chunkIndex = Math.floor(index / size);
+
+    if (!chunks[chunkIndex]) {
+      chunks[chunkIndex] = [];
+    }
+
+    chunks[chunkIndex].push(value);
+  });
+
+  return chunks;
+}
+
 async function loadRegionMap() {
   const snapshot = await adminDb.collection("regions").get();
 
@@ -247,7 +263,7 @@ export async function GET() {
 
   const linkedDoctorUids = await resolveLinkedDoctorUids(actor);
 
-  const [regionMap, motherSnapshots, doctorSnapshots, visitSnapshot] = await Promise.all([
+  const [regionMap, motherSnapshots, doctorSnapshots] = await Promise.all([
     loadRegionMap(),
     Promise.all(
       linkedDoctorUids.map((uid) =>
@@ -259,7 +275,6 @@ export async function GET() {
         adminDb.collection("users").doc(uid).get(),
       ),
     ),
-    adminDb.collection("doctorCheckups").get(),
   ]);
 
   const doctorNames = doctorSnapshots
@@ -276,9 +291,18 @@ export async function GET() {
 
   const motherDocs = motherSnapshots.flatMap((snapshot) => snapshot.docs);
   const motherMap = new Map(motherDocs.map((doc) => [doc.id, doc]));
+  const motherUids = [...motherMap.keys()];
+
+  const visitSnapshots = motherUids.length
+    ? await Promise.all(
+        chunkValues(motherUids, 10).map((chunk) =>
+          adminDb.collection("doctorCheckups").where("motherUid", "in", chunk).get(),
+        ),
+      )
+    : [];
 
   const userSnapshots = await Promise.all(
-    [...motherMap.keys()].map((uid) => adminDb.collection("users").doc(uid).get()),
+    motherUids.map((uid) => adminDb.collection("users").doc(uid).get()),
   );
 
   const userMap = new Map(
@@ -286,7 +310,7 @@ export async function GET() {
   );
 
   const visitLookup = buildVisitLookup(
-    visitSnapshot.docs.map((doc) => ({
+    visitSnapshots.flatMap((snapshot) => snapshot.docs).map((doc) => ({
       id: doc.id,
       data: doc.data(),
     })),

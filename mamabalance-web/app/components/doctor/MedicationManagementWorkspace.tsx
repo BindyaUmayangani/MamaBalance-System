@@ -149,7 +149,6 @@ export default function MedicationManagementWorkspace() {
   const selectedHistoryRecords = historyMother
     ? records.filter((item) => item.motherId === historyMother.id)
     : [];
-
   const filteredRecords = useMemo(() => {
     const search = searchTerm.toLowerCase();
     return records
@@ -199,10 +198,19 @@ export default function MedicationManagementWorkspace() {
     setStopReason("");
   };
 
-  const openHistory = (motherId: string) => {
-    const mother = mothers.find((item) => item.id === motherId) ?? null;
+  const openHistory = (record: MedicationRecord) => {
     setViewRecord(null);
-    setHistoryMother(mother);
+    setStatusFilter("All");
+    setSearchTerm(record.motherName);
+    setCurrentPage(1);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.querySelector(".med-table-card")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
   };
 
   const changeEditTarget = (medicationId: string) => {
@@ -354,7 +362,7 @@ export default function MedicationManagementWorkspace() {
         <div className="search-box">
           <Search size={18} />
           <input
-            placeholder="Search by medication, mother, or ID"
+            placeholder="Search by medication, mother, or prescription ID"
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value);
@@ -559,7 +567,7 @@ export default function MedicationManagementWorkspace() {
             <div className="mother-history-preview">
               <div className="mother-history-preview-head">
                 <h3>Mother Medication History</h3>
-                <button className="btn-outline history-btn" onClick={() => openHistory(viewRecord.motherId)}>
+                <button className="btn-outline history-btn" onClick={() => openHistory(viewRecord)}>
                   <History size={16} /> View Full History
                 </button>
               </div>
@@ -590,7 +598,7 @@ export default function MedicationManagementWorkspace() {
               <div className="form-span-2">
                 <label>Mother (Name, Username, or ID)</label>
                 <input
-                  placeholder="Type mother name or username"
+                  placeholder="Search mother by name, username, or ID"
                   value={addForm.motherQuery}
                   onChange={(event) => setAddForm((prev) => ({ ...prev, motherQuery: event.target.value }))}
                 />

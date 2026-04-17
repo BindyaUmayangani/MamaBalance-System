@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +39,7 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   static const Duration _otpRequestCooldown = Duration(seconds: 60);
   static const Duration _otpRateLimitCooldown = Duration(minutes: 5);
+  static const Duration _backendTimeout = Duration(seconds: 20);
 
   User? get currentUser => _auth.currentUser;
 
@@ -106,7 +109,7 @@ class AuthService {
           'phoneNumber': normalizedPhone,
           'purpose': purpose,
         }),
-      );
+      ).timeout(_backendTimeout);
 
       final payload = _decodeJson(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -125,6 +128,22 @@ class AuthService {
       );
     } on AppAuthException {
       rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on HttpException {
+      throw const AppAuthException(
+        'The OTP service returned an invalid response. Please try again shortly.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The OTP service returned an unreadable response. Please try again shortly.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The OTP request timed out. Check the backend connection and try again.',
+      );
     } catch (_) {
       throw const AppAuthException('Unable to send OTP right now.');
     }
@@ -142,7 +161,7 @@ class AuthService {
           'requestId': verificationId,
           'otp': smsCode.trim(),
         }),
-      );
+      ).timeout(_backendTimeout);
 
       final payload = _decodeJson(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -160,6 +179,22 @@ class AuthService {
       await _ensureMotherAccess(result.user);
     } on AppAuthException {
       rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on HttpException {
+      throw const AppAuthException(
+        'The OTP verification service returned an invalid response. Please try again shortly.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The OTP verification service returned an unreadable response. Please try again shortly.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The OTP verification request timed out. Check the backend connection and try again.',
+      );
     } on FirebaseAuthException catch (error) {
       throw AppAuthException(_mapFirebaseError(error));
     }

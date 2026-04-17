@@ -20,7 +20,7 @@
 
 .upcoming-add-btn {
   border: none;
-  background: #2f7f6f;
+  background: #499d85;
   color: #ffffff;
   border-radius: 12px;
   padding: 12px 20px;
@@ -30,7 +30,7 @@
 }
 
 .upcoming-add-btn:hover {
-  background: #256b5f;
+  background: #3f8c77;
 }
 
 .visit-tabs {
@@ -73,6 +73,9 @@
   border-radius: 14px;
   border: 1px solid #94a3b8;
   width: 395px;
+  min-width: 395px;
+  max-width: 395px;
+  box-sizing: border-box;
 }
 
 .search-box.visit-search input {
@@ -93,30 +96,37 @@
 
 .visit-filter-select {
   position: relative;
+  width: 220px;
+  min-width: 220px;
+  flex: 0 0 220px;
 }
 
 .visit-filter-select select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  min-width: 260px;
-  padding: 12px 46px 12px 18px;
-  border-radius: 14px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  height: 46px;
+  padding: 0 40px 0 14px;
+  border-radius: 12px;
   border: 1.5px solid #6bc2ad;
-  background: #f6fffb;
-  font-size: 1rem;
-  color: #334155;
+  background: #fbfffd;
+  font-size: 0.9rem;
+  color: #2f4b57;
   outline: none;
+  box-sizing: border-box;
 }
 
 .visit-filter-icon {
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: transparent;
-  color: #499d85;
+  color: #4c947f;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -337,6 +347,13 @@
   font-weight: 500;
 }
 
+.reschedule-copy {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #374151;
+}
+
 .visit-modal label {
   display: block;
   margin-top: 18px;
@@ -437,6 +454,70 @@
   border: 1.5px solid #499d85;
   background: #499d85;
   color: #ffffff;
+}
+
+/* Lock visit modal layout against generic modal styles imported on this page. */
+.midwife-upcoming-page .modal-overlay {
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal {
+  width: 500px;
+  min-width: 500px;
+  max-width: 500px;
+  max-height: 86vh;
+  padding: 35px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal .modal-title {
+  margin: 0 0 16px;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal .modal-name-text {
+  margin: 0 0 10px;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal .reschedule-copy {
+  margin: 4px 0 16px;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal input,
+.midwife-upcoming-page .modal-card.visit-modal select,
+.midwife-upcoming-page .modal-card.visit-modal textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal textarea {
+  min-height: 148px;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.midwife-upcoming-page .modal-card.visit-modal .btn-outline,
+.midwife-upcoming-page .modal-card.visit-modal .btn-primary {
+  min-width: 150px;
+  box-sizing: border-box;
 }
 
 .pagination {
@@ -553,6 +634,13 @@
   }
 
   .visit-modal {
+    padding: 30px 22px;
+  }
+
+  .midwife-upcoming-page .modal-card.visit-modal {
+    width: calc(100vw - 40px);
+    min-width: calc(100vw - 40px);
+    max-width: calc(100vw - 40px);
     padding: 30px 22px;
   }
 

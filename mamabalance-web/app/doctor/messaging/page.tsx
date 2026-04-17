@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Info, Search, SendHorizonal } from "lucide-react";
+import { getCurrentUserClient } from "@/lib/auth/client";
 import "@/app/doctor/styles/Messaging.css";
 
 type ChatPreview = {
@@ -89,8 +90,7 @@ export default function MessagingPage() {
   useEffect(() => {
     let isMounted = true;
 
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((response) => response.json())
+    getCurrentUserClient()
       .then((payload: CurrentUserResponse) => {
         if (!isMounted) return;
         const name =
@@ -189,7 +189,7 @@ export default function MessagingPage() {
 
           <div className="search-box chat-search">
             <Search size={18} />
-            <input placeholder="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <input placeholder="Search conversations by mother name" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
 
           <div className="chat-preview-list">

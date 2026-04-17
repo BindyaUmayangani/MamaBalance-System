@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import LoadingState from "@/components/admin/LoadingState";
+import { getCurrentUserClient } from "@/lib/auth/client";
 import type { MidwifeMotherRecord } from "@/lib/midwife/types";
 import "@/app/midwife/styles/MidwifeDashboard.css";
 
@@ -169,16 +170,13 @@ export default function DoctorDashboard() {
   useEffect(() => {
     async function loadCurrentUser() {
       try {
-        const response = await fetch("/api/auth/me", {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as {
+        const payload = (await getCurrentUserClient()) as {
           user?: {
             displayName?: string | null;
           } | null;
         };
 
-        if (response.ok && payload.user?.displayName) {
+        if (payload.user?.displayName) {
           setDisplayName(payload.user.displayName);
         }
       } catch {

@@ -14,6 +14,7 @@ import {
 
 import LoadingState from "@/components/admin/LoadingState";
 import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
+import { getCurrentUserClient } from "@/lib/auth/client";
 import "@/app/midwife/styles/MidwifeDashboard.css";
 
 type VisitSummaryItem = {
@@ -143,16 +144,13 @@ export default function MidwifeDashboard() {
   useEffect(() => {
     async function loadCurrentUser() {
       try {
-        const response = await fetch("/api/auth/me", {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as {
+        const payload = (await getCurrentUserClient()) as {
           user?: {
             displayName?: string | null;
           } | null;
         };
 
-        if (response.ok && payload.user?.displayName) {
+        if (payload.user?.displayName) {
           setDisplayName(payload.user.displayName);
         }
       } catch {

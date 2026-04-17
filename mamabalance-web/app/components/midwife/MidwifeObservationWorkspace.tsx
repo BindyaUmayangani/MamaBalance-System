@@ -283,7 +283,7 @@ export default function MidwifeObservationWorkspace() {
         <div className="midwife-observation-search">
           <Search size={18} />
           <input
-            placeholder="Search mothers, titles, notes, or tags"
+            placeholder="Search by mother, observation title, notes, or tag"
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value);

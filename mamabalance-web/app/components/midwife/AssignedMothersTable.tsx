@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Eye, FileText, Filter, ChevronDown } from "lucide-react";
+import { Search, Eye, FileText, Filter, ChevronDown, FileDown } from "lucide-react";
 
 import FilterModal from "@/app/superadmin/user-management/modals/FilterModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
 import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
+import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/doctor/styles/AssignedMothers.css";
 
@@ -112,8 +114,10 @@ export default function MidwifeAssignedMothersTable() {
   const [liveMedications, setLiveMedications] = useState<MidwifeMedicationApiRecord[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [detailsError, setDetailsError] = useState("");
+  const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [localHighlightedUserId, setLocalHighlightedUserId] = useState("");
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const pageSize = 6;
   const highlightedUserId = searchParams.get("highlight") || "";
   const activeHighlightedUserId = localHighlightedUserId || highlightedUserId;
@@ -613,6 +617,23 @@ export default function MidwifeAssignedMothersTable() {
     };
   }, []);
 
+  useEffect(() => {
+    const modalLayer = document.createElement("div");
+    modalLayer.setAttribute("id", "midwife-assigned-mothers-modal-root");
+    Object.assign(modalLayer.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147483646",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(modalLayer);
+    setPortalRoot(modalLayer);
+
+    return () => {
+      modalLayer.remove();
+    };
+  }, []);
+
   const mothersWithLiveDetails = useMemo<MotherRecord[]>(() => {
     return backendMothers.map((mother) => {
       const observations = liveObservations
@@ -705,6 +726,25 @@ export default function MidwifeAssignedMothersTable() {
     window.setTimeout(() => {
       setLocalHighlightedUserId((current) => (current === highlightKey ? "" : current));
     }, 10000);
+  }
+
+  async function downloadPatientSummary(mother: MotherRecord) {
+    if (!mother.uid) return;
+    setDownloadingMotherUid(mother.uid);
+    try {
+      const response = await fetch(`/api/midwife/mothers/${encodeURIComponent(mother.uid)}/summary`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to generate patient summary report.");
+      }
+      generatePatientSummaryPdf(payload);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to generate patient summary report.");
+    } finally {
+      setDownloadingMotherUid("");
+    }
   }
 
   const totalItems = filteredData.length;
@@ -805,11 +845,11 @@ export default function MidwifeAssignedMothersTable() {
         </p>
       </div>
 
-      <div className="filter-row">
+      <div className="filter-row midwife-assigned-filter-row">
         <div className="search-box midwife-table-search">
           <Search size={18} />
           <input
-            placeholder="Search by ID, Username, Name"
+            placeholder="Search by mother ID, username, or name"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -818,8 +858,8 @@ export default function MidwifeAssignedMothersTable() {
           />
         </div>
 
-        <div className="filter-row-actions">
-          <div className="filter-select-wrap">
+        <div className="filter-row-actions midwife-filter-row-actions">
+          <div className="filter-select-wrap midwife-filter-select-wrap">
             <select
               value={riskFilter}
               onChange={(e) => {
@@ -837,7 +877,7 @@ export default function MidwifeAssignedMothersTable() {
             </span>
           </div>
 
-          <div className="filter-select-wrap">
+          <div className="filter-select-wrap midwife-filter-select-wrap">
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -855,7 +895,7 @@ export default function MidwifeAssignedMothersTable() {
             </span>
           </div>
 
-          <button className="filter-btn" onClick={() => setShowFilterModal(true)}>
+          <button className="filter-btn midwife-filter-btn" onClick={() => setShowFilterModal(true)}>
             <Filter size={16} /> Filter
           </button>
         </div>
@@ -974,6 +1014,11 @@ export default function MidwifeAssignedMothersTable() {
                             setMedicationHistoryPage(1);
                           }}
                         />
+                        <FileDown
+                          size={18}
+                          className={downloadingMotherUid === mother.uid ? "report-icon loading" : "report-icon"}
+                          onClick={() => void downloadPatientSummary(mother)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -1004,9 +1049,9 @@ export default function MidwifeAssignedMothersTable() {
         </div>
       )}
 
-      {selectedMother && (
-        <div className="modal-overlay">
-          <div className="modal-card mother-profile-modal">
+      {selectedMother && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedMother(null)}>
+          <div className="modal-card mother-profile-modal" onClick={(event) => event.stopPropagation()}>
             <div className="profile-banner">
               <div>
                 <h2>Mother Profile: {selectedMother.name}</h2>
@@ -1079,16 +1124,20 @@ export default function MidwifeAssignedMothersTable() {
             </div>
 
             <div className="modal-actions">
+              <button className="btn-outline" onClick={() => void downloadPatientSummary(selectedMother)} disabled={downloadingMotherUid === selectedMother.uid}>
+                {downloadingMotherUid === selectedMother.uid ? "Generating..." : "Download Summary Report"}
+              </button>
               <button className="btn-outline" onClick={() => setSelectedMother(null)}>
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
 
-      {selectedObservationDetails && (
-        <div className="modal-overlay" onClick={() => setSelectedObservationMother(null)}>
+      {selectedObservationDetails && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedObservationMother(null)}>
           <div className="modal-card mother-observation-modal" onClick={(event) => event.stopPropagation()}>
             <div className="profile-banner compact">
               <div>
@@ -1315,7 +1364,8 @@ export default function MidwifeAssignedMothersTable() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
     </div>
   );

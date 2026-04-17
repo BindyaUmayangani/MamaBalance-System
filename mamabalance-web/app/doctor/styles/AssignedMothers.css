@@ -31,10 +31,15 @@
   gap: 10px;
   background: #f6fffb;
   /* CARD BACKGROUND */
-  padding: 10px 14px;
+  padding: 0 16px;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
-  width: 320px;
+  width: 420px;
+  min-width: 420px;
+  max-width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
   margin-bottom: 0;
 }
 
@@ -43,6 +48,7 @@
   outline: none;
   background: transparent;
   width: 100%;
+  font-size: 1rem;
 }
 
 .search-box.midwife-table-search {
@@ -50,6 +56,8 @@
   border-radius: 14px;
   border: 1px solid #94a3b8;
   width: 395px;
+  min-width: 395px;
+  max-width: 395px;
 }
 
 .search-box.midwife-table-search input {
@@ -59,25 +67,85 @@
 /* ================= FILTER ROW ================= */
 
 .filter-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
+  margin-top: 18px;
   margin-bottom: 22px;
-  justify-content: space-between;
   width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 
 .filter-row-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 20px;
-  margin-left: auto;
+  gap: 16px;
+  grid-column: 3;
+  justify-self: end;
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .filter-select-wrap {
   position: relative;
-  min-width: 260px;
+  width: 324px;
+  min-width: 324px;
+  flex: 0 0 324px;
+}
+
+.midwife-assigned-filter-row {
+  grid-template-columns: 395px minmax(24px, 1fr) max-content;
+  gap: 14px;
+  overflow-x: visible;
+}
+
+.midwife-filter-row-actions {
+  gap: 12px;
+  justify-self: end;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.midwife-filter-select-wrap {
+  width: 236px;
+  min-width: 236px;
+  max-width: 236px;
+  flex: 0 0 236px;
+}
+
+.midwife-filter-select-wrap select {
+  width: 236px;
+  min-width: 236px;
+  max-width: 236px;
+  height: 46px;
+  padding: 0 48px 0 14px;
+  border-radius: 12px;
+  border-color: #88cdbc;
+  font-size: 0.9rem;
+  color: #2f4b57;
+  background: #fbfffd;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.midwife-filter-select-wrap .filter-select-icon {
+  right: 12px;
+  color: #4c947f;
+}
+
+.midwife-filter-btn {
+  width: 86px;
+  min-width: 86px;
+  height: 46px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  padding: 0 12px;
 }
 
 .filter-row select {
@@ -85,8 +153,9 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   width: 100%;
-  min-width: 260px;
-  padding: 12px 46px 12px 18px;
+  min-width: 324px;
+  height: 52px;
+  padding: 0 46px 0 18px;
   border-radius: 14px;
   border: 1.5px solid #6bc2ad;
   background: #f6fffb;
@@ -94,6 +163,43 @@
   font-size: 1rem;
   color: #334155;
   outline: none;
+  box-sizing: border-box;
+}
+
+.midwife-assigned-filter-row .midwife-filter-select-wrap {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  flex: 0 0 220px;
+}
+
+.midwife-assigned-filter-row .midwife-filter-select-wrap select {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  height: 46px;
+  padding: 0 44px 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid #88cdbc;
+  background: #fbfffd;
+  font-size: 0.9rem;
+  color: #2f4b57;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.midwife-assigned-filter-row .midwife-filter-row-actions {
+  gap: 10px;
+  justify-self: end;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.midwife-assigned-filter-row .midwife-filter-select-wrap .filter-select-icon {
+  right: 12px;
+  color: #4c947f;
 }
 
 .filter-select-icon {
@@ -452,20 +558,40 @@ tbody tr.dashboard-highlight-row {
   transform: scale(1.1);
 }
 
+.report-icon {
+  color: #499d85 !important;
+}
+
+.report-icon:hover {
+  color: #2f7f6f !important;
+  transform: scale(1.1);
+}
+
+.report-icon.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* ================= FILTER BUTTON ================= */
 
 .filter-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 10px 14px;
+  width: 104px;
+  min-width: 104px;
+  height: 48px;
+  padding: 0 14px;
   border-radius: 10px;
   border: 1px solid #499d85;
   background: #f6fffb;
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 500;
   transition: 0.2s;
-  margin-left: auto;
+  margin-left: 0;
+  box-sizing: border-box;
 }
 
 .filter-btn:hover {
@@ -478,11 +604,28 @@ tbody tr.dashboard-highlight-row {
 .modal-overlay {
   position: fixed;
   inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.35);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 2147483640;
+}
+
+.assigned-mothers-modal-overlay {
+  width: 100vw;
+  min-width: 100vw;
+  padding: 24px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  align-items: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================= MODAL CARD ================= */
@@ -494,16 +637,24 @@ tbody tr.dashboard-highlight-row {
   width: 420px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   position: relative;
-  z-index: 2001;
+  z-index: 2147483641;
+  box-sizing: border-box;
 }
 
 .mother-profile-modal,
 .mother-observation-modal {
-  width: min(1320px, 94vw);
+  width: 1180px;
+  min-width: 1180px;
+  max-width: calc(100vw - 48px);
   max-height: 88vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border: 2px solid #9be0d0;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
+  pointer-events: auto;
+  margin: 0 auto;
 }
 
 .mother-profile-modal {
@@ -594,6 +745,8 @@ tbody tr.dashboard-highlight-row {
   grid-template-columns: 1fr 1fr;
   gap: 28px;
   margin-bottom: 26px;
+  width: 100%;
+  min-width: 0;
 }
 
 .profile-panel,
@@ -603,6 +756,8 @@ tbody tr.dashboard-highlight-row {
   border-radius: 22px;
   padding: 28px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .profile-panel h3,
@@ -702,6 +857,7 @@ tbody tr.dashboard-highlight-row {
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 18px;
+  min-width: 0;
 }
 
 .section-caption {
@@ -752,12 +908,16 @@ tbody tr.dashboard-highlight-row {
 
 .observation-table-shell {
   overflow-x: auto;
+  width: 100%;
+  min-width: 0;
 }
 
 .timeline-table {
-  width: 100%;
+  width: max-content;
+  min-width: 1120px;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: auto;
 }
 
 .timeline-table th,
@@ -765,6 +925,7 @@ tbody tr.dashboard-highlight-row {
   padding: 14px 16px;
   text-align: left;
   vertical-align: top;
+  white-space: nowrap;
 }
 
 .timeline-table th {
@@ -795,6 +956,8 @@ tbody tr.dashboard-highlight-row {
   display: grid;
   grid-template-columns: 1fr 1.1fr;
   gap: 24px;
+  width: 100%;
+  min-width: 0;
 }
 
 .profile-section-card+.profile-section-card {
@@ -805,6 +968,8 @@ tbody tr.dashboard-highlight-row {
   border-radius: 22px;
   padding: 24px;
   min-height: 320px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .active-medication-panel {
@@ -1183,29 +1348,25 @@ tbody tr.dashboard-highlight-row {
 }
 
 @media (max-width: 768px) {
-  .filter-row,
-  .filter-row-actions {
-    align-items: stretch;
-    flex-direction: column;
-    width: 100%;
+  .filter-row {
+    grid-template-columns: 420px minmax(28px, 1fr) auto;
+    align-items: center;
   }
 
   .filter-row-actions {
-    margin-left: 0;
-  }
-
-  .search-box,
-  .filter-select-wrap,
-  .filter-row select,
-  .filter-btn {
-    width: 100%;
-    min-width: 0;
+    justify-self: end;
   }
 
   .mother-profile-modal,
   .mother-observation-modal {
     width: 94vw;
+    min-width: 94vw;
+    max-width: 94vw;
     padding: 20px;
+  }
+
+  .assigned-mothers-modal-overlay {
+    padding: 16px;
   }
 
   .profile-banner,

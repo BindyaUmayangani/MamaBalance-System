@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, FileText, Search, ChevronDown } from "lucide-react";
+import { Eye, FileText, Search, ChevronDown, FileDown } from "lucide-react";
 
 import "@/app/doctor/styles/AssignedMothers.css";
 import "@/app/midwife/styles/HighRiskMothers.css";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
 import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
+import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/superadmin/styles/userManagement.css";
 
 type HighRiskMother = {
@@ -461,6 +463,7 @@ export default function HighRiskMothersTable() {
   const [liveMedications, setLiveMedications] = useState<MidwifeMedicationApiRecord[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [detailsError, setDetailsError] = useState("");
+  const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
 
   const [editingMotherId, setEditingMotherId] = useState<string | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState("");
@@ -468,6 +471,7 @@ export default function HighRiskMothersTable() {
   const [isSavingAssignment, setIsSavingAssignment] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [localHighlightedMotherId, setLocalHighlightedMotherId] = useState("");
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const pageSize = 6;
   const highlightedMotherId = searchParams.get("highlight") || "";
   const activeHighlightedMotherId = localHighlightedMotherId || highlightedMotherId;
@@ -538,6 +542,42 @@ export default function HighRiskMothersTable() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const modalLayer = document.createElement("div");
+    modalLayer.setAttribute("id", "midwife-high-risk-modal-root");
+    Object.assign(modalLayer.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147483646",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(modalLayer);
+    setPortalRoot(modalLayer);
+
+    return () => {
+      modalLayer.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const shouldLockScroll = Boolean(selectedMother || selectedObservationMother);
+
+    if (!shouldLockScroll) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [selectedMother, selectedObservationMother]);
 
   const mothersWithLiveDetails = useMemo<HighRiskMother[]>(() => {
     return mothers.map((mother) => {
@@ -643,6 +683,24 @@ export default function HighRiskMothersTable() {
         current === highlightKey ? "" : current,
       );
     }, 10000);
+  }
+
+  async function downloadPatientSummary(mother: HighRiskMother) {
+    setDownloadingMotherUid(mother.uid);
+    try {
+      const response = await fetch(`/api/midwife/mothers/${encodeURIComponent(mother.uid)}/summary`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to generate patient summary report.");
+      }
+      generatePatientSummaryPdf(payload);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to generate patient summary report.");
+    } finally {
+      setDownloadingMotherUid("");
+    }
   }
 
   const paginatedData = filteredData.slice(
@@ -775,11 +833,11 @@ export default function HighRiskMothersTable() {
         </p>
       </div>
 
-      <div className="filter-row">
+      <div className="filter-row midwife-assigned-filter-row">
         <div className="search-box midwife-table-search">
           <Search size={18} />
           <input
-            placeholder="Search by ID, Username, Name"
+            placeholder="Search high-risk mothers by ID, username, or name"
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value);
@@ -788,8 +846,8 @@ export default function HighRiskMothersTable() {
           />
         </div>
 
-        <div className="filter-row-actions">
-          <div className="filter-select-wrap">
+        <div className="filter-row-actions midwife-filter-row-actions">
+          <div className="filter-select-wrap midwife-filter-select-wrap">
             <select
               value={statusFilter}
               onChange={(event) => {
@@ -807,7 +865,7 @@ export default function HighRiskMothersTable() {
             </span>
           </div>
 
-          <div className="filter-select-wrap">
+          <div className="filter-select-wrap midwife-filter-select-wrap">
             <select
               value={doctorFilter}
               onChange={(event) => {
@@ -945,6 +1003,11 @@ export default function HighRiskMothersTable() {
                               setMedicationHistoryPage(1);
                             }}
                           />
+                          <FileDown
+                            size={18}
+                            className={downloadingMotherUid === mother.uid ? "report-icon loading" : "report-icon"}
+                            onClick={() => void downloadPatientSummary(mother)}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -1017,9 +1080,9 @@ export default function HighRiskMothersTable() {
         </div>
       )}
 
-      {selectedProfileDetails && (
-        <div className="modal-overlay">
-          <div className="modal-card mother-profile-modal">
+      {selectedProfileDetails && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedMother(null)}>
+          <div className="modal-card mother-profile-modal" onClick={(event) => event.stopPropagation()}>
             <div className="profile-banner">
               <div>
                 <h2>Mother Profile: {selectedProfileDetails.name}</h2>
@@ -1092,16 +1155,20 @@ export default function HighRiskMothersTable() {
             </div>
 
             <div className="modal-actions">
+              <button className="btn-outline" onClick={() => void downloadPatientSummary(selectedProfileDetails)} disabled={downloadingMotherUid === selectedProfileDetails.uid}>
+                {downloadingMotherUid === selectedProfileDetails.uid ? "Generating..." : "Download Summary Report"}
+              </button>
               <button className="btn-outline" onClick={() => setSelectedMother(null)}>
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
 
-      {selectedObservationDetails && (
-        <div className="modal-overlay" onClick={() => setSelectedObservationMother(null)}>
+      {selectedObservationDetails && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedObservationMother(null)}>
           <div className="modal-card mother-observation-modal" onClick={(event) => event.stopPropagation()}>
             <div className="profile-banner compact">
               <div>
@@ -1328,7 +1395,8 @@ export default function HighRiskMothersTable() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
     </div>
   );

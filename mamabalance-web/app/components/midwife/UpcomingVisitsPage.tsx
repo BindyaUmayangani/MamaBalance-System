@@ -30,6 +30,26 @@ type MotherOption = {
   riskLevel: RiskLevel;
 };
 
+function findMother(query: string, mothers: MotherOption[]) {
+  const normalized = query.trim().toLowerCase();
+
+  if (!normalized) return null;
+
+  return (
+    mothers.find(
+      (mother) =>
+        mother.motherName.toLowerCase() === normalized ||
+        mother.uid.toLowerCase() === normalized,
+    ) ||
+    mothers.find(
+      (mother) =>
+        mother.motherName.toLowerCase().includes(normalized) ||
+        mother.uid.toLowerCase().includes(normalized),
+    ) ||
+    null
+  );
+}
+
 export default function UpcomingVisitsPage() {
   const searchParams = useSearchParams();
   const [visitItems, setVisitItems] = useState<VisitItem[]>([]);
@@ -48,8 +68,7 @@ export default function UpcomingVisitsPage() {
   const [showDelete, setShowDelete] = useState<VisitItem | null>(null);
   const [showComplete, setShowComplete] = useState<VisitItem | null>(null);
   const [newVisitForm, setNewVisitForm] = useState({
-    motherUid: "",
-    riskLevel: "" as RiskLevel | "",
+    motherQuery: "",
     visitType: "home" as VisitType,
     dateTime: "",
     notes: "",
@@ -153,6 +172,10 @@ export default function UpcomingVisitsPage() {
   const endItem = Math.min(safeCurrentPage * itemsPerPage, filteredVisits.length);
   const hasActiveSearchOrFilter =
     searchTerm.trim().length > 0 || dateRange !== "All" || statusFilter !== "All";
+  const matchedMother = useMemo(
+    () => findMother(newVisitForm.motherQuery, motherProfiles),
+    [motherProfiles, newVisitForm.motherQuery],
+  );
 
   const openDatePicker = (inputRef: React.RefObject<HTMLInputElement | null>) => {
     if (!inputRef.current) return;
@@ -162,7 +185,7 @@ export default function UpcomingVisitsPage() {
   };
 
   const handleSaveNewVisit = async () => {
-    if (!newVisitForm.motherUid || !newVisitForm.riskLevel || !newVisitForm.dateTime) return;
+    if (!matchedMother || !newVisitForm.dateTime) return;
 
     try {
       setIsSaving(true);
@@ -170,7 +193,7 @@ export default function UpcomingVisitsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          motherUid: newVisitForm.motherUid,
+          motherUid: matchedMother.uid,
           visitType: newVisitForm.visitType,
           dateTime: newVisitForm.dateTime,
           notes: newVisitForm.notes,
@@ -184,8 +207,7 @@ export default function UpcomingVisitsPage() {
       setCurrentPage(1);
       setShowAdd(false);
       setNewVisitForm({
-        motherUid: "",
-        riskLevel: "",
+        motherQuery: "",
         visitType: activeTab,
         dateTime: "",
         notes: "",
@@ -291,8 +313,7 @@ export default function UpcomingVisitsPage() {
           className="upcoming-add-btn"
           onClick={() => {
             setNewVisitForm({
-              motherUid: "",
-              riskLevel: "",
+              motherQuery: "",
               visitType: activeTab,
               dateTime: "",
               notes: "",
@@ -308,7 +329,7 @@ export default function UpcomingVisitsPage() {
         <div className="search-box visit-search">
           <Search size={18} />
           <input
-            placeholder="Search"
+            placeholder="Search by mother name, visit type, or notes"
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value);
@@ -462,18 +483,25 @@ export default function UpcomingVisitsPage() {
         <div className="modal-overlay">
           <div className="modal-card visit-modal">
             <h2 className="modal-title">ADD NEW UPCOMING VISIT</h2>
-            <label>Mother</label>
-            <div className="modal-input-icon">
-              <select value={newVisitForm.motherUid} onChange={(event) => {
-                const selected = motherProfiles.find((mother) => mother.uid === event.target.value);
-                setNewVisitForm((prev) => ({ ...prev, motherUid: event.target.value, riskLevel: selected?.riskLevel ?? "" }));
-              }}>
-                <option value="">Select mother</option>
-                {motherProfiles.map((mother) => (
-                  <option key={mother.uid} value={mother.uid}>{mother.motherName}</option>
-                ))}
-              </select>
-              <button type="button" className="modal-icon-trigger modal-select-trigger" tabIndex={-1}><ChevronDown size={18} /></button>
+            <label>Mother (name or user ID)</label>
+            <input
+              value={newVisitForm.motherQuery}
+              onChange={(event) =>
+                setNewVisitForm((prev) => ({ ...prev, motherQuery: event.target.value }))
+              }
+              placeholder="Search assigned mother"
+            />
+
+            <div className="selected-mother-panel">
+              {matchedMother ? (
+                <>
+                  <p><strong>Name:</strong> {matchedMother.motherName}</p>
+                  <p><strong>User ID:</strong> {matchedMother.uid}</p>
+                  <p><strong>Risk:</strong> <span className={`visit-risk-badge ${matchedMother.riskLevel.toLowerCase()}`}>{matchedMother.riskLevel}</span></p>
+                </>
+              ) : (
+                <span className="matched-mother-hint">Start typing a mother&apos;s name or user ID.</span>
+              )}
             </div>
 
             <label>Visit Type</label>
@@ -506,15 +534,20 @@ export default function UpcomingVisitsPage() {
         <div className="modal-overlay">
           <div className="modal-card visit-modal">
             <h2 className="modal-title">RESCHEDULE VISIT</h2>
-            <p className="modal-name-text">Name: <strong>{showReschedule.motherName}</strong></p>
+            <p className="modal-name-text">
+              Name: <strong>{showReschedule.motherName}</strong>
+            </p>
+            <p className="reschedule-copy" style={{ marginBottom: "16px" }}>
+              Previous appointment: <strong>{showReschedule.date}</strong> at <strong>{showReschedule.time}</strong>
+            </p>
 
-            <label>New Visit Date and Time</label>
+            <label>Rescheduled Date and Time</label>
             <div className="modal-input-icon">
               <input ref={rescheduleDateRef} type="datetime-local" value={rescheduleDateTime} onChange={(event) => setRescheduleDateTime(event.target.value)} />
               <button type="button" className="modal-icon-trigger" onClick={() => openDatePicker(rescheduleDateRef)} aria-label="Open date picker"><CalendarDays size={18} /></button>
             </div>
 
-            <label>Reason / Notes</label>
+            <label>Reschedule Notes</label>
             <textarea rows={4} value={rescheduleNotes} onChange={(event) => setRescheduleNotes(event.target.value)} />
 
             <div className="modal-actions">

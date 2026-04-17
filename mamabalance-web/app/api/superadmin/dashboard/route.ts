@@ -84,7 +84,7 @@ export async function GET() {
     adminDb.collection("users").get(),
     adminDb.collection("mothers").get(),
     adminDb.collection("regions").get(),
-    adminDb.collection("auditLogs").get(),
+    adminDb.collection("auditLogs").orderBy("createdAt", "desc").limit(12).get(),
   ]);
 
   const regionOptions = regionsSnapshot.empty

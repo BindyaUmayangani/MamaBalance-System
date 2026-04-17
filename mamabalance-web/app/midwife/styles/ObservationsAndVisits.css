@@ -19,10 +19,9 @@
   color: #1f2937;
 }
 
-.observation-add-btn,
-.btn-primary {
+.observation-add-btn {
   border: none;
-  background: #2f7f6f;
+  background: #499d85;
   color: #ffffff;
   border-radius: 12px;
   padding: 12px 20px;
@@ -31,9 +30,23 @@
   cursor: pointer;
 }
 
-.observation-add-btn:hover,
+.observation-add-btn:hover {
+  background: #3f8c77;
+}
+
+.btn-primary {
+  border: none;
+  background: #499d85;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .btn-primary:hover {
-  background: #256b5f;
+  background: #3f8c77;
 }
 
 .observation-top-toolbar {
@@ -53,6 +66,9 @@
   border-radius: 14px;
   border: 1px solid #94a3b8;
   width: 395px;
+  min-width: 395px;
+  max-width: 395px;
+  box-sizing: border-box;
 }
 
 .midwife-observation-search input {
@@ -73,30 +89,37 @@
 
 .observation-filter-select {
   position: relative;
+  width: 220px;
+  min-width: 220px;
+  flex: 0 0 220px;
 }
 
 .observation-filter-actions select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  min-width: 292px;
-  padding: 12px 46px 12px 18px;
-  border-radius: 14px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  height: 46px;
+  padding: 0 40px 0 14px;
+  border-radius: 12px;
   border: 1.5px solid #6bc2ad;
-  background: #f6fffb;
-  font-size: 1rem;
-  color: #334155;
+  background: #fbfffd;
+  font-size: 0.9rem;
+  color: #2f4b57;
   outline: none;
+  box-sizing: border-box;
 }
 
 .observation-filter-icon {
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: transparent;
-  color: #72cbb7;
+  color: #4c947f;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -375,11 +398,14 @@
 }
 
 .observation-editor-modal {
-  width: 880px;
-  max-width: 96vw;
+  width: min(880px, calc(100vw - 40px));
+  min-width: min(880px, calc(100vw - 40px));
+  max-width: min(880px, calc(100vw - 40px));
   max-height: 86vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 26px 28px;
+  box-sizing: border-box;
 }
 
 .observation-view-modal {
@@ -399,9 +425,10 @@
 
 .observation-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   column-gap: 24px;
   row-gap: 6px;
+  min-width: 0;
 }
 
 .observation-form-grid label {
@@ -431,10 +458,22 @@
   min-height: 130px;
 }
 
+.observation-form-grid > div,
+.observation-form-stack {
+  min-width: 0;
+}
+
 .observation-form-stack {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.observation-form-grid input,
+.observation-form-grid textarea,
+.matched-mother-hint,
+.selected-mother-panel p {
+  overflow-wrap: anywhere;
 }
 
 .selected-mother-panel {
@@ -673,7 +712,9 @@
 @media (max-width: 1024px) {
   .observation-editor-modal,
   .observation-view-modal {
-    width: 92vw;
+    width: calc(100vw - 40px);
+    min-width: calc(100vw - 40px);
+    max-width: calc(100vw - 40px);
   }
 
   .observation-form-grid {
@@ -703,6 +744,14 @@
   .observation-add-btn {
     width: 100%;
     min-width: 0;
+  }
+
+  .observation-editor-modal,
+  .observation-view-modal {
+    width: calc(100vw - 32px);
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    padding: 22px 18px;
   }
 
   .observation-tab-row {

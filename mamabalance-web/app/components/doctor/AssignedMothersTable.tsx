@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CalendarDays, ChevronDown, Eye, Filter, Search, ShieldAlert, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, Filter, Search, ShieldAlert, FileText, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 
 import FilterModal from "@/app/superadmin/user-management/modals/FilterModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
 import type { MidwifeMotherRecord } from "@/lib/midwife/types";
+import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/doctor/styles/AssignedMothers.css";
 import "@/app/doctor/styles/MedicationManagement.css";
 
@@ -109,9 +111,11 @@ export default function AssignedMothersTable() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const [selectedMother, setSelectedMother] = useState<DoctorMotherRecord | null>(null);
   const [selectedObservationMother, setSelectedObservationMother] = useState<DoctorMotherRecord | null>(null);
+  const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
 
   // Observation Pagination & Filtering
   const [observationPage, setObservationPage] = useState(1);
@@ -177,6 +181,22 @@ export default function AssignedMothersTable() {
   };
 
   useEffect(() => { void loadData(); }, []);
+  useEffect(() => {
+    const modalLayer = document.createElement("div");
+    modalLayer.setAttribute("id", "doctor-assigned-mothers-modal-root");
+    Object.assign(modalLayer.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147483646",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(modalLayer);
+    setPortalRoot(modalLayer);
+
+    return () => {
+      modalLayer.remove();
+    };
+  }, []);
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
@@ -210,6 +230,27 @@ export default function AssignedMothersTable() {
     window.setTimeout(() => {
       setLocalHighlightedUserId((current) => (current === highlightKey ? "" : current));
     }, 10000);
+  }
+
+  async function downloadPatientSummary(mother: DoctorMotherRecord) {
+    setDownloadingMotherUid(mother.uid);
+
+    try {
+      const response = await fetch(`/api/doctor/mothers/${encodeURIComponent(mother.uid)}/summary`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to generate patient summary report.");
+      }
+
+      generatePatientSummaryPdf(payload);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to generate patient summary report.");
+    } finally {
+      setDownloadingMotherUid("");
+    }
   }
 
   // Derived Selection State Lookups
@@ -369,7 +410,7 @@ export default function AssignedMothersTable() {
           <Search size={18} color="#6b7280" />
           <input
             type="text"
-            placeholder="Search by mother ID, username, name, or NIC"
+            placeholder="Search by mother ID, name, username, or NIC"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -476,6 +517,14 @@ export default function AssignedMothersTable() {
                           setHistoryMedPage(1);
                         }}
                       />
+                      <FileDown
+                        size={18}
+                        className={downloadingMotherUid === mother.uid ? "report-icon loading" : "report-icon"}
+                        onClick={() => {
+                          triggerRowHighlight(mother.uid || mother.userId);
+                          void downloadPatientSummary(mother);
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -499,8 +548,8 @@ export default function AssignedMothersTable() {
       )}
 
       {/* PROFILE VIEW MODAL */}
-      {selectedMother && (
-        <div className="modal-overlay" onClick={() => setSelectedMother(null)}>
+      {selectedMother && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedMother(null)}>
           <div className="modal-card mother-profile-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-banner">
               <div>
@@ -569,17 +618,21 @@ export default function AssignedMothersTable() {
               </div>
             </div>
             <div className="modal-actions">
+              <button className="btn-outline" onClick={() => void downloadPatientSummary(selectedMother)} disabled={downloadingMotherUid === selectedMother.uid}>
+                {downloadingMotherUid === selectedMother.uid ? "Generating..." : "Download Summary Report"}
+              </button>
               <button className="btn-outline" onClick={() => setSelectedMother(null)}>
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
 
       {/* OBSERVATIONS & MEDICATIONS MODAL */}
-      {selectedObservationMother && (
-        <div className="modal-overlay" onClick={() => setSelectedObservationMother(null)}>
+      {selectedObservationMother && portalRoot && createPortal(
+        <div className="modal-overlay assigned-mothers-modal-overlay" onClick={() => setSelectedObservationMother(null)}>
           <div className="modal-card mother-observation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-banner compact">
               <div>
@@ -921,7 +974,8 @@ export default function AssignedMothersTable() {
             </div>
 
           </div>
-        </div>
+        </div>,
+        portalRoot,
       )}
     </div>
   );

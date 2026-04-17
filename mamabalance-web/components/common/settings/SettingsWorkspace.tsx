@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import LoadingState from "@/components/admin/LoadingState";
+import ChangePasswordModal from "@/components/common/modals/ChangePasswordModal";
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/styles/RoleSettingsSupport.css";
 import type { StaffRole } from "@/lib/auth/types";
@@ -19,6 +20,8 @@ type SettingsWorkspaceProps = {
   detailLabel: string;
   detailKey: "organization" | "specialization" | "regionName";
   detailReadonly?: boolean;
+  notificationDescription?: string;
+  notificationNote?: string;
 };
 
 type SettingsResponse = {
@@ -41,6 +44,8 @@ export default function SettingsWorkspace({
   detailLabel,
   detailKey,
   detailReadonly = false,
+  notificationDescription = "Choose which alerts stay active for your account. These preferences are saved to your profile.",
+  notificationNote = "Login email is shown for reference only. Contact email, phone number, and notification preferences can be updated here.",
 }: SettingsWorkspaceProps) {
   const [initialData, setInitialData] = useState<SettingsResponse | null>(null);
   const [formData, setFormData] = useState<SettingsResponse["profile"] | null>(null);
@@ -48,6 +53,7 @@ export default function SettingsWorkspace({
   const [options, setOptions] = useState<NotificationOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
@@ -164,111 +170,140 @@ export default function SettingsWorkspace({
   }
 
   return (
-    <div className="role-page">
-      {header}
+    <>
+      <div className="role-page">
+        {header}
 
-      <div className="role-grid settings-grid">
-        <section className="role-card">
-          <h3>Profile Settings</h3>
-          <p className="faq-intro">
-            Keep your account details up to date so support, notifications, and internal workflows stay accurate.
-          </p>
+        <div className="role-grid settings-grid">
+          <section className="role-card">
+            <h3>Profile Settings</h3>
+            <p className="faq-intro">
+              Keep your account details up to date so support, notifications, and internal workflows stay accurate.
+            </p>
 
-          <div className="form-grid">
-            <div className="role-field">
-              <label>Display Name</label>
-              <input
-                value={formData.displayName}
-                onChange={(event) =>
-                  setFormData((prev) =>
-                    prev ? { ...prev, displayName: event.target.value } : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="role-field">
-              <label>{detailLabel}</label>
-              <input
-                value={detailValue}
-                readOnly={detailReadonly}
-                className={detailReadonly ? "readonly-field" : ""}
-                onChange={(event) =>
-                  setFormData((prev) =>
-                    prev ? { ...prev, [detailKey]: event.target.value } : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="role-field">
-              <label>Contact Email</label>
-              <input
-                value={formData.contactEmail}
-                onChange={(event) =>
-                  setFormData((prev) =>
-                    prev ? { ...prev, contactEmail: event.target.value } : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="role-field">
-              <label>Phone Number</label>
-              <input
-                value={formData.phoneNumber}
-                onChange={(event) =>
-                  setFormData((prev) =>
-                    prev ? { ...prev, phoneNumber: event.target.value } : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="role-field wide">
-              <label>Login Email</label>
-              <input value={formData.loginEmail} readOnly className="readonly-field" />
-            </div>
-          </div>
-
-          {feedback && <div className={`support-feedback ${feedback.type}`}>{feedback.text}</div>}
-
-          <div className="role-actions">
-            <button className="btn-outline" onClick={handleReset} disabled={isSaving}>
-              Cancel
-            </button>
-            <button className="btn-primary" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </section>
-
-        <section className="role-card">
-          <h3>Notifications</h3>
-          <p className="faq-intro">
-            Choose which alerts stay active for your account. These preferences are saved to your profile.
-          </p>
-
-          <div className="switch-row">
-            {options.map((option) => (
-              <label className="switch-item" key={option.key}>
-                <span>{option.label}</span>
+            <div className="form-grid">
+              <div className="role-field">
+                <label>Display Name</label>
                 <input
-                  type="checkbox"
-                  checked={Boolean(preferences[option.key])}
+                  value={formData.displayName}
                   onChange={(event) =>
-                    setPreferences((prev) => ({
-                      ...prev,
-                      [option.key]: event.target.checked,
-                    }))
+                    setFormData((prev) =>
+                      prev ? { ...prev, displayName: event.target.value } : prev,
+                    )
                   }
                 />
-              </label>
-            ))}
-          </div>
+              </div>
+              <div className="role-field">
+                <label>{detailLabel}</label>
+                <input
+                  value={detailValue}
+                  readOnly={detailReadonly}
+                  className={detailReadonly ? "readonly-field" : ""}
+                  onChange={(event) =>
+                    setFormData((prev) =>
+                      prev ? { ...prev, [detailKey]: event.target.value } : prev,
+                    )
+                  }
+                />
+              </div>
+              <div className="role-field">
+                <label>Contact Email</label>
+                <input
+                  value={formData.contactEmail}
+                  onChange={(event) =>
+                    setFormData((prev) =>
+                      prev ? { ...prev, contactEmail: event.target.value } : prev,
+                    )
+                  }
+                />
+              </div>
+              <div className="role-field">
+                <label>Phone Number</label>
+                <input
+                  value={formData.phoneNumber}
+                  onChange={(event) =>
+                    setFormData((prev) =>
+                      prev ? { ...prev, phoneNumber: event.target.value } : prev,
+                    )
+                  }
+                />
+              </div>
+              <div className="role-field wide">
+                <label>Login Email</label>
+                <input value={formData.loginEmail} readOnly className="readonly-field" />
+              </div>
+            </div>
 
-          <div className="settings-note">
-            Login email is shown for reference only. Contact email, phone number, and notification preferences can be
-            updated here.
-          </div>
-        </section>
+            {feedback && <div className={`support-feedback ${feedback.type}`}>{feedback.text}</div>}
+
+            <div className="role-actions">
+              <button className="btn-outline" onClick={handleReset} disabled={isSaving}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </section>
+
+          <section className="role-card">
+            <h3>Notifications</h3>
+            <p className="faq-intro">{notificationDescription}</p>
+
+            <div className="switch-row">
+              {options.map((option) => (
+                <label className="switch-item" key={option.key}>
+                  <span>{option.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(preferences[option.key])}
+                    onChange={(event) =>
+                      setPreferences((prev) => ({
+                        ...prev,
+                        [option.key]: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="settings-note">{notificationNote}</div>
+          </section>
+
+          <section className="role-card">
+            <h3>Security</h3>
+            <p className="faq-intro">
+              Update your password for this staff account and keep your sign-in details secure.
+            </p>
+
+            <div className="form-grid">
+              <div className="role-field wide">
+                <label>Account Login</label>
+                <input value={formData.loginEmail} readOnly className="readonly-field" />
+              </div>
+            </div>
+
+            <div className="settings-note">
+              Use a strong password with at least 8 characters. After changing it, use the new password the next time
+              you sign in.
+            </div>
+
+            <div className="role-actions">
+              <button className="btn-primary" onClick={() => setIsPasswordModalOpen(true)} type="button">
+                Change Password
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
+
+      {isPasswordModalOpen ? (
+        <ChangePasswordModal
+          onClose={() => setIsPasswordModalOpen(false)}
+          onBack={() => setIsPasswordModalOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
