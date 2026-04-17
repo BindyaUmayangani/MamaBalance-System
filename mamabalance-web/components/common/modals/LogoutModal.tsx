@@ -1,6 +1,7 @@
 "use client";
 
 import ModalBase from "./ModalBase";
+import styles from "./LogoutModal.module.css";
 
 type Props = {
   onClose: () => void;
@@ -14,16 +15,16 @@ export default function LogoutModal({
   isSubmitting = false,
 }: Props) {
   return (
-    <ModalBase onClose={onClose}>
-      <h2 className="modal-title danger">LOG OUT</h2>
+    <ModalBase onClose={onClose} contentClassName={styles.logoutModal}>
+      <h2 className={styles.title}>LOG OUT</h2>
 
-      <p className="delete-text">Are you sure you want to log out?</p>
+      <p className={styles.message}>Are you sure you want to log out?</p>
 
-      <div className="modal-actions">
-        <button className="btn-close" onClick={onClose} disabled={isSubmitting}>
+      <div className={styles.actions}>
+        <button className={styles.cancelButton} onClick={onClose} disabled={isSubmitting}>
           Cancel
         </button>
-        <button className="btn-danger" onClick={onConfirm} disabled={isSubmitting}>
+        <button className={styles.confirmButton} onClick={onConfirm} disabled={isSubmitting}>
           {isSubmitting ? "Logging Out..." : "Log Out"}
         </button>
       </div>

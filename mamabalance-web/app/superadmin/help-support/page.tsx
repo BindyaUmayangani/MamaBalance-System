@@ -6,7 +6,7 @@ export default function SuperadminHelpSupportPage() {
     <div className="role-page">
       <div className="role-header">
         <h1>Help & Support</h1>
-        <p>Get platform support for administrative and system-wide operations.</p>
+        <p>Get platform support for administrative and system-wide operations. Submitted tickets are routed to the support team inbox.</p>
       </div>
 
       <div className="role-grid">
@@ -73,7 +73,7 @@ export default function SuperadminHelpSupportPage() {
         </section>
 
         <CustomerSupportSection
-          intro="Reach customer support for system-wide operations, analytics exports, permissions, and platform incidents."
+          intro="Reach customer support for system-wide operations, analytics exports, permissions, and platform incidents. Tickets from this page go directly to the support team inbox."
           categoryOptions={[
             { value: "platform", label: "Platform Operations" },
             { value: "technical", label: "Technical" },

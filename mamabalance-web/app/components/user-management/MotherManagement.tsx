@@ -20,6 +20,7 @@ import FilterMotherModal from "@/app/superadmin/user-management/modals/mother/Fi
 import UserDeleteModal from "@/app/superadmin/user-management/modals/UserDeleteModal";
 import { ManagedMotherRow, ManagedUserRow } from "@/lib/admin/types";
 import EditMotherModal from "@/app/superadmin/user-management/modals/mother/EditMotherModal";
+import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 
 type RoleType = "superadmin" | "regionaladmin";
 
@@ -44,6 +45,7 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
   const [localHighlightedUserId, setLocalHighlightedUserId] = useState("");
   const [selectedUser, setSelectedUser] = useState<ManagedMotherRow | null>(null);
   const [isProvisioningSmsLogin, setIsProvisioningSmsLogin] = useState(false);
+  const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
   const { users: allMothers, regions, isLoading, error, reload } =
     useManagedUsers<ManagedMotherRow>("mother");
   const { users: allMidwives } = useManagedUsers<ManagedUserRow>("midwife");
@@ -172,7 +174,7 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
 
   const totalItems = searchedData.length;
   const highlightedIndex = searchedData.findIndex((mother) =>
-    matchesHighlightedMother(mother, activeHighlightedUserId),
+    matchesHighlightedMother(mother, highlightedUserId),
   );
   const highlightedPage =
     highlightedIndex >= 0 ? Math.floor(highlightedIndex / pageSize) + 1 : null;
@@ -208,6 +210,26 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
   }, [effectiveCurrentPage, highlightedUserId]);
   const hasActiveSearch = searchTerm.trim().length > 0;
 
+  async function downloadPatientSummary(mother: ManagedMotherRow) {
+    try {
+      setDownloadingMotherUid(mother.uid);
+      const response = await fetch(`/api/admin/mothers/${encodeURIComponent(mother.uid)}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to generate patient summary report.");
+      }
+
+      generatePatientSummaryPdf(payload);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to generate patient summary report.");
+    } finally {
+      setDownloadingMotherUid("");
+    }
+  }
+
   const tableContent = isLoading ? (
     <LoadingState label="Loading mothers..." />
   ) : error ? (
@@ -228,6 +250,10 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
         setSelectedUser(row);
         setActiveModal("observations");
       }}
+      onDownloadSummary={(row) => {
+        void downloadPatientSummary(row);
+      }}
+      isDownloadingSummary={(row) => downloadingMotherUid === row.uid}
       onEdit={(row) => {
         setSelectedUser(row);
         setActiveModal("edit");
@@ -265,7 +291,7 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
         </div>
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <button
-            className="filter-btn"
+            className="filter-btn provision-sms-btn"
             disabled={isProvisioningSmsLogin}
             onClick={async () => {
               try {
@@ -365,7 +391,7 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
       )}
 
       {activeModal === "edit" && selectedUser && (
-        <ModalWrapper variant="view" onClose={() => setActiveModal(null)}>
+        <ModalWrapper variant="mother" onClose={() => setActiveModal(null)}>
           <EditMotherModal
             mother={selectedUser}
             regionOptions={regions}
@@ -382,12 +408,10 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
       )}
 
       {activeModal === "view" && selectedUser && (
-        <ModalWrapper variant="mother" onClose={() => setActiveModal(null)}>
-          <MotherProfileViewModal
-            mother={selectedUser}
-            onClose={() => setActiveModal(null)}
-          />
-        </ModalWrapper>
+        <MotherProfileViewModal
+          mother={selectedUser}
+          onClose={() => setActiveModal(null)}
+        />
       )}
 
       {activeModal === "observations" && selectedUser && (

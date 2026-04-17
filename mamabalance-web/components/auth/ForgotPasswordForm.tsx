@@ -2,10 +2,9 @@
 
 import { FormEvent, KeyboardEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 import "@/app/forgot-password/forgot-password.css";
-import { firebaseAuth } from "@/lib/firebase/client";
 
 type Step = 1 | 2 | 3;
 
@@ -16,13 +15,15 @@ function buildOtpArray() {
 export default function ForgotPasswordForm() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(buildOtpArray());
   const [requestId, setRequestId] = useState("");
   const [resetToken, setResetToken] = useState("");
-  const [maskedEmail, setMaskedEmail] = useState("");
+  const [maskedPhone, setMaskedPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,25 +66,32 @@ export default function ForgotPasswordForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ phoneNumber: phoneNumber.trim() }),
       });
 
       const payload = (await response.json()) as {
         error?: string;
         requestId?: string | null;
-        maskedEmail?: string;
+        maskedPhone?: string;
       };
 
       if (!response.ok) {
         throw new Error(payload.error || "Unable to send OTP.");
       }
 
+      if (!payload.requestId) {
+        setSuccess(
+          "We could not start SMS recovery for that number. Please confirm the saved staff phone number or contact an administrator.",
+        );
+        return;
+      }
+
       setRequestId(payload.requestId || "");
-      setMaskedEmail(payload.maskedEmail || "");
+      setMaskedPhone(payload.maskedPhone || "");
       setOtpDigits(buildOtpArray());
       setStep(2);
       setSuccess(
-        `If the account exists, a 6-digit OTP has been sent to ${payload.maskedEmail || "the saved email address"}.`,
+        `If the staff account exists, a 6-digit OTP has been sent to ${payload.maskedPhone || "the saved phone number"}.`,
       );
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to send OTP.");
@@ -149,45 +157,18 @@ export default function ForgotPasswordForm() {
 
       const payload = (await response.json()) as {
         error?: string;
-        loginEmail?: string;
       };
 
       if (!response.ok) {
         throw new Error(payload.error || "Unable to reset password.");
       }
 
-      const resolvedLoginEmail = String(payload.loginEmail || "").trim();
-
-      if (!resolvedLoginEmail) {
-        throw new Error("Password updated, but the account login email could not be resolved.");
-      }
-
-      const credential = await signInWithEmailAndPassword(
-        firebaseAuth,
-        resolvedLoginEmail,
-        newPassword,
-      );
-
-      const idToken = await credential.user.getIdToken();
-      const sessionResponse = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const sessionPayload = (await sessionResponse.json()) as {
-        redirectPath?: string;
-        error?: string;
-      };
-
-      if (!sessionResponse.ok || !sessionPayload.redirectPath) {
-        throw new Error(sessionPayload.error || "Password updated, but sign-in could not be completed.");
-      }
-
-      router.replace(sessionPayload.redirectPath);
-      router.refresh();
+      setSuccess("Password reset successful. Redirecting to the login page...");
+      setNewPassword("");
+      setConfirmPassword("");
+      window.setTimeout(() => {
+        router.replace("/login?reset=success");
+      }, 1200);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to reset password.");
     } finally {
@@ -215,17 +196,18 @@ export default function ForgotPasswordForm() {
 
       {step === 1 && (
         <form className="form" onSubmit={handleSendOtp}>
-          <p className="subtitle">Enter the personal email linked to the staff account or the staff login email.</p>
+          <p className="subtitle">Enter the phone number saved on the staff account to receive a reset OTP by SMS.</p>
 
           <div className="form-group">
-            <label htmlFor="reset-email">Email Address</label>
+            <label htmlFor="reset-phone">Phone Number</label>
             <input
-              id="reset-email"
-              type="email"
-              autoComplete="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              id="reset-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="0771234567"
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
               required
             />
           </div>
@@ -242,7 +224,7 @@ export default function ForgotPasswordForm() {
       {step === 2 && (
         <form className="form" onSubmit={handleVerifyOtp}>
           <p className="subtitle">
-            Enter the 6-digit OTP sent to {maskedEmail || "your saved email"}.
+            Enter the 6-digit OTP sent to {maskedPhone || "your saved phone number"}.
           </p>
 
           <div className="form-group">
@@ -282,26 +264,44 @@ export default function ForgotPasswordForm() {
 
           <div className="form-group">
             <label htmlFor="new-password">New Password</label>
-            <input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((current) => !current)}
+                aria-label="Toggle new password visibility"
+              >
+                {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label htmlFor="confirm-password">Confirm Password</label>
-            <input
-              id="confirm-password"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((current) => !current)}
+                aria-label="Toggle confirm password visibility"
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {error ? <p className="form-message error">{error}</p> : null}

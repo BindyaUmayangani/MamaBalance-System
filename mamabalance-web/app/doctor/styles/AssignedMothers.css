@@ -834,14 +834,33 @@ tbody tr.dashboard-highlight-row {
 
 .chart-axis-label.x-axis {
   text-anchor: middle;
+  font-size: 10px;
 }
 
 .chart-point {
   fill: #ef4444;
 }
 
-.chart-point.latest {
-  fill: #facc15;
+.chart-point.risk-low {
+  fill: #22c55e;
+}
+
+.chart-point.risk-moderate {
+  fill: #f97316;
+}
+
+.chart-point.risk-high {
+  fill: #dc2626;
+}
+
+.chart-tooltip-box {
+  fill: rgba(17, 24, 39, 0.92);
+}
+
+.chart-tooltip-text {
+  fill: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .chart-month-label {
@@ -849,6 +868,53 @@ tbody tr.dashboard-highlight-row {
   text-align: center;
   font-weight: 700;
   color: #111827;
+}
+
+.month-toggle-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.month-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eef9f5;
+  border: 1px solid #bfe7db;
+}
+
+.month-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #9be0d0;
+  background: #ffffff;
+  color: #499d85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.month-toggle-btn:hover:not(:disabled) {
+  background: #499d85;
+  color: #ffffff;
+}
+
+.month-toggle-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.selected-month-label {
+  min-width: 120px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .section-card-header {

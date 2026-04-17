@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
@@ -37,11 +37,13 @@ function getFriendlySignInError(caughtError: unknown) {
 
 export default function StaffLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const resetStatus = searchParams.get("reset");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,6 +142,11 @@ export default function StaffLoginForm() {
         </div>
 
         {error ? <p className="form-message error">{error}</p> : null}
+        {resetStatus === "success" ? (
+          <p className="form-message success">
+            Password reset successful. Please sign in with your new password.
+          </p>
+        ) : null}
 
         <button type="submit" className="submit-btn" disabled={isSubmitting}>
           {isSubmitting ? "Signing In..." : "Sign In"}

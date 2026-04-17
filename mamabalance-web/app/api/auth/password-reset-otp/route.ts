@@ -2,19 +2,14 @@ import { randomInt, randomUUID, createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 
+import { STAFF_ROLES } from "@/lib/auth/types";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { maskPhoneNumber, normalizePhoneNumber, sendNotifySms } from "@/lib/notify/sms";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const VERIFIED_TTL_MS = 15 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
-
-function sanitizeEmail(value: unknown) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
 
 function hashValue(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -28,30 +23,56 @@ function createResetToken() {
   return randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
 }
 
-function maskEmail(value: string) {
-  const [local, domain] = value.split("@");
-  if (!local || !domain) return value;
-  const prefix = local.slice(0, 2);
-  const maskedLocal = `${prefix}${"*".repeat(Math.max(local.length - 2, 2))}`;
-  return `${maskedLocal}@${domain}`;
+function sanitizeEmail(value: unknown) {
+  return String(value || "").trim().toLowerCase();
 }
 
-async function findUserByEmail(submittedEmail: string) {
-  let snapshot = await adminDb
+function buildPhoneLookupVariants(phoneNumber: string) {
+  const normalized = normalizePhoneNumber(phoneNumber);
+  const variants = new Set<string>();
+
+  if (normalized) {
+    variants.add(normalized);
+  }
+
+  if (normalized.startsWith("+")) {
+    variants.add(normalized.slice(1));
+  }
+
+  if (normalized.startsWith("+94")) {
+    variants.add(`0${normalized.slice(3)}`);
+  }
+
+  return Array.from(variants).slice(0, 10);
+}
+
+async function findStaffByPhone(phoneNumber: string) {
+  const variants = buildPhoneLookupVariants(phoneNumber);
+
+  if (variants.length === 0) {
+    return null;
+  }
+
+  const snapshot = await adminDb
     .collection("users")
-    .where("personalEmail", "==", submittedEmail)
-    .limit(1)
+    .where("phoneNumber", "in", variants)
+    .limit(10)
     .get();
 
   if (snapshot.empty) {
-    snapshot = await adminDb
-      .collection("users")
-      .where("email", "==", submittedEmail)
-      .limit(1)
-      .get();
+    return null;
   }
 
-  return snapshot.empty ? null : snapshot.docs[0];
+  const matchingDocs = snapshot.docs.filter((doc) => {
+    const data = doc.data();
+    return STAFF_ROLES.includes(data.role) && data.status === "active";
+  });
+
+  if (matchingDocs.length !== 1) {
+    return null;
+  }
+
+  return matchingDocs[0];
 }
 
 async function readAuthEmail(uid: string, fallbackEmail: string) {
@@ -63,80 +84,107 @@ async function readAuthEmail(uid: string, fallbackEmail: string) {
   }
 }
 
-async function handleSendOtp(request: NextRequest) {
-  const payload = (await request.json()) as { email?: string };
-  const submittedEmail = sanitizeEmail(payload.email);
+async function assertCooldown(uid: string) {
+  const snapshot = await adminDb
+    .collection("passwordResetRequests")
+    .where("uid", "==", uid)
+    .get();
 
-  if (!submittedEmail || !isValidEmail(submittedEmail)) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  if (snapshot.empty) {
+    return;
   }
 
-  const userDoc = await findUserByEmail(submittedEmail);
+  const latest = snapshot.docs
+    .map((doc) => doc.data())
+    .reduce((currentLatest, item) => {
+      const latestCreatedAtMs = Number(currentLatest.createdAtMs || 0);
+      const itemCreatedAtMs = Number(item.createdAtMs || 0);
+      return itemCreatedAtMs > latestCreatedAtMs ? item : currentLatest;
+    });
+  const createdAtMs = Number(latest.createdAtMs || 0);
+  const elapsed = Date.now() - createdAtMs;
+
+  if (elapsed < OTP_RESEND_COOLDOWN_MS) {
+    const remainingSeconds = Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000);
+    const safeSeconds = Math.max(1, Math.min(remainingSeconds, 60));
+    throw new Error(`Please wait ${safeSeconds} seconds before requesting another OTP.`);
+  }
+}
+
+async function handleSendOtp(request: NextRequest) {
+  const payload = (await request.json()) as { phoneNumber?: string };
+  const submittedPhoneNumber = normalizePhoneNumber(payload.phoneNumber);
+
+  if (!submittedPhoneNumber) {
+    return NextResponse.json({ error: "Enter a valid phone number." }, { status: 400 });
+  }
+
+  const userDoc = await findStaffByPhone(submittedPhoneNumber);
 
   if (!userDoc) {
     return NextResponse.json({
       ok: true,
       requestId: null,
-      maskedEmail: maskEmail(submittedEmail),
+      maskedPhone: maskPhoneNumber(submittedPhoneNumber),
     });
   }
 
   const user = userDoc.data();
   const loginEmail = await readAuthEmail(userDoc.id, sanitizeEmail(user.email));
-  const deliveryEmail = sanitizeEmail(user.personalEmail) || loginEmail;
+  const deliveryPhone = normalizePhoneNumber(user.phoneNumber);
   const displayName = String(user.displayName || "MamaBalance user").trim();
 
-  if (!deliveryEmail || !loginEmail) {
-    return NextResponse.json({ ok: true, requestId: null, maskedEmail: maskEmail(submittedEmail) });
+  if (!deliveryPhone || !loginEmail) {
+    return NextResponse.json({
+      ok: true,
+      requestId: null,
+      maskedPhone: maskPhoneNumber(submittedPhoneNumber),
+    });
   }
 
-  const code = createOtpCode();
-  const requestId = randomUUID();
-  const now = Date.now();
+  try {
+    await assertCooldown(userDoc.id);
 
-  await adminDb.collection("passwordResetRequests").doc(requestId).set({
-    uid: userDoc.id,
-    submittedEmail,
-    deliveryEmail,
-    loginEmail,
-    displayName,
-    otpHash: hashValue(code),
-    otpAttempts: 0,
-    expiresAtMs: now + OTP_TTL_MS,
-    verifiedAtMs: null,
-    resetTokenHash: null,
-    resetTokenExpiresAtMs: null,
-    consumedAtMs: null,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+    const code = createOtpCode();
+    const requestId = randomUUID();
+    const now = Date.now();
 
-  await adminDb.collection("mail").add({
-    to: [deliveryEmail],
-    message: {
-      subject: "MamaBalance password reset OTP",
-      text:
-        `Hello ${displayName},\n\n` +
-        `Use this OTP to reset your MamaBalance password: ${code}\n\n` +
-        "This OTP expires in 10 minutes.\n\n" +
-        `Account login email: ${loginEmail}\n\n` +
-        "If you did not request this reset, you can ignore this email.",
-    },
-    meta: {
-      feature: "password-reset-otp",
-      requestId,
-      userUid: userDoc.id,
+    await sendNotifySms({
+      phoneNumber: deliveryPhone,
+      message:
+        `MamaBalance: Your staff password reset code is ${code}. ` +
+        "Use it within 10 minutes.",
+      contactFirstName: displayName.split(" ").filter(Boolean)[0] || "Staff",
+    });
+
+    await adminDb.collection("passwordResetRequests").doc(requestId).set({
+      uid: userDoc.id,
+      submittedPhoneNumber,
+      deliveryPhone,
       loginEmail,
-      deliveryEmail,
-    },
-    createdAt: FieldValue.serverTimestamp(),
-  });
+      displayName,
+      otpHash: hashValue(code),
+      otpAttempts: 0,
+      expiresAtMs: now + OTP_TTL_MS,
+      verifiedAtMs: null,
+      resetTokenHash: null,
+      resetTokenExpiresAtMs: null,
+      consumedAtMs: null,
+      createdAtMs: now,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
-  return NextResponse.json({
-    ok: true,
-    requestId,
-    maskedEmail: maskEmail(deliveryEmail),
-  });
+    return NextResponse.json({
+      ok: true,
+      requestId,
+      maskedPhone: maskPhoneNumber(deliveryPhone),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to send OTP right now.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
 
 async function handleVerifyOtp(request: NextRequest) {

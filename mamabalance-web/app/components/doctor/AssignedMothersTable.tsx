@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CalendarDays, ChevronDown, Eye, Filter, Search, ShieldAlert, FileText, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, Filter, Search, ShieldAlert, FileText, FileDown } from "lucide-react";
 
 import FilterModal from "@/app/superadmin/user-management/modals/FilterModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
+import EpdsTrendChart from "@/components/common/EpdsTrendChart";
 import type { MidwifeMotherRecord } from "@/lib/midwife/types";
 import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/doctor/styles/AssignedMothers.css";
@@ -114,6 +115,9 @@ export default function AssignedMothersTable() {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   const [selectedMother, setSelectedMother] = useState<DoctorMotherRecord | null>(null);
+  const [selectedMotherSummary, setSelectedMotherSummary] = useState<PatientSummaryResponse | null>(null);
+  const [selectedMotherSummaryLoading, setSelectedMotherSummaryLoading] = useState(false);
+  const [selectedMotherSummaryError, setSelectedMotherSummaryError] = useState("");
   const [selectedObservationMother, setSelectedObservationMother] = useState<DoctorMotherRecord | null>(null);
   const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
 
@@ -197,6 +201,55 @@ export default function AssignedMothersTable() {
       modalLayer.remove();
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSelectedMotherSummary() {
+      if (!selectedMother?.uid) {
+        if (isMounted) {
+          setSelectedMotherSummary(null);
+          setSelectedMotherSummaryError("");
+          setSelectedMotherSummaryLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setSelectedMotherSummaryLoading(true);
+        setSelectedMotherSummaryError("");
+        const response = await fetch(`/api/doctor/mothers/${encodeURIComponent(selectedMother.uid)}/summary`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load EPDS trend.");
+        }
+
+        if (isMounted) {
+          setSelectedMotherSummary(payload);
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setSelectedMotherSummary(null);
+          setSelectedMotherSummaryError(
+            caughtError instanceof Error ? caughtError.message : "Unable to load EPDS trend.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setSelectedMotherSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSelectedMotherSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMother?.uid]);
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
@@ -289,13 +342,6 @@ export default function AssignedMothersTable() {
 
   const historyMedsTotalPages = Math.max(1, historyMotherMeds.length);
   const historyMotherMedsPaginated = historyMotherMeds.slice(historyMedPage - 1, historyMedPage);
-  const chartPoints = selectedMother
-    ? selectedMother.epdsTrend.map((value, index) => ({
-      x: 48 + index * 84,
-      y: 210 - value * 6,
-      value,
-    }))
-    : [];
 
   const openEditMedication = (record: MedicationRecord) => {
     setEditRecord(record);
@@ -554,6 +600,8 @@ export default function AssignedMothersTable() {
             <div className="profile-banner">
               <div>
                 <h2>Mother Profile: {selectedMother.name}</h2>
+                {selectedMotherSummaryLoading ? <p className="profile-load-note">Refreshing EPDS trend...</p> : null}
+                {selectedMotherSummaryError ? <p className="profile-error-note">{selectedMotherSummaryError}</p> : null}
               </div>
               <span className={`profile-risk-badge ${selectedMother.risk}`}>{riskLabel(selectedMother.risk)}</span>
             </div>
@@ -576,45 +624,11 @@ export default function AssignedMothersTable() {
               </div>
               <div className="profile-panel">
                 <h3>EPDS Score Trend</h3>
-                <div className="epds-chart-card">
-                  <svg viewBox="0 0 360 250" className="epds-chart" aria-label="EPDS score trend">
-                    {[0, 5, 10, 15, 20, 25, 30].map((tick) => {
-                      const y = 210 - tick * 6;
-                      return (
-                        <g key={tick}>
-                          <line x1="52" y1={y} x2="320" y2={y} className="chart-grid-line" />
-                          <text x="18" y={y + 4} className="chart-axis-label">
-                            {String(tick).padStart(2, "0")}
-                          </text>
-                        </g>
-                      );
-                    })}
-                    <polyline
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="2"
-                      points={chartPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-                    />
-                    {chartPoints.map((point, index) => (
-                      <g key={`${point.value}-${index}`}>
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r="6"
-                          className={`chart-point ${index === chartPoints.length - 1 ? "latest" : ""}`}
-                        >
-                          <title>EPDS score: {point.value}</title>
-                        </circle>
-                      </g>
-                    ))}
-                    {["1st Week", "2nd Week", "3rd Week", "4th Week"].map((label, index) => (
-                      <text key={label} x={48 + index * 84} y="236" className="chart-axis-label x-axis">
-                        {label}
-                      </text>
-                    ))}
-                  </svg>
-                  <p className="chart-month-label">April</p>
-                </div>
+                <EpdsTrendChart
+                  history={selectedMotherSummary?.epdsHistory}
+                  fallbackScore={Number(selectedMother.lastEPDS) || 0}
+                  fallbackSubmittedAt={selectedMother.lastEPDSTestDate}
+                />
               </div>
             </div>
             <div className="modal-actions">

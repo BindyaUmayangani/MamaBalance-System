@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, Pencil, Search, ShieldAlert, Trash2 } from "lucide-react";
+import { Eye, FileDown, FileText, Pencil, Search, ShieldAlert, Trash2 } from "lucide-react";
 
 type Column = { key: string; label: string };
 type TableRow = Record<string, string | number | null | undefined>;
@@ -11,6 +11,8 @@ type Props<T extends TableRow> = {
   visibleColumns: Record<string, boolean>;
   onView: (row: T) => void;
   onObserve?: (row: T) => void;
+  onDownloadSummary?: (row: T) => void;
+  isDownloadingSummary?: (row: T) => boolean;
   onEdit: (row: T) => void;
   onDelete: (row: T) => void;
   highlightedKey?: string;
@@ -27,6 +29,8 @@ export default function UserTable<T extends TableRow>({
   visibleColumns,
   onView,
   onObserve,
+  onDownloadSummary,
+  isDownloadingSummary,
   onEdit,
   onDelete,
   highlightedKey = "",
@@ -112,6 +116,12 @@ export default function UserTable<T extends TableRow>({
                       <FileText
                         className="observation-icon"
                         onClick={() => onObserve(row)}
+                      />
+                    ) : null}
+                    {onDownloadSummary ? (
+                      <FileDown
+                        className={isDownloadingSummary?.(row) ? "report-icon loading" : "report-icon"}
+                        onClick={() => onDownloadSummary(row)}
                       />
                     ) : null}
                     <Pencil className="edit-icon" onClick={() => onEdit(row)} />

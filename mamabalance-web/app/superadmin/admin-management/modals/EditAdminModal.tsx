@@ -2,6 +2,7 @@
 
 import { ManagedUserRow } from "@/lib/admin/types";
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 type RegionOption = {
   id: string;
@@ -37,7 +38,7 @@ export default function EditAdminModal({
     <>
       <h2 className="modal-title">UPDATE ADMIN</h2>
 
-      <p className="readonly-field">
+      <p className="modal-identity-row">
         <strong>Full Name:</strong> {admin.name}
       </p>
 
@@ -50,29 +51,32 @@ export default function EditAdminModal({
       />
 
       <label>Assigned Region</label>
-      <select
-        value={regionId}
-        onChange={(e) => setRegionId(e.target.value)}
-      >
-        <option value="" disabled>
-          Select region
-        </option>
+      <div className="field-control">
+        <select
+          value={regionId}
+          onChange={(e) => setRegionId(e.target.value)}
+        >
+          <option value="" disabled>
+            Select region
+          </option>
 
-        {regionOptions.length > 0 ? (
-          regionOptions.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))
-        ) : (
-          <>
-            <option value="RG001">Kaduwela</option>
-            <option value="RG002">Homagama</option>
-            <option value="RG003">Maharagama</option>
-            <option value="RG004">Kesbewa</option>
-          </>
-        )}
-      </select>
+          {regionOptions.length > 0 ? (
+            regionOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))
+          ) : (
+            <>
+              <option value="RG001">Kaduwela</option>
+              <option value="RG002">Homagama</option>
+              <option value="RG003">Maharagama</option>
+              <option value="RG004">Kesbewa</option>
+            </>
+          )}
+        </select>
+        <ChevronDown size={18} className="field-icon" />
+      </div>
 
       <div className="modal-actions">
         <button className="btn-outline" onClick={onClose}>

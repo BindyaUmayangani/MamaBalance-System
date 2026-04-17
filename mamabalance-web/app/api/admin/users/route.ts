@@ -262,6 +262,7 @@ async function createStaffAccount(
   const temporaryPassword = buildTemporaryPassword(payload.fullName, payload.role);
   const username = buildSystemUsername(payload.fullName, payload.role);
   const personalEmail = payload.personalEmail.trim().toLowerCase();
+  const normalizedPhone = normalizePhoneNumber(payload.contactNumber);
   const userRecord = await adminAuth.createUser({
     email: loginEmail,
     password: temporaryPassword,
@@ -280,7 +281,7 @@ async function createStaffAccount(
     username,
     email: loginEmail,
     personalEmail,
-    phoneNumber: payload.contactNumber.trim(),
+    phoneNumber: normalizedPhone,
     nic: payload.nic.trim(),
     regionId: payload.regionId,
     clinicId: null,

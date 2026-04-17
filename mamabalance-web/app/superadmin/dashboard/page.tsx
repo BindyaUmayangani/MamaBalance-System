@@ -6,6 +6,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  Bell,
   Users,
 } from "lucide-react";
 import {
@@ -175,6 +176,7 @@ type DashboardPayload = {
     inactiveUsers: number;
     regions: number;
   };
+  unreadCount: number;
   riskDistribution: Array<{ name: string; value: number; color: string }>;
   weeklyEpds: Array<{ day: string; value: number }>;
   highRiskMothers: Array<{
@@ -211,6 +213,7 @@ const EMPTY_DASHBOARD: DashboardPayload = {
     inactiveUsers: 0,
     regions: 0,
   },
+  unreadCount: 0,
   riskDistribution: [
     { name: "Low", value: 0, color: "#22c55e" },
     { name: "Moderate", value: 0, color: "#fb923c" },
@@ -305,6 +308,21 @@ export default function SuperAdminDashboard() {
           <p>
             Monitor platform users, maternal risk distribution, regional coverage, and recent operational activity.
           </p>
+        </div>
+        <div className="doctor-page-header-actions">
+          <button
+            type="button"
+            className="midwife-notification"
+            aria-label="Open support-team notification inbox"
+            onClick={() => router.push("/superadmin/notifications")}
+          >
+            <Bell size={22} />
+            {dashboard.unreadCount > 0 ? (
+              <span className="regional-notification-badge">
+                {dashboard.unreadCount > 9 ? "9+" : dashboard.unreadCount}
+              </span>
+            ) : null}
+          </button>
         </div>
       </div>
 

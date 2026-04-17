@@ -299,7 +299,7 @@ export default function CustomerSupportSection({
       </div>
 
       <div className="support-note">
-        Include screenshots, the affected role, and the exact page name to help support resolve the issue faster.
+        Include the affected role, the exact page name, and any error text you saw to help support resolve the issue faster.
       </div>
 
       {feedback && (

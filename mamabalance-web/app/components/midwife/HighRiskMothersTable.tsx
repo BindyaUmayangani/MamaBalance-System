@@ -9,6 +9,7 @@ import "@/app/doctor/styles/AssignedMothers.css";
 import "@/app/midwife/styles/HighRiskMothers.css";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
+import EpdsTrendChart from "@/components/common/EpdsTrendChart";
 import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
 import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/superadmin/styles/userManagement.css";
@@ -454,6 +455,9 @@ export default function HighRiskMothersTable() {
   const [statusFilter, setStatusFilter] = useState("");
   const [doctorFilter, setDoctorFilter] = useState("");
   const [selectedMother, setSelectedMother] = useState<HighRiskMother | null>(null);
+  const [selectedMotherSummary, setSelectedMotherSummary] = useState<PatientSummaryResponse | null>(null);
+  const [selectedMotherSummaryLoading, setSelectedMotherSummaryLoading] = useState(false);
+  const [selectedMotherSummaryError, setSelectedMotherSummaryError] = useState("");
   const [selectedObservationMother, setSelectedObservationMother] = useState<HighRiskMother | null>(null);
   const [observationPage, setObservationPage] = useState(1);
   const [observationFilter, setObservationFilter] = useState("all");
@@ -578,6 +582,55 @@ export default function HighRiskMothersTable() {
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [selectedMother, selectedObservationMother]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSelectedMotherSummary() {
+      if (!selectedMother?.uid) {
+        if (isMounted) {
+          setSelectedMotherSummary(null);
+          setSelectedMotherSummaryError("");
+          setSelectedMotherSummaryLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setSelectedMotherSummaryLoading(true);
+        setSelectedMotherSummaryError("");
+        const response = await fetch(`/api/midwife/mothers/${encodeURIComponent(selectedMother.uid)}/summary`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as PatientSummaryResponse & { error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load EPDS trend.");
+        }
+
+        if (isMounted) {
+          setSelectedMotherSummary(payload);
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setSelectedMotherSummary(null);
+          setSelectedMotherSummaryError(
+            caughtError instanceof Error ? caughtError.message : "Unable to load EPDS trend.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setSelectedMotherSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSelectedMotherSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMother?.uid]);
 
   const mothersWithLiveDetails = useMemo<HighRiskMother[]>(() => {
     return mothers.map((mother) => {
@@ -787,13 +840,6 @@ export default function HighRiskMothersTable() {
 
   const getRiskLabel = (risk: string) => `${risk.charAt(0).toUpperCase()}${risk.slice(1)}`;
   const formatDosage = (value: string) => value.replace(/mg/gi, "").trim();
-  const chartPoints = selectedProfileDetails
-    ? selectedProfileDetails.epdsTrend.map((value, index) => ({
-        x: 48 + index * 84,
-        y: 210 - value * 6,
-        value,
-      }))
-    : [];
 
   const handleOpenAssignModal = (mother: HighRiskMother) => {
     setEditingMotherId(mother.uid);
@@ -1086,6 +1132,8 @@ export default function HighRiskMothersTable() {
             <div className="profile-banner">
               <div>
                 <h2>Mother Profile: {selectedProfileDetails.name}</h2>
+                {selectedMotherSummaryLoading ? <p className="profile-load-note">Refreshing EPDS trend...</p> : null}
+                {selectedMotherSummaryError ? <p className="profile-error-note">{selectedMotherSummaryError}</p> : null}
               </div>
               <span className={`profile-risk-badge ${selectedProfileDetails.risk}`}>
                 {getRiskLabel(selectedProfileDetails.risk)}
@@ -1112,45 +1160,11 @@ export default function HighRiskMothersTable() {
 
               <div className="profile-panel">
                 <h3>EPDS Score Trend</h3>
-                <div className="epds-chart-card">
-                  <svg viewBox="0 0 360 250" className="epds-chart" aria-label="EPDS score trend">
-                    {[0, 5, 10, 15, 20, 25, 30].map((tick) => {
-                      const y = 210 - tick * 6;
-                      return (
-                        <g key={tick}>
-                          <line x1="52" y1={y} x2="320" y2={y} className="chart-grid-line" />
-                          <text x="18" y={y + 4} className="chart-axis-label">
-                            {String(tick).padStart(2, "0")}
-                          </text>
-                        </g>
-                      );
-                    })}
-                    <polyline
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="2"
-                      points={chartPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-                    />
-                    {chartPoints.map((point, index) => (
-                      <g key={`${point.value}-${index}`}>
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r="6"
-                          className={`chart-point ${index === chartPoints.length - 1 ? "latest" : ""}`}
-                        >
-                          <title>EPDS score: {point.value}</title>
-                        </circle>
-                      </g>
-                    ))}
-                    {["1st Week", "2nd Week", "3rd Week", "4th Week"].map((label, index) => (
-                      <text key={label} x={48 + index * 84} y="236" className="chart-axis-label x-axis">
-                        {label}
-                      </text>
-                    ))}
-                  </svg>
-                  <p className="chart-month-label">April</p>
-                </div>
+                <EpdsTrendChart
+                  history={selectedMotherSummary?.epdsHistory}
+                  fallbackScore={Number(selectedProfileDetails.lastEPDS) || 0}
+                  fallbackSubmittedAt={selectedProfileDetails.lastEPDSTestDate}
+                />
               </div>
             </div>
 

@@ -5,6 +5,7 @@ import { getCurrentSessionUser } from "@/lib/auth/server";
 import { logAuditEvent } from "@/lib/audit/log";
 import { adminDb } from "@/lib/firebase/admin";
 import type { StaffRole } from "@/lib/auth/types";
+import { normalizePhoneNumber } from "@/lib/notify/sms";
 
 type NotificationPreferences = Record<string, boolean>;
 
@@ -15,9 +16,9 @@ type SettingsFieldConfig = {
 
 const SETTINGS_OPTIONS: Record<StaffRole, SettingsFieldConfig[]> = {
   superadmin: [
-    { key: "adminManagementUpdates", label: "Admin management updates" },
-    { key: "regionConfigurationChanges", label: "Region configuration changes" },
-    { key: "platformAnalyticsReports", label: "Platform analytics reports" },
+    { key: "supportTeamTickets", label: "Support team ticket alerts" },
+    { key: "staffAccessChanges", label: "Staff account and access alerts" },
+    { key: "educationalContentUpdates", label: "Educational content update alerts" },
   ],
   regionaladmin: [
     { key: "newUserRegistrationRequests", label: "New user registration requests" },
@@ -147,7 +148,7 @@ async function handlePatch(request: NextRequest) {
 
   const displayName = sanitizeText(payload.displayName);
   const contactEmail = sanitizeText(payload.contactEmail).toLowerCase();
-  const phoneNumber = sanitizeText(payload.phoneNumber);
+  const phoneNumber = normalizePhoneNumber(payload.phoneNumber);
   const organization = sanitizeText(payload.organization);
   const specialization = sanitizeText(payload.specialization);
 

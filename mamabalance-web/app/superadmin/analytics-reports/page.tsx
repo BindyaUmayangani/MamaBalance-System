@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -21,9 +21,7 @@ import {
   AlertTriangle,
   ChevronDown,
   Stethoscope,
-  Activity,
-  Maximize2,
-  Search
+  Activity
 } from "lucide-react";
 import LoadingState from "@/components/admin/LoadingState";
 import ModalWrapper from "../educational-content/modals/ModalWrapper";
@@ -58,21 +56,11 @@ export default function AnalyticsReportsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData | null>(null);
-  const [showRegionalModal, setShowRegionalModal] = useState(false);
-  const [modalSearch, setModalSearch] = useState("");
   const [regionalPage, setRegionalPage] = useState(1);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportType>("full");
   const regionalPageSize = 5;
   const [activeActivityChart, setActiveActivityChart] = useState<"epds" | "obs">("epds");
-
-  const filteredRegions = useMemo(() => {
-    if (!data) return [];
-    if (!modalSearch) return data.regionalBreakdown;
-    return data.regionalBreakdown.filter(r =>
-      r.name.toLowerCase().includes(modalSearch.toLowerCase())
-    );
-  }, [data, modalSearch]);
 
   useEffect(() => {
     async function fetchData() {
@@ -528,10 +516,6 @@ export default function AnalyticsReportsPage() {
                   <h3>Regional Performance Breakdown</h3>
                   <p className="chart-subtitle">Operational metrics comparison across assigned regions</p>
                 </div>
-                <button className="see-more-btn" onClick={() => setShowRegionalModal(true)}>
-                  <Maximize2 size={16} />
-                  <span>See all details</span>
-                </button>
               </div>
 
               <div className="table-wrapper">
@@ -586,76 +570,6 @@ export default function AnalyticsReportsPage() {
               )}
             </div>
           </div>
-
-          {/* REGIONAL MODAL */}
-          {showRegionalModal && (
-            <ModalWrapper variant="mother" onClose={() => setShowRegionalModal(false)}>
-              <div className="analytics-modal-wide">
-                <div className="modal-header">
-                  <h2 className="modal-title">Complete Regional Insights</h2>
-                  <div className="modal-search-wrapper">
-                    <Search size={18} className="modal-search-icon" />
-                    <input
-                      type="text"
-                      placeholder="Search regions..."
-                      className="modal-search-input"
-                      value={modalSearch}
-                      onChange={(e) => setModalSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="modal-body">
-                  <div className="table-wrapper">
-                    <table className="analytics-table">
-                      <thead>
-                        <tr>
-                          <th>Region</th>
-                          <th>Total Mothers</th>
-                          <th>Submissions</th>
-                          <th>Low Risk</th>
-                          <th>Moderate</th>
-                          <th>High Risk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRegions.length > 0 ? (
-                          filteredRegions.map((region, index) => (
-                            <tr key={`${region.name}-${index}`}>
-                              <td><strong>{region.name}</strong></td>
-                              <td>{region.totalMothers}</td>
-                              <td>{region.submissions}</td>
-                              <td>{region.low}</td>
-                              <td>{region.moderate}</td>
-                              <td>{region.high}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                              No regions found matching &quot;{modalSearch}&quot;
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="modal-footer">
-                  <button
-                    className="btn-close"
-                    onClick={() => {
-                      setShowRegionalModal(false);
-                      setModalSearch("");
-                    }}
-                  >
-                    Close View
-                  </button>
-                </div>
-              </div>
-            </ModalWrapper>
-          )}
 
           {showExportModal && data ? (
             <ModalWrapper variant="export" onClose={() => setShowExportModal(false)}>

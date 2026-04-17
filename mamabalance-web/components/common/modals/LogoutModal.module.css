@@ -1,0 +1,91 @@
+.logoutModal {
+  background: #ffffff;
+  padding: 28px 24px 24px;
+  border-radius: 20px;
+  width: 500px;
+  max-width: calc(100vw - 32px);
+  height: auto;
+  position: relative;
+  z-index: 10000;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.title {
+  margin: 0;
+  color: #dc2626;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.message {
+  margin: 14px 0 0;
+  color: #111827;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.actions button {
+  min-width: 120px;
+  height: 42px;
+}
+
+.cancelButton {
+  background: #ffffff;
+  color: #499d85;
+  border: 1.5px solid #499d85;
+  padding: 10px 28px;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: #499d85;
+  color: #ffffff;
+}
+
+.cancelButton:active:not(:disabled) {
+  background: #3f8c77;
+  border-color: #3f8c77;
+  color: #ffffff;
+}
+
+.confirmButton {
+  background: #499d85;
+  color: #ffffff;
+  border: 1.5px solid #499d85;
+  padding: 10px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background: #3f8c77;
+  border-color: #3f8c77;
+}
+
+.cancelButton:disabled,
+.confirmButton:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .logoutModal {
+    width: calc(100vw - 24px);
+    padding: 24px 18px 18px;
+  }
+}

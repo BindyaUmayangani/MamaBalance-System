@@ -94,6 +94,10 @@ export default function EducationalContentPage({ role }: Props) {
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+  const hasActiveSearchOrFilter =
+    search.trim().length > 0 ||
+    filterType !== "all" ||
+    filterVisibility !== "all";
 
   async function handleDelete() {
     if (!selectedContent) {
@@ -142,6 +146,22 @@ export default function EducationalContentPage({ role }: Props) {
       data={paginatedData}
       canEdit={isSuperAdmin}
       canDelete={isSuperAdmin}
+      emptyStateVariant={hasActiveSearchOrFilter ? "search" : "default"}
+      emptyStateTitle={
+        hasActiveSearchOrFilter
+          ? "No matching educational content found"
+          : "No educational content yet"
+      }
+      emptyStateMessage={
+        hasActiveSearchOrFilter
+          ? "Try a different title, content ID, or clear the current filters."
+          : "Educational resources will appear here once content is added for care teams."
+      }
+      emptyStateTips={
+        hasActiveSearchOrFilter
+          ? ["Check spelling", "Try fewer keywords", "Clear filters"]
+          : ["Articles and guides", "Video resources", "Regional visibility"]
+      }
       onView={(item) => {
         setSelectedContent(item);
         setActiveModal("view");

@@ -98,7 +98,7 @@ export default function ResetPasswordModal({
   return (
     <>
       <h2 className="modal-title">Reset Admin Password</h2>
-      <p className="readonly-field">
+      <p className="modal-identity-row">
         Set a new password for <strong>{name}</strong>.
       </p>
 
@@ -110,6 +110,8 @@ export default function ResetPasswordModal({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter new password"
+          autoComplete="new-password"
+          data-lpignore="true"
         />
 
         <span
@@ -138,6 +140,8 @@ export default function ResetPasswordModal({
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirm new password"
+          autoComplete="new-password"
+          data-lpignore="true"
         />
 
         <span

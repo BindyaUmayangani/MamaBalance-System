@@ -82,9 +82,15 @@ export default function AdminManagementPage() {
         <div className="search-box">
           <Search size={18} />
           <input
+            type="search"
+            name="regional-admin-search"
             placeholder="Search by Admin ID, Name, Username or Region"
             value={search}
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            data-lpignore="true"
             onChange={(e) => {
               setSearch(e.target.value);
               setCurrentPage(1);

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ManagedMotherRow } from "@/lib/admin/types";
+import EpdsTrendChart from "@/components/common/EpdsTrendChart";
 import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
-import "@/app/superadmin/styles/userManagement.css";
+import "@/app/doctor/styles/AssignedMothers.css";
 
 type Props = {
   mother: ManagedMotherRow;
@@ -36,65 +36,34 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
   const [details, setDetails] = useState<MotherDetails>(mother);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [detailError, setDetailError] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [isMounted, setIsMounted] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const displayMother = details;
   const motherRiskClass = riskClass(displayMother.riskStatus);
 
-  // Group EPDS scores by Month Year
-  const groupedByMonth = useMemo(() => {
-    const history = displayMother.epdsHistory || [];
-    const groups: Record<string, typeof history> = {};
-
-    history.forEach((item) => {
-      const date = item.submittedAt ? new Date(item.submittedAt) : new Date();
-      const monthKey = date.toLocaleString("default", { month: "long", year: "numeric" });
-      if (!groups[monthKey]) groups[monthKey] = [];
-      groups[monthKey].push(item);
-    });
-
-    return groups;
-  }, [displayMother.epdsHistory]);
-
-  const availableMonths = useMemo(() => Object.keys(groupedByMonth).reverse(), [groupedByMonth]);
-
-  // Set default month when data is loaded
   useEffect(() => {
-    if (availableMonths.length > 0 && !selectedMonth) {
-      setSelectedMonth(availableMonths[0]);
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
     }
-  }, [availableMonths, selectedMonth]);
 
-  const epdsTrend = useMemo(() => {
-    const history = groupedByMonth[selectedMonth] || [];
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
-    return history.map((item) => ({
-      label: item.label,
-      score: item.score,
-    }));
-  }, [groupedByMonth, selectedMonth]);
-
-  const chartPoints = useMemo(() => {
-    return epdsTrend.map((point, index) => {
-      const usableWidth = 252;
-      const step = epdsTrend.length > 1 ? usableWidth / (epdsTrend.length - 1) : 0;
-
-      return {
-        ...point,
-        x: epdsTrend.length > 1 ? 58 + index * step : 184,
-        y: 210 - Math.min(30, Math.max(0, point.score)) * 6,
-      };
-    });
-  }, [epdsTrend]);
-
-  const handleMonthShift = (direction: "prev" | "next") => {
-    const currentIndex = availableMonths.indexOf(selectedMonth);
-    const nextIndex = direction === "next" ? currentIndex - 1 : currentIndex + 1;
-    if (nextIndex >= 0 && nextIndex < availableMonths.length) {
-      setSelectedMonth(availableMonths[nextIndex]);
-    }
-  };
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isMounted]);
 
   useEffect(() => {
     let isMounted = true;
@@ -152,8 +121,13 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
     }
   }
 
-  return (
-    <div className="mother-profile-modal">
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div className="modal-overlay assigned-mothers-modal-overlay" onClick={onClose}>
+      <div className="modal-card mother-profile-modal" onClick={(event) => event.stopPropagation()}>
       <div className="profile-banner">
         <div>
           <h2>Mother Profile: {displayMother.name}</h2>
@@ -171,9 +145,14 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
           <div className="profile-info-list">
             <p><span>Name:</span> <strong>{displayMother.name}</strong></p>
             <p><span>NIC:</span> <strong>{displayMother.nic || "-"}</strong></p>
-            <p><span>Email:</span> <strong>{displayMother.email || "-"}</strong></p>
-            <p><span>Current Email:</span> <strong>{displayMother.personalEmail || "-"}</strong></p>
+            <p><span>MamaBalance Email:</span> <strong>{displayMother.email || "-"}</strong></p>
+            <p><span>Personal Email:</span> <strong>{displayMother.personalEmail || "-"}</strong></p>
             <p><span>Region:</span> <strong>{displayMother.region || "-"}</strong></p>
+            <p><span>Assigned Midwife:</span> <strong>{displayMother.assignedMidwife || "-"}</strong></p>
+            <p><span>Assigned Doctor:</span> <strong>{displayMother.assignedDoctor || "-"}</strong></p>
+            <p><span>Last EPDS Test Date:</span> <strong>{displayMother.lastEpdTestDate || "-"}</strong></p>
+            <p><span>Created On:</span> <strong>{displayMother.createdOn || "-"}</strong></p>
+            <p><span>Status:</span> <strong>{displayMother.status === "active" ? "Active" : "Inactive"}</strong></p>
             <p><span>Contact No:</span> <strong>{displayMother.contact || "-"}</strong></p>
             <p><span>Birthday:</span> <strong>{displayMother.birthdate || "-"}</strong></p>
             <p><span>Age:</span> <strong>{displayMother.age || "-"}</strong></p>
@@ -182,91 +161,16 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
             <p><span>Guardian Contact No:</span> <strong>{displayMother.guardianContact || "-"}</strong></p>
             <p><span>Delivery Date:</span> <strong>{displayMother.deliveryDate || "-"}</strong></p>
             <p><span>No of Children:</span> <strong>{displayMother.noOfChildren ?? "-"}</strong></p>
-            <p><span>Assigned Midwife:</span> <strong>{displayMother.assignedMidwife || "-"}</strong></p>
-            <p><span>Assigned Doctor:</span> <strong>{displayMother.assignedDoctor || "-"}</strong></p>
-            <p><span>Last EPDS Test Date:</span> <strong>{displayMother.lastEpdTestDate || "-"}</strong></p>
-            <p><span>Created On:</span> <strong>{displayMother.createdOn || "-"}</strong></p>
-            <p><span>Status:</span> <strong>{displayMother.status === "active" ? "Active" : "Inactive"}</strong></p>
           </div>
         </div>
 
         <div className="profile-panel">
           <h3>EPDS Score Trend</h3>
-          <div className="epds-chart-card">
-            {chartPoints.length > 0 ? (
-              <>
-                <svg viewBox="0 0 360 250" className="epds-chart" aria-label="EPDS score trend">
-                  {[0, 5, 10, 15, 20, 25, 30].map((tick) => {
-                    const y = 210 - tick * 6;
-                    return (
-                      <g key={tick}>
-                        <line x1="52" y1={y} x2="320" y2={y} className="chart-grid-line" />
-                        <text x="18" y={y + 4} className="chart-axis-label">
-                          {String(tick).padStart(2, "0")}
-                        </text>
-                      </g>
-                    );
-                  })}
-                  {chartPoints.length > 1 ? (
-                    <polyline
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="2"
-                      points={chartPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-                    />
-                  ) : null}
-                  {chartPoints.map((point, index) => (
-                    <g key={`${point.score}-${index}`}>
-                      <circle
-                        cx={point.x}
-                        cy={point.y}
-                        r="6"
-                        className={`chart-point ${index === chartPoints.length - 1 ? "latest" : ""}`}
-                      >
-                        <title>EPDS score: {point.score}</title>
-                      </circle>
-                    </g>
-                  ))}
-                  {chartPoints.map((point) => (
-                    <text key={point.label} x={point.x - 18} y="236" className="chart-axis-label x-axis">
-                      {point.label}
-                    </text>
-                  ))}
-                </svg>
-                
-                <div className="month-toggle-row">
-                  <div className="month-toggle-group">
-                    <button 
-                      className="month-toggle-btn"
-                      onClick={() => handleMonthShift("prev")}
-                      disabled={availableMonths.indexOf(selectedMonth) === availableMonths.length - 1}
-                      title="Previous Month"
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <span className="selected-month-label">{selectedMonth}</span>
-                    <button 
-                      className="month-toggle-btn"
-                      onClick={() => handleMonthShift("next")}
-                      disabled={availableMonths.indexOf(selectedMonth) === 0}
-                      title="Next Month"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </div>
-                </div>
-
-                <p className="chart-month-label" style={{ marginTop: '10px' }}>
-                  Latest in selection: {chartPoints.at(-1)?.score ?? "-"}
-                </p>
-              </>
-            ) : (
-              <div className="epds-empty-state">
-                <h4>No EPDS tests recorded</h4>
-                <p>EPDS trend points will appear here after the mother submits assessments.</p>
-              </div>
-            )}
-          </div>
+          <EpdsTrendChart
+            history={displayMother.epdsHistory}
+            fallbackScore={displayMother.lastEpdScore}
+            fallbackSubmittedAt={displayMother.lastEpdTestDate}
+          />
         </div>
       </div>
 
@@ -278,6 +182,8 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
           Close
         </button>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { ManagedMotherRow } from "@/lib/admin/types";
 import "@/app/doctor/styles/AssignedMothers.css";
@@ -86,6 +87,7 @@ export default function MotherObservationModal({ mother, onClose }: Props) {
   const [details, setDetails] = useState<MotherCareDetails>(mother);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [detailError, setDetailError] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
   const [observationFilter, setObservationFilter] = useState("all");
   const [observationPage, setObservationPage] = useState(1);
   const [activeMedicationPage, setActiveMedicationPage] = useState(1);
@@ -100,6 +102,29 @@ export default function MotherObservationModal({ mother, onClose }: Props) {
     [details.medicationHistory],
   );
   const motherRiskClass = riskClass(details.riskStatus);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isMounted]);
 
   useEffect(() => {
     let isMounted = true;
@@ -178,12 +203,13 @@ export default function MotherObservationModal({ mother, onClose }: Props) {
     Math.ceil(medicationHistory.length / medicationItemsPerPage),
   );
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-card mother-observation-modal"
-        onClick={(event) => event.stopPropagation()}
-      >
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div className="modal-overlay assigned-mothers-modal-overlay" onClick={onClose}>
+      <div className="modal-card mother-observation-modal" onClick={(event) => event.stopPropagation()}>
         <div className="profile-banner compact">
           <div>
             <h2>{details.name} Overview</h2>
@@ -404,6 +430,7 @@ export default function MotherObservationModal({ mother, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

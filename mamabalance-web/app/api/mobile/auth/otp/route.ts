@@ -3,23 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { normalizePhoneNumber, sendNotifySms } from "@/lib/notify/sms";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
-
-function normalizePhoneNumber(value: unknown) {
-  const cleaned = String(value || "").trim().replace(/[\s()-]/g, "");
-  if (!cleaned) return "";
-  if (cleaned.startsWith("+")) return cleaned;
-  if (cleaned.startsWith("94")) return `+${cleaned}`;
-  if (cleaned.startsWith("0")) return `+94${cleaned.slice(1)}`;
-  return cleaned;
-}
-
-function notifyPhoneNumber(value: string) {
-  return value.replace(/^\+/, "");
-}
 
 function hashValue(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -27,20 +15,6 @@ function hashValue(value: string) {
 
 function createOtpCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
-}
-
-function requireNotifyConfig() {
-  const userId = process.env.NOTIFY_LK_USER_ID;
-  const apiKey = process.env.NOTIFY_LK_API_KEY;
-  const senderId = process.env.NOTIFY_LK_SENDER_ID;
-
-  if (!userId || !apiKey || !senderId) {
-    throw new Error(
-      "Missing Notify.lk credentials. Add NOTIFY_LK_USER_ID, NOTIFY_LK_API_KEY, and NOTIFY_LK_SENDER_ID.",
-    );
-  }
-
-  return { userId, apiKey, senderId };
 }
 
 async function findMotherByPhone(phoneNumber: string) {
@@ -96,34 +70,13 @@ async function sendSmsOtp({
   code: string;
   displayName: string;
 }) {
-  const { userId, apiKey, senderId } = requireNotifyConfig();
-  const params = new URLSearchParams({
-    user_id: userId,
-    api_key: apiKey,
-    sender_id: senderId,
-    to: notifyPhoneNumber(phoneNumber),
+  await sendNotifySms({
+    phoneNumber,
     message:
       `MamaBalance: Your verification code is ${code}. ` +
       `Use it within 10 minutes to continue.`,
-    contact_fname: displayName.split(" ").filter(Boolean)[0] || "Mother",
+    contactFirstName: displayName.split(" ").filter(Boolean)[0] || "Mother",
   });
-
-  const response = await fetch(`https://app.notify.lk/api/v1/send?${params.toString()}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-
-  const payload = (await response.json().catch(() => null)) as
-    | { status?: string; data?: unknown }
-    | null;
-
-  if (!response.ok || payload?.status !== "success") {
-    const reason =
-      payload && typeof payload.data === "string"
-        ? payload.data
-        : "Notify.lk SMS request failed.";
-    throw new Error(reason);
-  }
 }
 
 async function handleSendOtp(request: NextRequest) {

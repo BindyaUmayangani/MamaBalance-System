@@ -4,6 +4,7 @@ import type { DocumentData } from "firebase-admin/firestore";
 import { DEFAULT_REGIONS, normalizeRegionName } from "@/lib/admin/regions";
 import { getCurrentSessionUser } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { buildSuperadminNotifications } from "@/lib/superadmin/notifications";
 
 type RiskLevel = "low" | "moderate" | "high";
 
@@ -178,6 +179,8 @@ export async function GET() {
     .sort((first, second) => second.sortTime - first.sortTime)
     .slice(0, 4);
 
+  const unreadCount = (await buildSuperadminNotifications(actor.uid)).filter((item) => !item.read).length;
+
   return NextResponse.json({
     displayName: actor.displayName || "Super Admin",
     stats: {
@@ -198,5 +201,6 @@ export async function GET() {
     weeklyEpds: weekBuckets,
     highRiskMothers,
     recentAudit,
+    unreadCount,
   });
 }

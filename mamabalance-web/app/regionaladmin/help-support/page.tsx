@@ -6,7 +6,7 @@ export default function RegionalAdminHelpSupportPage() {
     <div className="role-page">
       <div className="role-header">
         <h1>Help & Support</h1>
-        <p>Use support tools for regional operations and user management tasks.</p>
+        <p>Use support tools for regional operations and escalate support tickets directly to the superadmin team.</p>
       </div>
 
       <div className="role-grid">
@@ -37,7 +37,7 @@ export default function RegionalAdminHelpSupportPage() {
             <details className="faq-item">
               <summary>How do I report user account access issues?</summary>
               <p className="faq-answer">
-                Submit a support ticket from this page with affected username, role, and error details for faster help.
+                Submit a support ticket from this page with the affected username, role, and error details. Regional admin tickets are routed directly to the superadmin team.
               </p>
             </details>
             <details className="faq-item">
@@ -72,7 +72,7 @@ export default function RegionalAdminHelpSupportPage() {
         </section>
 
         <CustomerSupportSection
-          intro="Use customer support for regional user management issues, publishing problems, and escalated account access cases."
+          intro="Use customer support for regional user management issues, publishing problems, and escalated account access cases sent directly to the superadmin team."
           categoryOptions={[
             { value: "regional", label: "Regional Operations" },
             { value: "technical", label: "Technical" },

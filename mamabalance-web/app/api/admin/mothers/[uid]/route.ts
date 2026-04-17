@@ -370,6 +370,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     noOfChildren: Number(mother?.noOfChildren ?? 0),
     epdsHistory,
     observations,
+    medications,
     activeMedications,
     medicationHistory,
   });

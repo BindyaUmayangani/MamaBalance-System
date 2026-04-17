@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useState } from "react";
-import { ExternalLink, FileText, ImageIcon, Video } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, ImageIcon, Video } from "lucide-react";
 import {
   getDownloadURL,
   ref,
@@ -256,33 +256,38 @@ export default function ContentFormModal({
           />
 
           <label>Content Type</label>
-          <select
-            value={type}
-            onChange={(event) => {
-              const nextType = event.target.value as EducationalContentType;
-              const wasFileType = type === "video" || type === "pdf";
-              const nextIsFileType =
-                nextType === "video" || nextType === "pdf";
+          <div className="field-control">
+            <select
+              value={type}
+              onChange={(event) => {
+                const nextType = event.target.value as EducationalContentType;
+                const wasFileType = type === "video" || type === "pdf";
+                const nextIsFileType =
+                  nextType === "video" || nextType === "pdf";
 
-              setType(nextType);
+                setType(nextType);
 
-              if (wasFileType !== nextIsFileType) {
-                setResourceUrl("");
-                setResourcePath("");
-                setResourceFile(null);
-              }
-            }}
-          >
-            {EDUCATIONAL_CONTENT_TYPES.map((item) => (
-              <option key={item} value={item}>
-                {item === "youtube"
-                  ? "YouTube Video"
-                  : item === "pdf"
-                    ? "PDF"
-                    : item.charAt(0).toUpperCase() + item.slice(1)}
-              </option>
-            ))}
-          </select>
+                if (wasFileType !== nextIsFileType) {
+                  setResourceUrl("");
+                  setResourcePath("");
+                  setResourceFile(null);
+                }
+              }}
+            >
+              {EDUCATIONAL_CONTENT_TYPES.map((item) => (
+                <option key={item} value={item}>
+                  {item === "youtube"
+                    ? "YouTube Video"
+                    : item === "pdf"
+                      ? "PDF"
+                      : item.charAt(0).toUpperCase() + item.slice(1)}
+                </option>
+              ))}
+            </select>
+            <span className="field-icon" aria-hidden="true">
+              <ChevronDown size={18} />
+            </span>
+          </div>
 
           <label>Visibility</label>
           <div className="radio-group">

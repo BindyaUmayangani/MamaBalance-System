@@ -89,6 +89,17 @@
   font-size: 0.85rem;
 }
 
+.provision-sms-btn {
+  width: 210px !important;
+  min-width: 210px !important;
+  max-width: 210px !important;
+  height: 48px;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  flex: 0 0 210px;
+}
+
 /* ================= TABS ================= */
 .tabs-row {
   display: flex;
@@ -501,6 +512,21 @@ tbody tr.dashboard-highlight-row {
   line-height: 1.45;
 }
 
+.modal-identity-row {
+  margin: 8px 0 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.modal-identity-row strong {
+  color: #1f2937;
+  font-weight: 700;
+}
+
 .field-control {
   position: relative;
 }
@@ -873,6 +899,34 @@ tbody tr.dashboard-highlight-row {
 
 
 
+.modal-card.mother-modal {
+  width: 860px !important;
+  min-width: 860px !important;
+  max-width: 860px !important;
+  height: min(82vh, 760px) !important;
+  min-height: min(82vh, 760px) !important;
+  max-height: min(82vh, 760px) !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+
+.modal-card.mother-modal .modal-container {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-card.mother-modal .modal-body-scroll {
+  flex: 1;
+  max-height: none;
+}
+
 .modal-card.view-modal {
   width: 760px;
   max-width: 92vw;
@@ -887,6 +941,7 @@ tbody tr.dashboard-highlight-row {
 
 .modal-card.mother-modal:has(.mother-profile-modal) {
   width: min(1320px, 94vw);
+  min-width: 0;
   max-width: 94vw;
   padding: 0;
   border: none;
@@ -899,18 +954,49 @@ tbody tr.dashboard-highlight-row {
   max-height: 88vh;
 }
 
+@media (max-width: 900px) {
+  .modal-card.mother-modal {
+    width: calc(100vw - 32px) !important;
+    min-width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
+    height: min(84vh, 760px) !important;
+    min-height: min(84vh, 760px) !important;
+    max-height: min(84vh, 760px) !important;
+  }
+}
+
 /* ================= FILTER MOTHER MODAL ================= */
 
 /* Specialized width for filter configuration (Ultra-wide) */
 .modal-card.filter-modal {
-  width: 1180px;
-  max-width: 96vw;
+  width: 1180px !important;
+  min-width: 1180px !important;
+  max-width: 1180px !important;
+  height: min(84vh, 720px) !important;
+  min-height: min(84vh, 720px) !important;
+  max-height: min(84vh, 720px) !important;
   padding: 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-card.filter-modal .modal-container {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
 }
 
 /* No-scroll content container */
 .filter-content-no-scroll {
-  margin-bottom: 24px;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 12px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 /* Filter row (Region / Risk / Status) */
@@ -918,7 +1004,7 @@ tbody tr.dashboard-highlight-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 32px;
-  margin-bottom: 36px;
+  margin-bottom: 30px;
   align-items: center;
 }
 
@@ -961,7 +1047,13 @@ tbody tr.dashboard-highlight-row {
   grid-template-columns: repeat(4, 1fr);
   column-gap: 36px;
   row-gap: 22px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
+}
+
+.modal-card.filter-modal .modal-actions {
+  margin-top: 8px;
+  padding-top: 4px;
+  flex-shrink: 0;
 }
 
 /* Individual checkbox label */
@@ -1000,6 +1092,16 @@ tbody tr.dashboard-highlight-row {
 }
 /* Responsive: stack to 1 column */
 @media (max-width: 640px) {
+  .modal-card.filter-modal {
+    width: calc(100vw - 32px) !important;
+    min-width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
+    height: min(86vh, 720px) !important;
+    min-height: min(86vh, 720px) !important;
+    max-height: min(86vh, 720px) !important;
+    padding: 24px;
+  }
+
   .hide-columns-grid {
     grid-template-columns: 1fr;
   }
@@ -1244,6 +1346,11 @@ tbody tr.dashboard-highlight-row {
 
 .user-summary-scroll {
   max-height: min(68vh, 640px);
+}
+
+.modal-card.view-modal .modal-actions {
+  margin-top: 10px;
+  padding-top: 6px;
 }
 
 .modal-actions {

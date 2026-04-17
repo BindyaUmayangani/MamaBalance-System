@@ -109,7 +109,7 @@ export default function EditMotherModal({
     <div className="modal-container">
       <h2 className="modal-title">UPDATE MOTHER’S DETAILS</h2>
 
-      <p className="readonly-field">
+      <p className="modal-identity-row">
         <strong>Full Name:</strong> {mother.name}
       </p>
 

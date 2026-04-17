@@ -15,7 +15,7 @@ function buildTicketNumber() {
   return `SUP-${Date.now().toString().slice(-8)}`;
 }
 
-async function notifyRegionalAdminsForSubmittedTicket(ticket: {
+type SubmittedTicketNotification = {
   ticketId: string;
   ticketNumber: string;
   regionId: string | null;
@@ -24,7 +24,9 @@ async function notifyRegionalAdminsForSubmittedTicket(ticket: {
   requesterName: string;
   issueCategory: string;
   priority: TicketPriority;
-}) {
+};
+
+async function notifyRegionalAdminsForSubmittedTicket(ticket: SubmittedTicketNotification) {
   if (!ticket.regionId) {
     return;
   }
@@ -65,6 +67,54 @@ async function notifyRegionalAdminsForSubmittedTicket(ticket: {
   );
 
   await Promise.all(writes);
+}
+
+async function notifySupportTeamForSubmittedTicket(ticket: SubmittedTicketNotification) {
+  const superadminSnapshot = await adminDb
+    .collection("users")
+    .where("role", "==", "superadmin")
+    .get();
+
+  const recipients = superadminSnapshot.docs.filter((doc) => {
+    const data = doc.data();
+    return data.status === "active";
+  });
+
+  if (recipients.length === 0) {
+    return;
+  }
+
+  const writes = recipients.map((doc) =>
+    adminDb.collection("notifications").add({
+      recipientUid: doc.id,
+      recipientRole: "superadmin",
+      type: "support-ticket",
+      title: "New Support Team Ticket",
+      message: `${ticket.requesterName} submitted ${ticket.ticketNumber} (${ticket.issueCategory}).`,
+      ticketId: ticket.ticketId,
+      ticketNumber: ticket.ticketNumber,
+      requesterUid: ticket.requesterUid,
+      requesterRole: ticket.requesterRole,
+      requesterName: ticket.requesterName,
+      issueCategory: ticket.issueCategory,
+      priority: ticket.priority,
+      regionId: ticket.regionId,
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }),
+  );
+
+  await Promise.all(writes);
+}
+
+async function notifyRecipientsForSubmittedTicket(ticket: SubmittedTicketNotification) {
+  if (ticket.requesterRole === "regionaladmin" || ticket.requesterRole === "superadmin") {
+    await notifySupportTeamForSubmittedTicket(ticket);
+    return;
+  }
+
+  await notifyRegionalAdminsForSubmittedTicket(ticket);
 }
 
 async function handleList() {
@@ -170,7 +220,7 @@ async function handleCreate(request: NextRequest) {
   });
 
   if (status === "submitted") {
-    await notifyRegionalAdminsForSubmittedTicket({
+    await notifyRecipientsForSubmittedTicket({
       ticketId: ticketRef.id,
       ticketNumber,
       regionId: actor.regionId || null,
@@ -244,7 +294,7 @@ async function handleUpdate(request: NextRequest) {
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  await notifyRegionalAdminsForSubmittedTicket({
+  await notifyRecipientsForSubmittedTicket({
     ticketId: payload.id,
     ticketNumber: String(ticket?.ticketNumber || payload.id),
     regionId: (ticket?.regionId as string | null | undefined) || actor.regionId || null,

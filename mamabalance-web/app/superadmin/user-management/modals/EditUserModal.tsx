@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { ManagedUserRow } from "@/lib/admin/types";
 
 type RegionOption = {
@@ -48,7 +49,7 @@ export default function EditUserModal({
         UPDATE {config.role.toUpperCase()}
       </h2>
 
-      <p className="readonly-field">
+      <p className="modal-identity-row">
         <strong>Full Name:</strong> {user.name}
       </p>
 
@@ -69,19 +70,22 @@ export default function EditUserModal({
       {config.showRegion && (
         <>
           <label>Assigned Region</label>
-          <select
-            value={regionId}
-            onChange={(e) => setRegionId(e.target.value)}
-          >
-            <option value="" disabled>
-              Select region
-            </option>
-            {regionOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
+          <div className="field-control">
+            <select
+              value={regionId}
+              onChange={(e) => setRegionId(e.target.value)}
+            >
+              <option value="" disabled>
+                Select region
               </option>
-            ))}
-          </select>
+              {regionOptions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={18} className="field-icon" />
+          </div>
         </>
       )}
 

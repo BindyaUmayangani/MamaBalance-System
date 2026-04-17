@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import {
   CreatedCredentials,
@@ -131,14 +132,17 @@ export default function AddAdminModal({
         />
 
         <label>Assign Region</label>
-        <select value={region} onChange={(e) => setRegion(e.target.value)}>
-          <option value="">Select region</option>
-          {regionOptions.map((regionOption) => (
-            <option key={regionOption.id} value={regionOption.id}>
-              {regionOption.name}
-            </option>
-          ))}
-        </select>
+        <div className="field-control">
+          <select value={region} onChange={(e) => setRegion(e.target.value)}>
+            <option value="">Select region</option>
+            {regionOptions.map((regionOption) => (
+              <option key={regionOption.id} value={regionOption.id}>
+                {regionOption.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={18} className="field-icon" />
+        </div>
 
         <div className="field-note">
           The account credentials will be created for you after saving this regional admin.

@@ -564,19 +564,19 @@ export default function RegionalAnalyticsPage() {
               </div>
 
               <div className="table-wrapper">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>Staff Member</th>
-                      <th>Role</th>
-                      <th>Assigned Mothers</th>
-                      <th>High Risk</th>
-                      <th>Observations</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.careTeamBreakdown.length > 0 ? (
-                      pagedCareTeamRows.map((row) => (
+                {data.careTeamBreakdown.length > 0 ? (
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Staff Member</th>
+                        <th>Role</th>
+                        <th>Assigned Mothers</th>
+                        <th>High Risk</th>
+                        <th>Observations</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedCareTeamRows.map((row) => (
                         <tr key={row.uid}>
                           <td><strong>{row.name}</strong></td>
                           <td>{row.role}</td>
@@ -584,16 +584,23 @@ export default function RegionalAnalyticsPage() {
                           <td>{row.highRiskMothers}</td>
                           <td>{row.observations}</td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} style={{ textAlign: "center", padding: "34px", color: "#64748b" }}>
-                          No regional care team members found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="doctor-empty-state">
+                    <div className="doctor-empty-state-icon" aria-hidden="true">
+                      <Users size={26} strokeWidth={2.2} />
+                    </div>
+                    <h3>No regional care team members found</h3>
+                    <p>Care team workload will appear here once doctors and midwives are active in your assigned region.</p>
+                    <div className="doctor-empty-state-tips">
+                      <span>Check region staffing</span>
+                      <span>Review user status</span>
+                      <span>Refresh analytics</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {data.careTeamBreakdown.length > careTeamPageSize && (

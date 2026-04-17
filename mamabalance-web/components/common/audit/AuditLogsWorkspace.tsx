@@ -450,45 +450,53 @@ export default function AuditLogsWorkspace({
           </div>
 
           <div className="audit-table-card">
-            <table className="audit-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor</th>
-                  <th>Actor Role</th>
-                  {showRegionFilter && <th>Region</th>}
-                  <th>Module</th>
-                  <th>Action Type</th>
-                  <th>Action</th>
-                  <th>Target</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td>{formatTimestamp(log.timestamp)}</td>
-                    <td>{log.actor}</td>
-                    <td>{log.actorRole}</td>
-                    {showRegionFilter && <td>{log.region}</td>}
-                    <td>
-                      <span className={`audit-chip ${chipClassByModule[log.module] || "system"}`}>
-                        {log.module}
-                      </span>
-                    </td>
-                    <td>{log.actionType}</td>
-                    <td className="audit-action">{log.action}</td>
-                    <td>{log.target}</td>
-                  </tr>
-                ))}
-                {filteredLogs.length === 0 && (
+            {filteredLogs.length > 0 ? (
+              <table className="audit-table">
+                <thead>
                   <tr>
-                    <td colSpan={showRegionFilter ? 8 : 7} className="audit-empty">
-                      No audit log events found for the selected filters.
-                    </td>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Actor Role</th>
+                    {showRegionFilter && <th>Region</th>}
+                    <th>Module</th>
+                    <th>Action Type</th>
+                    <th>Action</th>
+                    <th>Target</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{formatTimestamp(log.timestamp)}</td>
+                      <td>{log.actor}</td>
+                      <td>{log.actorRole}</td>
+                      {showRegionFilter && <td>{log.region}</td>}
+                      <td>
+                        <span className={`audit-chip ${chipClassByModule[log.module] || "system"}`}>
+                          {log.module}
+                        </span>
+                      </td>
+                      <td>{log.actionType}</td>
+                      <td className="audit-action">{log.action}</td>
+                      <td>{log.target}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="doctor-empty-state">
+                <div className="doctor-empty-state-icon" aria-hidden="true">
+                  <Search size={26} strokeWidth={2.2} />
+                </div>
+                <h3>No audit log events found</h3>
+                <p>Try a different keyword or date range to find the regional activity you want to review.</p>
+                <div className="doctor-empty-state-tips">
+                  <span>Check spelling</span>
+                  <span>Adjust date range</span>
+                  <span>Clear filters</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <Pagination

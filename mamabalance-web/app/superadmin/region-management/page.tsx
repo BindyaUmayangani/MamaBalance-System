@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Trash2 } from "lucide-react";
+import { MapPin, Search, Trash2 } from "lucide-react";
 
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/superadmin/styles/regionManagement.css";
+import "@/app/styles/RoleSettingsSupport.css";
 
 import Pagination from "../components/Pagination";
 import ModalWrapper from "../educational-content/modals/ModalWrapper";
@@ -69,6 +70,7 @@ export default function RegionManagementPage() {
   }, [regions, search]);
 
   const totalItems = filteredRegions.length;
+  const hasActiveSearch = search.trim().length > 0;
 
   const paginatedRegions = filteredRegions.slice(
     (currentPage - 1) * pageSize,
@@ -107,6 +109,24 @@ export default function RegionManagementPage() {
 
       {loading ? (
         <LoadingState label="Loading regions..." />
+      ) : filteredRegions.length === 0 ? (
+        <div className="table-card">
+          <div className="doctor-empty-state">
+            <div className="doctor-empty-state-icon" aria-hidden="true">
+              <MapPin size={24} />
+            </div>
+            <h3>{hasActiveSearch ? "No matching regions found" : "No regions added yet"}</h3>
+            <p>
+              {hasActiveSearch
+                ? "Try a different region ID or name to find the region you need."
+                : "Regions you add here will appear with their assigned doctors, midwives, and mothers."}
+            </p>
+            <div className="doctor-empty-state-tips">
+              <span>{hasActiveSearch ? "Clear the search to see every region again." : "Use Add Region to create the first system region."}</span>
+              <span>{hasActiveSearch ? "Search using the region ID or the region name." : "Region totals will update here as users are assigned."}</span>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="table-card">
           <table>
@@ -122,41 +142,37 @@ export default function RegionManagementPage() {
             </thead>
 
             <tbody>
-              {paginatedRegions.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>No regions found.</td>
+              {paginatedRegions.map((region) => (
+                <tr key={region.id}>
+                  <td>{region.id}</td>
+                  <td>{region.name}</td>
+                  <td>{region.doctors}</td>
+                  <td>{region.midwives}</td>
+                  <td>{region.mothers}</td>
+                  <td className="actions">
+                    <Trash2
+                      title="Delete Region"
+                      onClick={() => {
+                        setSelectedRegion(region);
+                        setActiveModal("delete");
+                      }}
+                    />
+                  </td>
                 </tr>
-              ) : (
-                paginatedRegions.map((region) => (
-                  <tr key={region.id}>
-                    <td>{region.id}</td>
-                    <td>{region.name}</td>
-                    <td>{region.doctors}</td>
-                    <td>{region.midwives}</td>
-                    <td>{region.mothers}</td>
-                    <td className="actions">
-                      <Trash2
-                        title="Delete Region"
-                        onClick={() => {
-                          setSelectedRegion(region);
-                          setActiveModal("delete");
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      <Pagination
-        currentPage={currentPage}
-        totalItems={totalItems}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-      />
+      {filteredRegions.length > 0 ? (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
+      ) : null}
 
       {activeModal && (
         <ModalWrapper onClose={() => setActiveModal(null)}>
