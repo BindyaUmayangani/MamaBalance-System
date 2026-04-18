@@ -191,21 +191,130 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _clearChat() async {
     final shouldClear = await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Clear chat history?'),
-            content: const Text(
-              'This will remove your saved support conversation from this account.',
+          barrierColor: Colors.black.withOpacity(0.35),
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: const Color(0xFFD6ECE6)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x18000000),
+                    blurRadius: 26,
+                    offset: Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFF1F1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFD04545),
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text(
+                          'Clear chat history?',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'This will remove your saved supportive conversation from this account.',
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7F7),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFF4CDCD)),
+                    ),
+                    child: const Text(
+                      'This only clears the chat on this device session. You can start a new conversation any time.',
+                      style: TextStyle(
+                        color: Color(0xFF8B5E5E),
+                        fontSize: 13,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            side: BorderSide(color: _accent.withOpacity(0.35)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            foregroundColor: _accent,
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('Keep Chat'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            backgroundColor: const Color(0xFFD95454),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('Clear Chat'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Clear'),
-              ),
-            ],
           ),
         ) ??
         false;
