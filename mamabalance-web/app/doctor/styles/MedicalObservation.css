@@ -267,6 +267,7 @@
   z-index: 1000;
   padding: 24px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .modal-card {
@@ -737,10 +738,11 @@
   min-width: min(900px, calc(100vw - 48px));
   max-width: min(900px, calc(100vw - 48px));
   max-height: 86vh;
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
   padding: 26px 28px;
   box-sizing: border-box;
+  scrollbar-gutter: stable both-edges;
 }
 
 .observation-view-hero {

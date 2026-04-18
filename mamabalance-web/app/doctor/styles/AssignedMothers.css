@@ -621,11 +621,8 @@ tbody tr.dashboard-highlight-row {
   padding: 24px;
   box-sizing: border-box;
   pointer-events: auto;
-  align-items: flex-start;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  align-items: center;
+  overflow: hidden;
 }
 
 /* ================= MODAL CARD ================= */
@@ -646,16 +643,18 @@ tbody tr.dashboard-highlight-row {
   width: 1180px;
   min-width: 1180px;
   max-width: calc(100vw - 48px);
-  max-height: 88vh;
-  overflow-y: auto;
+  max-height: calc(100vh - 48px);
+  overflow-y: scroll;
   overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable both-edges;
   border: 2px solid #9be0d0;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
   pointer-events: auto;
   margin: 0 auto;
 }
+
 
 .mother-profile-modal {
   padding: 26px 28px 24px;

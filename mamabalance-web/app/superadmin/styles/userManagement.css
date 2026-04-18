@@ -954,6 +954,23 @@ tbody tr.dashboard-highlight-row {
   max-height: 88vh;
 }
 
+.modal-overlay.assigned-mothers-modal-overlay {
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.modal-card.mother-profile-modal,
+.modal-card.mother-observation-modal {
+  width: 1180px;
+  min-width: 1180px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
 @media (max-width: 900px) {
   .modal-card.mother-modal {
     width: calc(100vw - 32px) !important;
@@ -962,6 +979,14 @@ tbody tr.dashboard-highlight-row {
     height: min(84vh, 760px) !important;
     min-height: min(84vh, 760px) !important;
     max-height: min(84vh, 760px) !important;
+  }
+
+  .modal-card.mother-profile-modal,
+  .modal-card.mother-observation-modal {
+    width: calc(100vw - 32px);
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
   }
 }
 

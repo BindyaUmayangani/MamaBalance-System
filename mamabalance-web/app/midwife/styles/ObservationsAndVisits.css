@@ -388,6 +388,7 @@
   align-items: center;
   z-index: 2100;
   padding: 20px;
+  overflow: hidden;
 }
 
 .modal-card {
@@ -409,11 +410,15 @@
 }
 
 .observation-view-modal {
-  width: 720px;
-  max-width: 96vw;
+  width: min(900px, calc(100vw - 48px));
+  min-width: min(900px, calc(100vw - 48px));
+  max-width: min(900px, calc(100vw - 48px));
   max-height: 86vh;
-  overflow-y: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
   padding: 26px 28px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable both-edges;
 }
 
 .modal-title {

@@ -596,7 +596,7 @@
   flex-wrap: nowrap;
 }
 
-.analytics-export-modal .btn-close,
+.analytics-export-modal .btn-outline,
 .analytics-export-modal .btn-primary {
   width: 112px;
   min-width: 112px;
@@ -635,7 +635,7 @@
     flex-direction: column-reverse;
   }
 
-  .analytics-export-modal .btn-close,
+  .analytics-export-modal .btn-outline,
   .analytics-export-modal .btn-primary {
     width: 100%;
   }

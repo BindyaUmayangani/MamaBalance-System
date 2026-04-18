@@ -723,7 +723,7 @@ export default function RegionalAnalyticsPage() {
             </div>
 
             <div className="modal-actions">
-              <button className="btn-close" onClick={() => setShowExportModal(false)}>
+              <button className="btn-outline" onClick={() => setShowExportModal(false)}>
                 Cancel
               </button>
 

@@ -621,7 +621,7 @@ export default function AnalyticsReportsPage() {
                 </div>
 
                 <div className="modal-actions">
-                  <button className="btn-close" onClick={() => setShowExportModal(false)}>
+                  <button className="btn-outline" onClick={() => setShowExportModal(false)}>
                     Cancel
                   </button>
                   <button className="btn-primary" onClick={handleExport} disabled={isExporting}>
