@@ -126,8 +126,20 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
   }
 
   return createPortal(
-    <div className="modal-overlay assigned-mothers-modal-overlay" onClick={onClose}>
-      <div className="modal-card mother-profile-modal" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="modal-overlay assigned-mothers-modal-overlay"
+      onClick={onClose}
+      role="presentation"
+      style={{ zIndex: 10000 }}
+    >
+      <div
+        className="modal-card mother-profile-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Mother profile for ${displayMother.name}`}
+        style={{ zIndex: 10001, position: "relative" }}
+      >
       <div className="profile-banner">
         <div>
           <h2>Mother Profile: {displayMother.name}</h2>

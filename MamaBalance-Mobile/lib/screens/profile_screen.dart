@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/mother_profile.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_auth_service.dart';
 import '../services/mother_profile_service.dart';
 import 'educational_resources_screen.dart';
 import 'update_profile_page.dart';
@@ -168,6 +169,8 @@ class ProfileScreen extends StatelessWidget {
                       _buildListTile(context, icon: Icons.person_outline_rounded, text: 'My Account', subtitle: 'View profile details', onTap: () => Navigator.pushNamed(context, '/profile-details')),
                       _buildDivider(),
                       _buildListTile(context, icon: Icons.lock_outline_rounded, text: 'Reset Password', subtitle: 'Update your sign-in password', onTap: () => Navigator.pushNamed(context, '/forgot')),
+                      _buildDivider(),
+                      _buildListTile(context, icon: Icons.fingerprint_rounded, text: 'Biometric Login', subtitle: 'Manage fingerprint or face unlock', onTap: () => _manageBiometricLogin(context)),
                       _buildDivider(),
                       _buildListTile(context, icon: Icons.contacts_outlined, text: 'Emergency Contacts', subtitle: 'Important support numbers', onTap: () => Navigator.pushNamed(context, '/emergency-contacts')),
                       _buildDivider(),
@@ -337,6 +340,249 @@ class ProfileScreen extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _manageBiometricLogin(BuildContext context) async {
+    final biometricService = BiometricAuthService.instance;
+    final isEnabled = await biometricService.isEnabledForCurrentUser();
+    final availability = await biometricService.getAvailability();
+    final biometricLabel = await biometricService.biometricLabel();
+
+    if (!context.mounted) return;
+
+    if (availability != BiometricSetupAvailability.available) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Biometric Login'),
+          content: const Text(
+            'This device does not currently have fingerprint or face authentication ready for MamaBalance. Please add a fingerprint or face in your phone settings first, then come back and enable it here.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (isEnabled) {
+      final disable = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 30,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFCEDEC),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(
+                        Icons.lock_reset_rounded,
+                        color: Color(0xFFB6403D),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Turn Off Quick Unlock?',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF203C35),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'You can enable it again later',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B8078),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '$biometricLabel is currently protecting your saved MamaBalance session on this device. If you turn it off, the app will stop asking for biometric unlock on normal reopen.',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.55,
+                    color: Color(0xFF4E645C),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF6F5),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFF3D0CD)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: Color(0xFFB6403D),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Your OTP or password login still works normally. Turning this off only removes the fingerprint or face unlock step for this device.',
+                          style: TextStyle(
+                            height: 1.5,
+                            color: Color(0xFF7A5A57),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF4FA38A),
+                          side: const BorderSide(color: Color(0xFF4FA38A)),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: const Text(
+                          'Keep On',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB6403D),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        child: const Text(
+                          'Turn Off',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (disable == true) {
+        await biometricService.disableForCurrentUser();
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Biometric quick unlock has been turned off.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Enable Quick Unlock'),
+        content: Text(
+          'After your normal OTP or password login, you can use $biometricLabel to unlock the already-signed-in MamaBalance session on this device.\n\nMamaBalance will use the fingerprint or face authentication already enrolled on this phone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4FA38A),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldEnable != true) {
+      return;
+    }
+
+    final authenticated = await biometricService.authenticateToUnlock(
+      reason: 'Confirm $biometricLabel for MamaBalance quick unlock',
+    );
+
+    if (!context.mounted) return;
+
+    if (authenticated) {
+      await biometricService.enableForCurrentUser();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$biometricLabel quick unlock is now enabled.'),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$biometricLabel was not confirmed, so quick unlock stayed off.'),
       ),
     );
   }

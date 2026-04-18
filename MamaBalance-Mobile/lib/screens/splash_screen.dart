@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/biometric_auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,13 +26,18 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _bootstrap() async {
     await Future.delayed(const Duration(seconds: 3));
-    final hasMotherSession = await AuthService.instance.restoreMotherSession();
+    final restoreStatus = await AuthService.instance.restoreMotherSession();
+    final hasMotherSession = restoreStatus == SessionRestoreStatus.restored;
+    final shouldRequireUnlock =
+        hasMotherSession && await BiometricAuthService.instance.shouldRequireUnlock();
 
     if (!mounted) return;
 
     Navigator.pushReplacementNamed(
       context,
-      hasMotherSession ? '/home' : '/intro',
+      hasMotherSession
+          ? (shouldRequireUnlock ? '/biometric-lock' : '/home')
+          : (restoreStatus == SessionRestoreStatus.expired ? '/signin' : '/intro'),
     );
   }
 

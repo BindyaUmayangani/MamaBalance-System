@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/post_login_biometric_flow.dart';
 import '../widgets/otp_code_field.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -66,7 +67,7 @@ class _OtpScreenState extends State<OtpScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      await PostLoginBiometricFlow.complete(context);
     } on AppAuthException catch (error) {
       setState(() => _errorMessage = error.message);
     } finally {
@@ -88,9 +89,8 @@ class _OtpScreenState extends State<OtpScreen> {
         purpose: session.purpose,
         signOutFirst: true,
         onAutoVerify: (user) {
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-          }
+          if (!mounted) return;
+          PostLoginBiometricFlow.complete(context);
         },
       );
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/post_login_biometric_flow.dart';
 import '../widgets/otp_code_field.dart';
 import 'reset_password_screen.dart';
 
@@ -83,7 +84,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           ),
         );
       } else {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        await PostLoginBiometricFlow.complete(context);
       }
     } on AppAuthException catch (error) {
       setState(() => _errorMessage = error.message);
@@ -115,7 +116,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               ),
             );
           } else {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            PostLoginBiometricFlow.complete(context);
           }
         },
       );

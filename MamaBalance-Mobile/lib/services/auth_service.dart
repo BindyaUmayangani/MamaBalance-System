@@ -30,6 +30,12 @@ class OtpSession {
   });
 }
 
+enum SessionRestoreStatus {
+  restored,
+  noSession,
+  expired,
+}
+
 class AuthService {
   AuthService._();
 
@@ -40,6 +46,8 @@ class AuthService {
   static const Duration _otpRequestCooldown = Duration(seconds: 60);
   static const Duration _otpRateLimitCooldown = Duration(minutes: 5);
   static const Duration _backendTimeout = Duration(seconds: 20);
+  static const Duration _fullLoginLifetime = Duration(days: 7);
+  static const String _lastFullLoginAtKey = 'last_full_login_at';
 
   User? get currentUser => _auth.currentUser;
 
@@ -75,6 +83,7 @@ class AuthService {
         password: password,
       );
       await _ensureMotherAccess(credential.user);
+      await _recordFreshFullLogin();
     } on FirebaseAuthException catch (error) {
       throw AppAuthException(_mapFirebaseError(error));
     }
@@ -177,6 +186,7 @@ class AuthService {
 
       final result = await _auth.signInWithCustomToken(customToken);
       await _ensureMotherAccess(result.user);
+      await _recordFreshFullLogin();
     } on AppAuthException {
       rethrow;
     } on SocketException {
@@ -234,23 +244,46 @@ class AuthService {
     }
   }
 
-  Future<bool> restoreMotherSession() async {
+  Future<SessionRestoreStatus> restoreMotherSession() async {
     final user = _auth.currentUser;
 
     if (user == null) {
-      return false;
+      return SessionRestoreStatus.noSession;
     }
 
     try {
       await _ensureMotherAccess(user);
-      return true;
+      final isFresh = await isFullLoginStillValid();
+      if (!isFresh) {
+        await signOut();
+        return SessionRestoreStatus.expired;
+      }
+
+      return SessionRestoreStatus.restored;
     } catch (_) {
-      return false;
+      return SessionRestoreStatus.noSession;
     }
   }
 
-  Future<void> signOut() {
-    return _auth.signOut();
+  Future<void> signOut() async {
+    await _clearFullLoginRecord();
+    await _auth.signOut();
+  }
+
+  Future<bool> isFullLoginStillValid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastLoginMillis = prefs.getInt(_lastFullLoginAtKey);
+    if (lastLoginMillis == null) {
+      return false;
+    }
+
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(lastLoginMillis)
+        .add(_fullLoginLifetime);
+    return DateTime.now().isBefore(expiresAt);
+  }
+
+  Future<void> expireCurrentSession() async {
+    await signOut();
   }
 
   Future<Duration> getOtpCooldownRemaining(String phoneNumber) async {
@@ -396,6 +429,19 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final until = DateTime.now().add(duration).millisecondsSinceEpoch;
     await prefs.setInt(_otpCooldownKey(phoneNumber), until);
+  }
+
+  Future<void> _recordFreshFullLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _lastFullLoginAtKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  Future<void> _clearFullLoginRecord() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lastFullLoginAtKey);
   }
 
   String _otpCooldownKey(String phoneNumber) => 'otp_cooldown_$phoneNumber';

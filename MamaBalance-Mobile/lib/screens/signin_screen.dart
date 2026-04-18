@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/post_login_biometric_flow.dart';
 
 enum SignInMethod { email, phone }
 
@@ -63,7 +64,7 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      await PostLoginBiometricFlow.complete(context);
     } on AppAuthException catch (error) {
       setState(() => _errorMessage = error.message);
     } finally {
@@ -95,9 +96,8 @@ class _SignInScreenState extends State<SignInScreen> {
         phoneNumber,
         signOutFirst: true,
         onAutoVerify: (user) {
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-          }
+          if (!mounted) return;
+          PostLoginBiometricFlow.complete(context);
         },
       );
 

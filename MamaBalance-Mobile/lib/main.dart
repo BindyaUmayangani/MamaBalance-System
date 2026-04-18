@@ -1,8 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
+import 'services/auth_service.dart';
+import 'services/biometric_auth_service.dart';
 import 'screens/about_app_screen.dart';
+import 'screens/biometric_lock_screen.dart';
 import 'screens/chat_page.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/educational_resources_screen.dart';
@@ -33,12 +37,132 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final AppRouteObserver _routeObserver = AppRouteObserver();
+  bool _shouldLockOnResume = false;
+  bool _resumeCheckInProgress = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (BiometricAuthService.instance.authenticationInProgress) {
+        return;
+      }
+      _prepareBiometricLock();
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _lockOnResumeIfNeeded();
+    }
+  }
+
+  Future<void> _prepareBiometricLock() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      _shouldLockOnResume = false;
+      return;
+    }
+
+    final isSessionFresh = await AuthService.instance.isFullLoginStillValid();
+    if (!isSessionFresh) {
+      _shouldLockOnResume = false;
+      return;
+    }
+
+    _shouldLockOnResume =
+        await BiometricAuthService.instance.isEnabledForCurrentUser();
+  }
+
+  Future<void> _lockOnResumeIfNeeded() async {
+    if (_resumeCheckInProgress || !_shouldLockOnResume) {
+      return;
+    }
+
+    if (BiometricAuthService.instance.authenticationInProgress ||
+        BiometricAuthService.instance.shouldSuppressResumeLock) {
+      _shouldLockOnResume = false;
+      return;
+    }
+
+    _resumeCheckInProgress = true;
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        _shouldLockOnResume = false;
+        return;
+      }
+
+      final isSessionFresh = await AuthService.instance.isFullLoginStillValid();
+      if (!isSessionFresh) {
+        _shouldLockOnResume = false;
+        await AuthService.instance.expireCurrentSession();
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/signin',
+          (route) => false,
+        );
+        return;
+      }
+
+      final currentRoute = _routeObserver.currentRouteName;
+      const unlockedRoutes = <String>{
+        '/',
+        '/intro',
+        '/signin',
+        '/forgot',
+        '/reset',
+        '/otp',
+        '/otp-verification',
+        '/biometric-lock',
+      };
+
+      if (unlockedRoutes.contains(currentRoute)) {
+        return;
+      }
+
+      final biometricEnabled =
+          await BiometricAuthService.instance.isEnabledForCurrentUser();
+      if (!biometricEnabled) {
+        _shouldLockOnResume = false;
+        return;
+      }
+
+      _shouldLockOnResume = false;
+      _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/biometric-lock',
+        (route) => false,
+      );
+    } finally {
+      _resumeCheckInProgress = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
+      navigatorObservers: [_routeObserver],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -60,6 +184,7 @@ class MyApp extends StatelessWidget {
         '/forgot': (context) => ForgotPasswordScreen(),
         '/reset': (context) => ResetPasswordScreen(),
         '/home': (context) => HomePage(),
+        '/biometric-lock': (context) => const BiometricLockScreen(),
         '/weekly-checkin': (context) => WeeklyCheckInPage(),
         '/profile': (context) => ProfileScreen(),
         '/profile-details': (context) => ProfileDetailsPage(),
@@ -78,5 +203,27 @@ class MyApp extends StatelessWidget {
         '/otp-verification': (context) => const OTPVerificationScreen(),
       },
     );
+  }
+}
+
+class AppRouteObserver extends NavigatorObserver {
+  String? currentRouteName;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    currentRouteName = route.settings.name;
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    currentRouteName = newRoute?.settings.name;
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    currentRouteName = previousRoute?.settings.name;
+    super.didPop(route, previousRoute);
   }
 }

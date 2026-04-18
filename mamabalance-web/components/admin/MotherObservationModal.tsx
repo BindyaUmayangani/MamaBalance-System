@@ -208,8 +208,20 @@ export default function MotherObservationModal({ mother, onClose }: Props) {
   }
 
   return createPortal(
-    <div className="modal-overlay assigned-mothers-modal-overlay" onClick={onClose}>
-      <div className="modal-card mother-observation-modal" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="modal-overlay assigned-mothers-modal-overlay"
+      onClick={onClose}
+      role="presentation"
+      style={{ zIndex: 10000 }}
+    >
+      <div
+        className="modal-card mother-observation-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${details.name} observation overview`}
+        style={{ zIndex: 10001, position: "relative" }}
+      >
         <div className="profile-banner compact">
           <div>
             <h2>{details.name} Overview</h2>

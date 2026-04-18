@@ -111,13 +111,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _profile == null || _isTyping) return;
+    final userTimestamp = DateTime.now();
 
     setState(() {
       _displayMessages.add(
         _DisplayMessage(
           role: 'user',
           text: text,
-          createdAt: DateTime.now(),
+          createdAt: userTimestamp,
         ),
       );
       _isTyping = true;
@@ -125,44 +126,60 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
     _scrollToBottom();
 
-    await ChatbotService.instance.saveMessage(role: 'user', text: text);
+    try {
+      await ChatbotService.instance.saveMessage(role: 'user', text: text);
 
-    final response = await ChatbotService.instance.getChatResponse(
-      _chatHistory, 
-      text, 
-      _profile!
-    );
+      final response = await ChatbotService.instance.getChatResponse(
+        _chatHistory,
+        text,
+        _profile!,
+      );
 
-    await ChatbotService.instance.saveMessage(role: 'bot', text: response);
+      await ChatbotService.instance.saveMessage(role: 'bot', text: response);
 
-    if (mounted) {
+      if (!mounted) return;
+
+      final botTimestamp = DateTime.now();
       setState(() {
         _displayMessages.add(
           _DisplayMessage(
             role: 'bot',
             text: response,
-            createdAt: DateTime.now(),
+            createdAt: botTimestamp,
           ),
         );
-        _chatHistory.add(
-          ChatbotMessage(
-            id: DateTime.now().microsecondsSinceEpoch.toString(),
-            role: 'user',
-            text: text,
-            createdAt: DateTime.now(),
-          ),
-        );
-        _chatHistory.add(
-          ChatbotMessage(
-            id: DateTime.now().add(const Duration(microseconds: 1)).microsecondsSinceEpoch.toString(),
-            role: 'bot',
-            text: response,
-            createdAt: DateTime.now(),
-          ),
+        _chatHistory = ChatbotService.instance.buildModelHistory(
+          <ChatbotMessage>[
+            ..._chatHistory,
+            ChatbotMessage(
+              id: userTimestamp.microsecondsSinceEpoch.toString(),
+              role: 'user',
+              text: text,
+              createdAt: userTimestamp,
+            ),
+            ChatbotMessage(
+              id: botTimestamp.microsecondsSinceEpoch.toString(),
+              role: 'bot',
+              text: response,
+              createdAt: botTimestamp,
+            ),
+          ],
         );
         _isTyping = false;
       });
       _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isTyping = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The support companion could not reply just now. Please try again.',
+          ),
+        ),
+      );
     }
   }
 
@@ -345,7 +362,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             ),
                           ),
                           Text(
-                            'Active session · Private & Secure',
+                            'Active session | Private & Secure',
                             style: TextStyle(
                               color: _accent.withOpacity(0.8),
                               fontSize: 12,

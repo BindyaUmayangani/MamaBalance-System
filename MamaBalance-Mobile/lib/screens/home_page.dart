@@ -832,7 +832,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _buildQuickAction(
                   title: 'Messages',
-                  subtitle: 'Check in with your doctor',
+                  subtitle: 'Check in with your doctor and midwife',
                   icon: Icons.chat_bubble_rounded,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatPage(doctorName: 'Dr. Smith', showBackButton: true))),
                 ),

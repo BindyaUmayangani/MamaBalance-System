@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../config/app_config.dart';
 import '../models/mother_profile.dart';
 
@@ -28,82 +29,160 @@ enum _ResponseTone {
   crisis,
 }
 
+enum _ChatbotMode {
+  generalSupport,
+  educationalGuidance,
+  highRiskSupport,
+}
+
+class _ChatbotConversationState {
+  final String lastUserMessage;
+  final String lastAssistantMessage;
+  final bool incompleteAssistantResponse;
+
+  const _ChatbotConversationState({
+    required this.lastUserMessage,
+    required this.lastAssistantMessage,
+    required this.incompleteAssistantResponse,
+  });
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'lastUserMessage': lastUserMessage,
+      'lastAssistantMessage': lastAssistantMessage,
+      'incompleteAssistantResponse': incompleteAssistantResponse,
+    };
+  }
+
+  static _ChatbotConversationState fromJson(Map<String, dynamic> json) {
+    return _ChatbotConversationState(
+      lastUserMessage: '${json['lastUserMessage'] ?? ''}',
+      lastAssistantMessage: '${json['lastAssistantMessage'] ?? ''}',
+      incompleteAssistantResponse: json['incompleteAssistantResponse'] == true,
+    );
+  }
+}
+
 class ChatbotService {
   ChatbotService._();
+
   static final ChatbotService instance = ChatbotService._();
+
   static const List<String> _fallbackModels = <String>[
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-2.0-flash',
   ];
   static const int _maxStoredMessages = 50;
+  static const int _maxModelHistoryMessages = 10;
+  static const int _maxContinuationAttempts = 3;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<String> getChatResponse(
     List<ChatbotMessage> history,
-    String message, 
-    MotherProfile profile
+    String message,
+    MotherProfile profile,
   ) async {
     if (AppConfig.geminiApiKey == 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
       return "Hi ${profile.firstName}, I'm the MamaBalance AI. To start chatting, please make sure your Gemini API key is configured in the AppConfig.";
     }
 
-    final tone = _detectTone(message);
-    final crisisDetectedInMessage = _isHighRiskMessage(message);
+    final trimmedMessage = message.trim();
+    final tone = _detectTone(trimmedMessage);
+    final mode = _resolveMode(trimmedMessage, profile);
+    final highRiskDetectedInMessage = _isHighRiskMessage(trimmedMessage);
+    final safetyTriggers = _matchedHighRiskPhrases(trimmedMessage);
+    final recentHistory = _recentHistory(history);
+    final savedState = await _loadConversationState();
 
     try {
-      String text = await _sendWithFallbackModels(
-        history: history,
-        message: message,
+      var text = await _sendWithFallbackModels(
+        history: recentHistory,
+        message: trimmedMessage,
         profile: profile,
         tone: tone,
+        mode: mode,
+        conversationState: savedState,
+        continuationRequest: false,
       );
-      if (text.trim().isEmpty) {
-        text = "I'm sorry, I'm having a little trouble thinking right now. Could you try saying that again?";
+
+      text = _postProcessResponse(text, profile);
+
+      var incomplete = _looksIncomplete(text);
+      var continuationAttempts = 0;
+      while (incomplete && continuationAttempts < _maxContinuationAttempts) {
+        final continuedText = await _tryContinueIncompleteResponse(
+          history: recentHistory,
+          message: trimmedMessage,
+          profile: profile,
+          tone: tone,
+          mode: mode,
+          partialAssistantMessage: text,
+        );
+
+        if (continuedText == null || continuedText.trim().isEmpty) {
+          break;
+        }
+
+        text = _mergeContinuation(text, continuedText);
+        text = _postProcessResponse(text, profile);
+        incomplete = _looksIncomplete(text);
+        continuationAttempts++;
       }
 
-      if (crisisDetectedInMessage || text.contains('[CRISIS_DETECTED]')) {
-        text = text.replaceAll('[CRISIS_DETECTED]', '').trim();
-        await _notifyCareTeam(profile);
+      text = _softenUnnecessaryEscalation(
+        text,
+        mode: mode,
+        highRiskDetectedInMessage: highRiskDetectedInMessage,
+      );
+
+      if (text.trim().isEmpty) {
+        text = _fallbackRetryMessage(
+          highRisk:
+              highRiskDetectedInMessage || mode == _ChatbotMode.highRiskSupport,
+        );
       }
+
+      if (highRiskDetectedInMessage || text.contains('[CRISIS_DETECTED]')) {
+        text = text.replaceAll('[CRISIS_DETECTED]', '').trim();
+        await _notifyCareTeam(profile, safetyTriggers: safetyTriggers);
+      }
+
+      await _saveConversationState(
+        _ChatbotConversationState(
+          lastUserMessage: trimmedMessage,
+          lastAssistantMessage: text,
+          incompleteAssistantResponse: incomplete,
+        ),
+      );
 
       return text;
-    } catch (e) {
-      print('Gemini Error: $e');
-      if (crisisDetectedInMessage) {
-        await _notifyCareTeam(profile);
-        return "I'm really glad you told me this. You deserve immediate support right now. Please contact your care team now, and if you feel you may act on these thoughts, call Sri Lanka National Institute of Mental Health at 1926 or Sumithrayo at 011 269 6666.";
+    } catch (_) {
+      if (highRiskDetectedInMessage) {
+        await _notifyCareTeam(profile, safetyTriggers: safetyTriggers);
+        final fallback = _highRiskFallbackMessage(profile);
+        await _saveConversationState(
+          _ChatbotConversationState(
+            lastUserMessage: trimmedMessage,
+            lastAssistantMessage: fallback,
+            incompleteAssistantResponse: false,
+          ),
+        );
+        return fallback;
       }
-      return _friendlyChatbotError(e);
+
+      final fallback = _fallbackRetryMessage(highRisk: false);
+      await _saveConversationState(
+        _ChatbotConversationState(
+          lastUserMessage: trimmedMessage,
+          lastAssistantMessage: fallback,
+          incompleteAssistantResponse: false,
+        ),
+      );
+      return fallback;
     }
-  }
-
-  String _friendlyChatbotError(Object error) {
-    final raw = error.toString();
-    final normalized = raw.toLowerCase();
-
-    if (normalized.contains('api key') || normalized.contains('invalidapikey')) {
-      return 'The chatbot API key is not working right now. Please update the MamaBalance AI key and try again.';
-    }
-
-    if (normalized.contains('location is not supported')) {
-      return 'This chatbot service is not available from the current region on this API provider right now.';
-    }
-
-    if (normalized.contains('quota') ||
-        normalized.contains('rate limit') ||
-        normalized.contains('resource exhausted') ||
-        normalized.contains('429')) {
-      return 'The chatbot is temporarily busy. Please try again in a little while.';
-    }
-
-    if (normalized.contains('model') && normalized.contains('not found')) {
-      return 'The configured chatbot model is unavailable right now. Please switch to another supported model.';
-    }
-
-    return "I'm having trouble replying right now. Please try again in a moment. If you need immediate support, please reach out to your care team.\n\nTech detail: $raw";
   }
 
   Future<String> _sendWithFallbackModels({
@@ -111,6 +190,10 @@ class ChatbotService {
     required String message,
     required MotherProfile profile,
     required _ResponseTone tone,
+    required _ChatbotMode mode,
+    required _ChatbotConversationState? conversationState,
+    required bool continuationRequest,
+    String? partialAssistantMessage,
   }) async {
     final candidates = <String>{
       AppConfig.geminiModel,
@@ -126,10 +209,13 @@ class ChatbotService {
           message: message,
           profile: profile,
           tone: tone,
+          mode: mode,
+          conversationState: conversationState,
+          continuationRequest: continuationRequest,
+          partialAssistantMessage: partialAssistantMessage,
         );
-      } catch (e) {
-        lastError = e;
-        print('Gemini Error for model $modelName: $e');
+      } catch (error) {
+        lastError = error;
       }
     }
 
@@ -142,27 +228,40 @@ class ChatbotService {
     required String message,
     required MotherProfile profile,
     required _ResponseTone tone,
+    required _ChatbotMode mode,
+    required _ChatbotConversationState? conversationState,
+    required bool continuationRequest,
+    String? partialAssistantMessage,
   }) async {
     final model = GenerativeModel(
       model: modelName,
       apiKey: AppConfig.geminiApiKey,
       systemInstruction: Content.system(
-        _buildSystemInstruction(profile, tone: tone),
+        _buildSystemInstruction(
+          profile,
+          tone: tone,
+          mode: mode,
+        ),
       ),
       generationConfig: GenerationConfig(
-        temperature: 0.7,
+        temperature: continuationRequest ? 0.45 : 0.7,
         topP: 0.9,
-        maxOutputTokens: 600,
+        maxOutputTokens: continuationRequest ? 320 : 700,
       ),
     );
 
     final contents = <Content>[
-      ...history
-          .where((item) => item.text.trim().isNotEmpty)
-          .map((item) => item.role == 'user'
-              ? Content.text(item.text)
-              : Content.model([TextPart(item.text)])),
-      Content.text(message),
+      Content.text(
+        _buildStructuredContext(
+          profile: profile,
+          history: history,
+          userMessage: message,
+          mode: mode,
+          conversationState: conversationState,
+          continuationRequest: continuationRequest,
+          partialAssistantMessage: partialAssistantMessage,
+        ),
+      ),
     ];
 
     final response = await model.generateContent(contents);
@@ -173,6 +272,36 @@ class ChatbotService {
     }
 
     return text;
+  }
+
+  Future<String?> _tryContinueIncompleteResponse({
+    required List<ChatbotMessage> history,
+    required String message,
+    required MotherProfile profile,
+    required _ResponseTone tone,
+    required _ChatbotMode mode,
+    required String partialAssistantMessage,
+  }) async {
+    try {
+      final continued = await _sendWithFallbackModels(
+        history: history,
+        message: message,
+        profile: profile,
+        tone: tone,
+        mode: mode,
+        conversationState: _ChatbotConversationState(
+          lastUserMessage: message,
+          lastAssistantMessage: partialAssistantMessage,
+          incompleteAssistantResponse: true,
+        ),
+        continuationRequest: true,
+        partialAssistantMessage: partialAssistantMessage,
+      );
+
+      return continued.trim();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<ChatbotMessage>> loadChatHistory() async {
@@ -189,12 +318,14 @@ class ChatbotService {
 
     return decoded
         .whereType<Map>()
-        .map((item) => ChatbotMessage(
-              id: '${item['id'] ?? ''}',
-              role: '${item['role'] ?? 'bot'}',
-              text: '${item['text'] ?? ''}',
-              createdAt: _readDate(item['createdAt']),
-            ))
+        .map(
+          (item) => ChatbotMessage(
+            id: '${item['id'] ?? ''}',
+            role: '${item['role'] ?? 'bot'}',
+            text: '${item['text'] ?? ''}',
+            createdAt: _readDate(item['createdAt']),
+          ),
+        )
         .where((message) => message.text.trim().isNotEmpty)
         .toList();
   }
@@ -224,12 +355,14 @@ class ChatbotService {
 
     final encoded = jsonEncode(
       trimmedHistory
-          .map((message) => {
-                'id': message.id,
-                'role': message.role,
-                'text': message.text,
-                'createdAt': message.createdAt?.toIso8601String(),
-              })
+          .map(
+            (message) => <String, dynamic>{
+              'id': message.id,
+              'role': message.role,
+              'text': message.text,
+              'createdAt': message.createdAt?.toIso8601String(),
+            },
+          )
           .toList(),
     );
 
@@ -239,10 +372,19 @@ class ChatbotService {
   Future<void> clearChatHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_historyKey());
+    await prefs.remove(_conversationStateKey());
   }
 
   List<ChatbotMessage> buildModelHistory(List<ChatbotMessage> messages) {
-    return List<ChatbotMessage>.from(messages);
+    final trimmed = messages
+        .where((message) => message.text.trim().isNotEmpty)
+        .toList();
+
+    if (trimmed.length <= _maxModelHistoryMessages) {
+      return List<ChatbotMessage>.from(trimmed);
+    }
+
+    return trimmed.sublist(trimmed.length - _maxModelHistoryMessages);
   }
 
   String _currentUserUid() {
@@ -254,6 +396,16 @@ class ChatbotService {
   }
 
   String _historyKey() => 'chatbot_history_${_currentUserUid()}';
+
+  String _conversationStateKey() => 'chatbot_state_${_currentUserUid()}';
+
+  List<ChatbotMessage> _recentHistory(List<ChatbotMessage> history) {
+    if (history.length <= _maxModelHistoryMessages) {
+      return List<ChatbotMessage>.from(history);
+    }
+
+    return history.sublist(history.length - _maxModelHistoryMessages);
+  }
 
   _ResponseTone _detectTone(String message) {
     final normalized = message.toLowerCase();
@@ -273,6 +425,7 @@ class ChatbotService {
       'thanks',
       'smile',
       'hopeful',
+      'feeling better',
     ];
 
     const overwhelmedWords = <String>[
@@ -293,6 +446,8 @@ class ChatbotService {
       'crying',
       'upset',
       'angry',
+      'cannot cope',
+      "can't cope",
     ];
 
     final isPositive = positiveWords.any(normalized.contains);
@@ -313,7 +468,58 @@ class ChatbotService {
     return _ResponseTone.steadySupportive;
   }
 
+  _ChatbotMode _resolveMode(String message, MotherProfile profile) {
+    if (_isHighRiskMessage(message)) {
+      return _ChatbotMode.highRiskSupport;
+    }
+
+    final normalized = message.toLowerCase();
+    const elevatedDistressTerms = <String>[
+      'overwhelmed',
+      'cannot cope',
+      "can't cope",
+      'hopeless',
+      'panic',
+      'very anxious',
+      'extreme distress',
+      'cannot care for my baby',
+      "can't care for my baby",
+      'crying all the time',
+    ];
+    const educationTerms = <String>[
+      'what is',
+      'why',
+      'how',
+      'normal',
+      'postpartum',
+      'after birth',
+      'sleep',
+      'routine',
+      'stress management',
+      'breastfeeding',
+      'baby blues',
+      'facts',
+      'symptoms',
+      'tips',
+    ];
+
+    if (profile.latestEpdsScore >= 13 &&
+        elevatedDistressTerms.any(normalized.contains)) {
+      return _ChatbotMode.highRiskSupport;
+    }
+
+    if (educationTerms.any(normalized.contains)) {
+      return _ChatbotMode.educationalGuidance;
+    }
+
+    return _ChatbotMode.generalSupport;
+  }
+
   bool _isHighRiskMessage(String message) {
+    return _matchedHighRiskPhrases(message).isNotEmpty;
+  }
+
+  List<String> _matchedHighRiskPhrases(String message) {
     final normalized = message.toLowerCase();
     const highRiskPhrases = <String>[
       'kill myself',
@@ -331,9 +537,22 @@ class ChatbotService {
       "i can't go on",
       'no reason to live',
       'wish i was dead',
+      'want to disappear',
+      'cannot cope',
+      "can't cope",
+      'i am hopeless',
+      'feel hopeless',
+      'severe panic',
+      'panic attack',
+      'cannot care for my baby',
+      "can't care for my baby",
+      'cannot take care of my baby',
+      'extreme distress',
     ];
 
-    return highRiskPhrases.any(normalized.contains);
+    return highRiskPhrases
+        .where((phrase) => normalized.contains(phrase))
+        .toList();
   }
 
   DateTime? _readDate(dynamic value) {
@@ -343,89 +562,499 @@ class ChatbotService {
     return null;
   }
 
-  String _buildSystemInstruction(
-    MotherProfile profile, {
-    required _ResponseTone tone,
+  Future<_ChatbotConversationState?> _loadConversationState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_conversationStateKey());
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      return null;
+    }
+
+    return _ChatbotConversationState.fromJson(decoded);
+  }
+
+  Future<void> _saveConversationState(_ChatbotConversationState state) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_conversationStateKey(), jsonEncode(state.toJson()));
+  }
+
+  String _buildStructuredContext({
+    required MotherProfile profile,
+    required List<ChatbotMessage> history,
+    required String userMessage,
+    required _ChatbotMode mode,
+    required _ChatbotConversationState? conversationState,
+    required bool continuationRequest,
+    String? partialAssistantMessage,
   }) {
-    final toneInstruction = switch (tone) {
-      _ResponseTone.gentleShort =>
-        'The user may feel overwhelmed or has sent a brief emotional message. Keep the reply extra gentle, grounded, and short: 2-4 sentences.',
-      _ResponseTone.steadySupportive =>
-        'Use a calm, supportive reply with one clear next step and one soft follow-up question.',
-      _ResponseTone.warmCelebration =>
-        'The user may be sharing something positive or hopeful. Respond warmly, celebrate briefly, and keep the tone light and encouraging.',
-      _ResponseTone.crisis =>
-        'The user may be at high risk. Prioritize safety, immediate support, and clear crisis guidance.',
-    };
+    final recentHistory = history
+        .map(
+          (item) => '${item.role == 'user' ? 'Mother' : 'Assistant'}: ${item.text}',
+        )
+        .join('\n');
+
+    final epdsRisk = _resolveEpdsRiskLabel(profile.latestEpdsScore);
+    final careTeamText = _buildCareTeamSummary(profile);
 
     return """
-You are MamaBalance AI, a warm, emotionally aware, and supportive companion for new and expecting mothers.
-Your goal is to help ${profile.fullName} feel heard, calmer, and less alone through kind, natural conversation.
-
-CONTEXT ABOUT THE MOTHER:
+MOTHER PROFILE
 - Name: ${profile.fullName}
+- Preferred tone: calm, warm, brief
 - Number of children: ${profile.noOfChildren}
-- Latest wellbeing score: ${profile.latestEpdsScore} (A score of 10+ indicates moderate distress, 13+ indicates high distress).
-- Delivery date/expected: ${profile.deliveryDate}
+- Latest EPDS score: ${profile.latestEpdsScore}
+- Current EPDS risk band: $epdsRisk
+- Latest EPDS submitted at: ${profile.latestEpdsDate?.toLocal().toIso8601String() ?? 'Unknown'}
+- Delivery date or expected date: ${profile.deliveryDate}
+- Assigned care team: $careTeamText
 
-RESPONSE STYLE:
-- Be warm, calm, validating, and non-judgmental.
-- Sound human and gentle, not robotic, formal, or clinical.
-- Use simple everyday English and short paragraphs.
-- Keep most replies to 2-5 sentences unless more detail is clearly needed.
-- Finish your thought clearly and do not stop mid-sentence.
-- Use ${profile.firstName} naturally sometimes, but not in every reply.
-- First acknowledge the feeling, then offer one helpful next step.
-- Ask a follow-up question only when it clearly helps. Do not ask a question in every reply.
-- If she seems overwhelmed, give only one or two suggestions at a time.
-- Prefer natural supportive phrases such as "That sounds really hard" or "I'm glad you told me."
-- Avoid repeating the same reassurance in every answer.
-- Do not use bullet points unless listing calming steps or urgent support options would clearly help.
-- Tone guidance for this reply: $toneInstruction
-- When the user shares sadness, low mood, stress, or mixed emotions, do not keep asking what made her sad or repeatedly ask her to explain painful feelings.
-- Instead, gently comfort her, help her feel lighter, and suggest a small soothing or hopeful action she can do now.
-- Prefer supportive, mood-lifting replies over problem-interview questions.
-- If the user shares something positive, stay with the positive moment and help it grow.
-- If the user mentions feeling sad after previously feeling happy, acknowledge both feelings briefly and then guide the conversation toward comfort, hope, grounding, or a gentle next step.
+CHAT MODE
+- Active mode: ${_modeLabel(mode)}
+- This reply must stay focused on the mother's exact concern.
 
-BOUNDARIES:
-- DO NOT give medical advice, diagnosis, medication instructions, or emergency guarantees.
-- If she asks medical questions, gently encourage her to contact her assigned care team.
-- Do not invent facts, policies, appointments, or care-team actions.
-- If you are unsure, say so simply and gently.
+RECENT CONVERSATION MEMORY
+${recentHistory.isEmpty ? '- No recent conversation yet.' : recentHistory}
 
-HELPFUL BEHAVIORS:
-- If she shares stress, sadness, anger, guilt, loneliness, fear, or exhaustion, respond with empathy first.
-- Offer practical, low-pressure support such as breathing, hydration, rest, reaching out to a trusted person, or taking one small next step.
-- If she asks for ideas, give realistic suggestions for mothers with limited time and energy.
-- If the user sends a short message like "sad", "tired", or "I can't do this", ask a caring clarifying question instead of giving a long answer.
-- Do not repeatedly ask the user to describe why she feels bad.
-- After one acknowledgment, move toward relief, reassurance, encouragement, or a comforting suggestion.
-- If she shares something positive, celebrate it warmly and briefly.
+LAST TURN STATE
+- Last user message: ${conversationState?.lastUserMessage.isNotEmpty == true ? conversationState!.lastUserMessage : 'None'}
+- Last assistant message: ${conversationState?.lastAssistantMessage.isNotEmpty == true ? conversationState!.lastAssistantMessage : 'None'}
+- Previous assistant response may have been incomplete: ${conversationState?.incompleteAssistantResponse == true ? 'Yes' : 'No'}
 
-CRITICAL SAFETY & CRISIS PROTOCOL:
-- If ${profile.firstName} expresses thoughts of self-harm, hopelessness, or intense despair, you MUST:
-  1. Validate her feelings with extreme kindness.
-  2. Strongly encourage her to speak with a professional immediately.
-  3. Provide these Sri Lankan support numbers:
-     - Sri Lanka National Institute of Mental Health (NIMH): dial 1926
-     - Sumithrayo: 011 269 6666 (available 9 AM to 8 PM)
-- If you believe there is a genuine safety risk or crisis, conclude your message with the exact token [CRISIS_DETECTED]. This is used for internal safety triggers.
+CURRENT USER MESSAGE
+$userMessage
+
+TASK
+${continuationRequest ? 'Continue the previous assistant response naturally from where it stopped. Do not restart the full answer. Do not repeat the apology unless absolutely necessary. Complete the unfinished thought in a warm, concise way. Partial assistant reply: ${partialAssistantMessage ?? ''}' : 'Reply to the current user message with warm, concise support.'}
 """;
   }
 
-  Future<void> _notifyCareTeam(MotherProfile profile) async {
+  String _buildSystemInstruction(
+    MotherProfile profile, {
+    required _ResponseTone tone,
+    required _ChatbotMode mode,
+  }) {
+    final toneInstruction = switch (tone) {
+      _ResponseTone.gentleShort =>
+        'The mother may feel overwhelmed. Keep the reply extra gentle, grounded, and short: 2 to 4 short paragraphs or 2 to 4 sentences.',
+      _ResponseTone.steadySupportive =>
+        'Use a calm, emotionally supportive reply with one clear next step. Keep it brief and human.',
+      _ResponseTone.warmCelebration =>
+        'The mother may be sharing something positive. Respond warmly, briefly, and help the positive moment feel noticed.',
+      _ResponseTone.crisis =>
+        'The mother may be in serious distress. Prioritize emotional safety, immediate support, and clear escalation language.',
+    };
+
+    final modeInstruction = switch (mode) {
+      _ChatbotMode.generalSupport =>
+        'Mode: General support. Focus on emotional check-in, gentle grounding, and simple coping support.',
+      _ChatbotMode.educationalGuidance =>
+        'Mode: Educational guidance. Give clear, simple, non-diagnostic postpartum wellbeing information. Keep it practical and easy to follow.',
+      _ChatbotMode.highRiskSupport =>
+        'Mode: High-risk support. Acknowledge distress, offer one or two immediate calming or grounding suggestions first, then encourage timely human support when the distress is clearly serious.',
+    };
+
+    return """
+You are a supportive postpartum wellbeing companion inside the MamaBalance system.
+
+Your role:
+- Provide calm, emotionally supportive responses.
+- Encourage healthy coping steps and help-seeking.
+- Never diagnose.
+- Never prescribe medication.
+- Never replace a doctor, midwife, or emergency care.
+- If the user shows signs of severe distress, encourage immediate contact with a trusted person and their healthcare team.
+
+Response style:
+- Warm, gentle, human.
+- Short paragraphs.
+- Do not overwhelm the user.
+- Do not sound robotic.
+- Avoid repeating the same apology.
+- Keep replies focused on the user's exact concern.
+- Do not use bullet points unless giving a few very simple coping steps or urgent support options.
+- Most replies should be concise.
+- Finish the answer cleanly. Never stop mid-sentence.
+- Avoid repeated name mentions.
+- If the mother shares something difficult, acknowledge the feeling first, then give one or two realistic next steps.
+- If the mother sounds exhausted or low, do not interrogate her with too many questions.
+- Do not restart an answer if you are continuing a cut-off reply.
+
+$toneInstruction
+$modeInstruction
+
+If EPDS risk is high:
+- Acknowledge feelings.
+- Offer one or two realistic calming or coping suggestions first when the message is not an immediate safety emergency.
+- Encourage professional support when the mother sounds significantly distressed, worsening, or stuck.
+- Suggest contacting the assigned doctor or midwife when the distress is strong, persistent, or safety-related.
+- Avoid false guarantees.
+- Avoid saying recovery time exactly.
+
+Safety rules:
+- Never claim certainty about emergencies.
+- Never promise that everything will definitely be okay.
+- If the message suggests self-harm, hopelessness, severe panic, inability to cope, or inability to care for the baby:
+  1. Respond with warmth and urgency.
+  2. Encourage contacting a trusted person right now.
+  3. Encourage contacting the assigned doctor or midwife right away.
+  4. Provide these Sri Lankan support numbers:
+     - Sri Lanka National Institute of Mental Health (NIMH): 1926
+     - Sumithrayo: 011 269 6666
+  5. End with the exact token [CRISIS_DETECTED]
+
+Suggestion rules:
+- Do not jump straight to "contact your doctor or midwife" in every reply.
+- For non-emergency emotional messages, first give one or two gentle practical suggestions such as slow breathing, a glass of water, sitting with a trusted person, resting, stepping outside briefly, or sending one message to someone supportive.
+- Only escalate strongly when the wording suggests urgent distress, safety risk, or inability to cope.
+- In ordinary overwhelmed or anxious messages, do not add a closing paragraph about contacting the doctor or midwife unless the user asks for professional help or the situation clearly sounds serious.
+
+Continuation rules:
+- If the previous response was interrupted or cut off, continue naturally from where it stopped.
+- Do not restart from the beginning.
+- Do not repeat the apology unless necessary.
+
+The current mother is ${profile.fullName}, and your job is to help her feel supported, calmer, and gently guided without sounding clinical.
+""";
+  }
+
+  String _resolveEpdsRiskLabel(int score) {
+    if (score >= 13) return 'High';
+    if (score >= 10) return 'Moderate';
+    return 'Low';
+  }
+
+  String _modeLabel(_ChatbotMode mode) {
+    switch (mode) {
+      case _ChatbotMode.generalSupport:
+        return 'general_support';
+      case _ChatbotMode.educationalGuidance:
+        return 'educational_guidance';
+      case _ChatbotMode.highRiskSupport:
+        return 'high_risk_support';
+    }
+  }
+
+  String _buildCareTeamSummary(MotherProfile profile) {
+    final doctorAssigned = profile.assignedDoctorUid?.trim().isNotEmpty == true;
+    final midwifeAssigned =
+        profile.assignedMidwifeUid?.trim().isNotEmpty == true;
+
+    if (doctorAssigned && midwifeAssigned) {
+      return 'Assigned doctor and assigned midwife are available in MamaBalance.';
+    }
+    if (doctorAssigned) {
+      return 'Assigned doctor is available in MamaBalance.';
+    }
+    if (midwifeAssigned) {
+      return 'Assigned midwife is available in MamaBalance.';
+    }
+    return 'Assigned care team details are not available in the current profile context.';
+  }
+
+  String _postProcessResponse(String text, MotherProfile profile) {
+    var cleaned = text.trim();
+
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\[CRISIS_DETECTED\]\s*'),
+      '[CRISIS_DETECTED]',
+    );
+    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r"(I'm sorry|I am sorry|Sorry)[^.!?]*[.!?]\s*(I'm sorry|I am sorry|Sorry)",
+        caseSensitive: false,
+      ),
+      "I'm sorry",
+    );
+
+    cleaned = _removeRepeatedApologies(cleaned);
+    cleaned = _removeRepeatedNameMentions(cleaned, profile.firstName);
+    cleaned = _removeRepeatedOpeningParagraph(cleaned);
+    cleaned = _removeRepeatedSentences(cleaned);
+    cleaned = _removeNearDuplicateParagraphs(cleaned);
+    cleaned = _splitLongParagraphs(cleaned);
+
+    return cleaned.trim();
+  }
+
+  String _removeRepeatedApologies(String text) {
+    final apologyMatches = RegExp(
+      r"(I'm sorry|I am sorry|Sorry)",
+      caseSensitive: false,
+    ).allMatches(text).toList();
+
+    if (apologyMatches.length <= 1) {
+      return text;
+    }
+
+    var keptFirst = false;
+    return text.replaceAllMapped(
+      RegExp(r"(I'm sorry|I am sorry|Sorry)", caseSensitive: false),
+      (match) {
+        if (!keptFirst) {
+          keptFirst = true;
+          return match.group(0) ?? '';
+        }
+        return '';
+      },
+    ).replaceAll(RegExp(r'\s{2,}'), ' ');
+  }
+
+  String _removeRepeatedNameMentions(String text, String firstName) {
+    final escapedName = RegExp.escape(firstName);
+    final matches = RegExp(r'\b' + escapedName + r'\b').allMatches(text).length;
+    if (matches <= 2) {
+      return text;
+    }
+
+    var kept = 0;
+    return text.replaceAllMapped(
+      RegExp(r'\b' + escapedName + r'\b'),
+      (match) {
+        kept++;
+        return kept <= 2 ? match.group(0) ?? '' : '';
+      },
+    ).replaceAll(RegExp(r'\s{2,}'), ' ');
+  }
+
+  String _removeRepeatedOpeningParagraph(String text) {
+    final paragraphs = text
+        .split(RegExp(r'\n\s*\n'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (paragraphs.length < 2) {
+      return text;
+    }
+
+    if (paragraphs[0] == paragraphs[1]) {
+      paragraphs.removeAt(1);
+    }
+
+    return paragraphs.join('\n\n');
+  }
+
+  String _removeRepeatedSentences(String text) {
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+    final cleanedParagraphs = paragraphs.map((paragraph) {
+      final sentences = paragraph
+          .split(RegExp(r'(?<=[.!?])\s+'))
+          .map((sentence) => sentence.trim())
+          .where((sentence) => sentence.isNotEmpty)
+          .toList();
+
+      final kept = <String>[];
+      final normalizedSeen = <String>{};
+
+      for (final sentence in sentences) {
+        final normalized = _normalizeForDedup(sentence);
+        if (normalized.length < 8 || normalizedSeen.add(normalized)) {
+          kept.add(sentence);
+        }
+      }
+
+      return kept.join(' ').trim();
+    }).where((paragraph) => paragraph.isNotEmpty).toList();
+
+    return cleanedParagraphs.join('\n\n');
+  }
+
+  String _removeNearDuplicateParagraphs(String text) {
+    final paragraphs = text
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList();
+
+    final kept = <String>[];
+    final normalizedSeen = <String>[];
+
+    for (final paragraph in paragraphs) {
+      final normalized = _normalizeForDedup(paragraph);
+      final isDuplicate = normalizedSeen.any(
+        (existing) =>
+            existing == normalized ||
+            existing.contains(normalized) ||
+            normalized.contains(existing),
+      );
+
+      if (!isDuplicate) {
+        kept.add(paragraph);
+        normalizedSeen.add(normalized);
+      }
+    }
+
+    return kept.join('\n\n');
+  }
+
+  String _normalizeForDedup(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  String _splitLongParagraphs(String text) {
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+    final cleaned = paragraphs.map((paragraph) {
+      final trimmed = paragraph.trim();
+      if (trimmed.length < 280) {
+        return trimmed;
+      }
+
+      final sentences = trimmed.split(RegExp(r'(?<=[.!?])\s+'));
+      final buffer = StringBuffer();
+      var currentLength = 0;
+
+      for (final sentence in sentences) {
+        if (currentLength > 0 && currentLength + sentence.length > 220) {
+          buffer.write('\n\n');
+          currentLength = 0;
+        } else if (currentLength > 0) {
+          buffer.write(' ');
+        }
+
+        final cleanSentence = sentence.trim();
+        buffer.write(cleanSentence);
+        currentLength += cleanSentence.length;
+      }
+
+      return buffer.toString().trim();
+    }).where((part) => part.isNotEmpty).toList();
+
+    return cleaned.join('\n\n');
+  }
+
+  String _softenUnnecessaryEscalation(
+    String text, {
+    required _ChatbotMode mode,
+    required bool highRiskDetectedInMessage,
+  }) {
+    if (highRiskDetectedInMessage || mode == _ChatbotMode.highRiskSupport) {
+      return text.trim();
+    }
+
+    final paragraphs = text
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList();
+
+    final escalationPattern = RegExp(
+      r'(assigned doctor|assigned midwife|contact your doctor|contact your midwife|reach out to your doctor|reach out to your midwife|professional support|healthcare team)',
+      caseSensitive: false,
+    );
+
+    final filtered = paragraphs.where((paragraph) {
+      return !escalationPattern.hasMatch(paragraph);
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return text.trim();
+    }
+
+    return filtered.join('\n\n').trim();
+  }
+
+  bool _looksIncomplete(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      return true;
+    }
+
+    if (!RegExp(r'[.!?\]]$').hasMatch(trimmed)) {
+      return true;
+    }
+
+    final lower = trimmed.toLowerCase();
+    const unfinishedEndings = <String>[
+      'and',
+      'but',
+      'so',
+      'because',
+      'for example',
+      'such as',
+      'you can also',
+      'one small step is',
+      'if you can',
+      'try to',
+      'it may help to',
+      'you might',
+    ];
+
+    return unfinishedEndings.any(lower.endsWith);
+  }
+
+  String _mergeContinuation(String firstPart, String continuation) {
+    final start = continuation.trimLeft();
+    if (start.isEmpty) {
+      return firstPart.trim();
+    }
+
+    var normalizedContinuation = start;
+    final leadingMatch =
+        RegExp(r'^(And|But|So)\b\s*', caseSensitive: false).firstMatch(start);
+    if (leadingMatch != null) {
+      final originalPrefix = leadingMatch.group(0) ?? '';
+      final loweredPrefix = (leadingMatch.group(1) ?? '').toLowerCase();
+      normalizedContinuation =
+          start.replaceFirst(originalPrefix, loweredPrefix);
+    }
+
+    return '${firstPart.trim()} ${normalizedContinuation.trim()}';
+  }
+
+  String _fallbackRetryMessage({required bool highRisk}) {
+    if (highRisk) {
+      return "I'm here with you, and I had trouble finishing my reply just now. Please contact your doctor, midwife, or a trusted person right away if you feel unsafe, and you can send your message again when you can.";
+    }
+
+    return "I'm here with you. I had trouble replying just now. Could you send that once more?";
+  }
+
+  String _highRiskFallbackMessage(MotherProfile profile) {
+    final careTeamLine = _buildCareTeamNudge(profile);
+    return "I'm really glad you told me this. You deserve support right now. Please contact a trusted person immediately. $careTeamLine If you feel you may act on these thoughts or you feel unsafe, call Sri Lanka National Institute of Mental Health on 1926 or Sumithrayo on 011 269 6666.";
+  }
+
+  String _buildCareTeamNudge(MotherProfile profile) {
+    final hasDoctor = profile.assignedDoctorUid?.trim().isNotEmpty == true;
+    final hasMidwife = profile.assignedMidwifeUid?.trim().isNotEmpty == true;
+
+    if (hasDoctor && hasMidwife) {
+      return 'Please also contact your assigned doctor or midwife right away.';
+    }
+    if (hasDoctor) {
+      return 'Please also contact your assigned doctor right away.';
+    }
+    if (hasMidwife) {
+      return 'Please also contact your assigned midwife right away.';
+    }
+    return 'Please also contact your healthcare team right away.';
+  }
+
+  Future<void> _notifyCareTeam(
+    MotherProfile profile, {
+    required List<String> safetyTriggers,
+  }) async {
     final targets = <Map<String, String>>[];
-    
-    if (profile.assignedMidwifeUid != null && profile.assignedMidwifeUid!.isNotEmpty) {
-      targets.add({
+
+    if (profile.assignedMidwifeUid != null &&
+        profile.assignedMidwifeUid!.isNotEmpty) {
+      targets.add(<String, String>{
         'uid': profile.assignedMidwifeUid!,
         'role': 'midwife',
       });
     }
-    
-    if (profile.assignedDoctorUid != null && profile.assignedDoctorUid!.isNotEmpty) {
-      targets.add({
+
+    if (profile.assignedDoctorUid != null &&
+        profile.assignedDoctorUid!.isNotEmpty) {
+      targets.add(<String, String>{
         'uid': profile.assignedDoctorUid!,
         'role': 'doctor',
       });
@@ -433,16 +1062,21 @@ CRITICAL SAFETY & CRISIS PROTOCOL:
 
     if (targets.isEmpty) return;
 
+    final triggerSummary = safetyTriggers.isEmpty
+        ? 'urgent emotional distress'
+        : safetyTriggers.take(3).join(', ');
+
     final batch = _db.batch();
     for (final target in targets) {
       final docRef = _db.collection('notifications').doc();
-      batch.set(docRef, {
+      batch.set(docRef, <String, dynamic>{
         'recipientUid': target['uid'],
         'recipientRole': target['role'],
         'type': 'high_risk',
         'subType': 'chatbot_crisis',
         'title': 'Urgent: Chatbot Crisis Detection',
-        'message': '${profile.fullName} has expressed significant distress in an AI chat session. Please initiate a wellness check as soon as possible.',
+        'message':
+            '${profile.fullName} may need urgent follow-up after an AI chat session. Safety trigger: $triggerSummary.',
         'motherUid': profile.uid,
         'motherName': profile.fullName,
         'read': false,
