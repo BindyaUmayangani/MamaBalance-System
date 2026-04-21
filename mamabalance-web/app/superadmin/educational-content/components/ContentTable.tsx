@@ -52,6 +52,7 @@ export default function ContentTable({
             <tr>
               <th className="content-id-col">Content ID</th>
               <th className="content-title-col">Title</th>
+              <th className="content-type-col">Audience</th>
               <th className="content-type-col">Type</th>
               <th className="content-date-col">Date Added</th>
               <th className="visibility-col">Visibility</th>
@@ -64,6 +65,7 @@ export default function ContentTable({
               <tr key={item.id}>
                 <td className="content-id-col">{item.contentId}</td>
                 <td className="content-title-col">{item.title}</td>
+                <td className="content-type-col">{item.audienceLabel}</td>
                 <td className="content-type-col">{item.typeLabel}</td>
                 <td className="content-date-col">{item.dateAdded}</td>
 
@@ -78,16 +80,18 @@ export default function ContentTable({
                   </span>
                 </td>
 
-                <td className="actions actions-col">
-                  <Eye className="icon-view" onClick={() => onView(item)} />
+                <td className="actions-col actions-cell">
+                  <div className="actions content-table-actions">
+                    <Eye className="icon-view" onClick={() => onView(item)} />
 
-                  {canEdit && onEdit && (
-                    <Pencil className="icon-edit" onClick={() => onEdit(item)} />
-                  )}
+                    {canEdit && onEdit && (
+                      <Pencil className="icon-edit" onClick={() => onEdit(item)} />
+                    )}
 
-                  {canDelete && onDelete && (
-                    <Trash2 className="icon-delete" onClick={() => onDelete(item)} />
-                  )}
+                    {canDelete && onDelete && (
+                      <Trash2 className="icon-delete" onClick={() => onDelete(item)} />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

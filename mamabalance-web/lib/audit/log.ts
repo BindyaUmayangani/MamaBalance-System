@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase/admin";
-import type { StaffRole, UserProfile } from "@/lib/auth/types";
+import type { UserProfile } from "@/lib/auth/types";
 
 type AuditModule =
   | "Users"
@@ -11,7 +11,10 @@ type AuditModule =
   | "Notifications"
   | "Security"
   | "Visits"
-  | "Observations";
+  | "Observations"
+  | "Checkups"
+  | "Medication"
+  | "Medicine";
 
 type AuditActionType =
   | "Create"
@@ -20,6 +23,7 @@ type AuditActionType =
   | "Export"
   | "Submit"
   | "Read"
+  | "Dismiss"
   | "Reset Password"
   | "Assign"
   | "Reschedule"
@@ -65,7 +69,7 @@ async function resolveRegionName(regionId: string | null | undefined) {
   return (snapshot.data()?.name as string | undefined) || regionId;
 }
 
-function buildActorLabel(role: StaffRole, actorName: string) {
+function buildActorLabel(role: UserProfile["role"], actorName: string) {
   const roleLabel =
     role === "superadmin"
       ? "SuperAdmin"
@@ -73,7 +77,9 @@ function buildActorLabel(role: StaffRole, actorName: string) {
         ? "RegionalAdmin"
         : role === "doctor"
           ? "Doctor"
-          : "Midwife";
+          : role === "midwife"
+            ? "Midwife"
+            : "Mother";
 
   return `${roleLabel} - ${actorName}`;
 }

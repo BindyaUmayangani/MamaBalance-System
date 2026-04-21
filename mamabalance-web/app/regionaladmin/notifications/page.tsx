@@ -13,14 +13,18 @@ type NotificationItem = {
   id: string;
   title: string;
   message: string;
+  type: string | null;
   ticketId: string | null;
   ticketNumber: string | null;
   issueCategory: string | null;
+  contentId: string | null;
+  contentTitle: string | null;
   priority: "low" | "medium" | "high";
   read: boolean;
   createdAt: string | null;
   requesterName: string | null;
   requesterRole: string | null;
+  targetPath: string | null;
 };
 
 export default function RegionalAdminNotificationsPage() {
@@ -136,7 +140,7 @@ export default function RegionalAdminNotificationsPage() {
         await markOneAsRead(item.id);
       }
 
-      router.push("/regionaladmin/help-support");
+      router.push(item.targetPath || "/regionaladmin/help-support");
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -196,12 +200,38 @@ export default function RegionalAdminNotificationsPage() {
     });
   }
 
+  function metaBadges(item: NotificationItem) {
+    if (item.type === "educational-content") {
+      return [
+        item.contentId || "Educational content",
+        `Title: ${item.contentTitle || "Resource update"}`,
+        `Updated by: ${item.requesterName || "System"}`,
+        `Role: ${item.requesterRole || "superadmin"}`,
+        formatDate(item.createdAt),
+      ];
+    }
+
+    return [
+      item.ticketNumber || "Support ticket",
+      `Requester: ${item.requesterName || "Unknown User"}`,
+      `Role: ${item.requesterRole || "-"}`,
+      `Category: ${item.issueCategory || "General"}`,
+      formatDate(item.createdAt),
+    ];
+  }
+
+  function openLabel(item: NotificationItem) {
+    return item.type === "educational-content"
+      ? "Open Educational Content"
+      : "Open Help & Support";
+  }
+
   return (
     <div className="regional-notifications-page">
       <div className="doctor-page-header">
         <div className="role-header">
           <h1>Notification Inbox</h1>
-          <p>Review support-ticket alerts sent to your regional admin account.</p>
+          <p>Review support-ticket alerts and educational resource updates sent to your regional admin account.</p>
         </div>
 
         <div className="doctor-page-header-actions regional-notifications-actions">
@@ -228,7 +258,7 @@ export default function RegionalAdminNotificationsPage() {
         <div className="notifications-empty-card">
           <AlertTriangle size={28} />
           <h3>No notifications yet</h3>
-          <p>When a user in your region submits a support ticket, it will appear here.</p>
+          <p>Support-ticket alerts and educational resource updates will appear here when they are available.</p>
         </div>
       ) : (
         <div className="notifications-list">
@@ -267,15 +297,13 @@ export default function RegionalAdminNotificationsPage() {
               </div>
 
               <div className="notification-meta">
-                <span>{item.ticketNumber || "Support ticket"}</span>
-                <span>Requester: {item.requesterName || "Unknown User"}</span>
-                <span>Role: {item.requesterRole || "-"}</span>
-                <span>Category: {item.issueCategory || "General"}</span>
-                <span>{formatDate(item.createdAt)}</span>
+                {metaBadges(item).map((value) => (
+                  <span key={`${item.id}-${value}`}>{value}</span>
+                ))}
               </div>
 
               <div className="notification-open-row">
-                <span>Open Help & Support</span>
+                <span>{openLabel(item)}</span>
                 <ChevronRight size={16} />
               </div>
             </div>

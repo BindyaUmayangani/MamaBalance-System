@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EmergencyContactsPage extends StatelessWidget {
-  EmergencyContactsPage({super.key});
+  EmergencyContactsPage({
+    super.key,
+    this.audience = 'mother',
+  });
+
+  final String audience;
 
   static const Color _mint = Color(0xFF4FA38A);
   static const Color _deepMint = Color(0xFF2F7D68);
@@ -10,6 +15,8 @@ class EmergencyContactsPage extends StatelessWidget {
   static const Color _surface = Color(0xFFECF8F4);
   static const Color _text = Color(0xFF173C3A);
   static const Color _muted = Color(0xFF60756D);
+
+  bool get _isGuardian => audience.trim().toLowerCase() == 'guardian';
 
   Widget _buildContactCard({
     required IconData icon,
@@ -161,11 +168,13 @@ class EmergencyContactsPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.only(left: 48),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
                 child: Text(
-                  'Quick access to immediate support when you, your baby, or your family need urgent help.',
-                  style: TextStyle(
+                  _isGuardian
+                      ? 'Quick access to urgent support when the linked mother, baby, or family needs immediate help.'
+                      : 'Quick access to immediate support when you, your baby, or your family need urgent help.',
+                  style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,
                     color: _muted,
@@ -207,11 +216,11 @@ class EmergencyContactsPage extends StatelessWidget {
                           child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 28),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Need help right now?',
                                 style: TextStyle(
                                   fontSize: 20,
@@ -219,10 +228,12 @@ class EmergencyContactsPage extends StatelessWidget {
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: 6),
+                              const SizedBox(height: 6),
                               Text(
-                                'Choose the contact that matches your situation and call straight away.',
-                                style: TextStyle(
+                                _isGuardian
+                                    ? 'Choose the contact that best fits the situation and call straight away to support the mother safely.'
+                                    : 'Choose the contact that matches your situation and call straight away.',
+                                style: const TextStyle(
                                   fontSize: 14,
                                   height: 1.45,
                                   color: Colors.white70,
@@ -267,7 +278,9 @@ class EmergencyContactsPage extends StatelessWidget {
                 icon: Icons.local_hospital_outlined,
                 label: '24/7 Mental Health Helpline (Sri Lanka)',
                 contact: '1926',
-                description: 'Call any time for urgent mental health support, guidance, or crisis help.',
+                description: _isGuardian
+                    ? 'Call any time for urgent mental health support, crisis guidance, or help supporting the mother safely.'
+                    : 'Call any time for urgent mental health support, guidance, or crisis help.',
                 isPhone: true,
               ),
               const SizedBox(height: 14),
@@ -275,7 +288,9 @@ class EmergencyContactsPage extends StatelessWidget {
                 icon: Icons.support_agent_outlined,
                 label: 'MOH Mental Health Hotline',
                 contact: '071 234 5678',
-                description: 'Reach trained support staff for advice, follow-up, and next steps.',
+                description: _isGuardian
+                    ? 'Reach trained support staff for advice, follow-up, and the next steps for guardian support.'
+                    : 'Reach trained support staff for advice, follow-up, and next steps.',
                 isPhone: true,
               ),
               const SizedBox(height: 14),
@@ -283,14 +298,18 @@ class EmergencyContactsPage extends StatelessWidget {
                 icon: Icons.location_on_outlined,
                 label: 'Nearest PPD Support Center',
                 contact: 'Visit your local MOH clinic',
-                description: 'If you prefer in-person help, your nearest clinic can guide you to the right service.',
+                description: _isGuardian
+                    ? 'If in-person support is needed, the nearest clinic can guide the guardian and family to the right service.'
+                    : 'If you prefer in-person help, your nearest clinic can guide you to the right service.',
               ),
               const SizedBox(height: 14),
               _buildContactCard(
                 icon: Icons.emergency_outlined,
                 label: 'In an Emergency',
                 contact: 'Call 119 immediately',
-                description: 'Use this first if there is immediate danger, a medical emergency, or urgent safety concern.',
+                description: _isGuardian
+                    ? 'Use this first if the mother, baby, or anyone nearby is in immediate danger or there is an urgent safety concern.'
+                    : 'Use this first if there is immediate danger, a medical emergency, or urgent safety concern.',
                 isPhone: true,
               ),
               const SizedBox(height: 10),
@@ -302,15 +321,17 @@ class EmergencyContactsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFD7EAE3)),
                 ),
-                child: const Row(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.favorite_outline_rounded, color: _mint, size: 22),
-                    SizedBox(width: 12),
+                    const Icon(Icons.favorite_outline_rounded, color: _mint, size: 22),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'If speaking feels difficult, ask a trusted family member or caregiver to make the call with you.',
-                        style: TextStyle(
+                        _isGuardian
+                            ? 'If the situation feels overwhelming, ask another trusted family member or caregiver to help make the call with you.'
+                            : 'If speaking feels difficult, ask a trusted family member or caregiver to make the call with you.',
+                        style: const TextStyle(
                           fontSize: 13.5,
                           color: _muted,
                           height: 1.45,

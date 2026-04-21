@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_service.dart';
 import 'messaging_service.dart';
+import 'mobile_user_context_service.dart';
 
 class MotherNotificationItem {
   final String id;
@@ -66,6 +67,8 @@ class NotificationService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final MobileUserContextService _contextService =
+      MobileUserContextService.instance;
 
   Stream<MotherNotificationSummary> watchSummary() async* {
     yield await fetchSummary();
@@ -110,6 +113,8 @@ class NotificationService {
 
   static const String _readKey = 'mother_notification_read_ids';
   static const String _dismissedKey = 'mother_notification_dismissed_ids';
+  static const String _guardianReadKey = 'guardian_notification_read_ids';
+  static const String _guardianDismissedKey = 'guardian_notification_dismissed_ids';
 
   Future<MotherNotificationSummary> fetchSummary() async {
     final user = _auth.currentUser;
@@ -161,6 +166,82 @@ class NotificationService {
     return summary;
   }
 
+  Stream<MotherNotificationSummary> watchGuardianSummary() async* {
+    yield await fetchGuardianSummary();
+
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final context = await _contextService.resolveCurrent();
+      final motherDoc = context.motherDoc;
+      final controller = StreamController<void>.broadcast();
+
+      final s1 = _db
+          .collection('mothers')
+          .doc(motherDoc.id)
+          .snapshots()
+          .listen((_) => controller.add(null));
+      final s2 = _db
+          .collection('midwifeVisits')
+          .where('motherUid', isEqualTo: motherDoc.id)
+          .snapshots()
+          .listen((_) => controller.add(null));
+      final s3 = _db
+          .collection('doctorCheckups')
+          .where('motherUid', isEqualTo: motherDoc.id)
+          .snapshots()
+          .listen((_) => controller.add(null));
+      final s4 = _db
+          .collection('educationalContents')
+          .where('visibility', isEqualTo: 'visible')
+          .snapshots()
+          .listen((_) => controller.add(null));
+
+      yield* controller.stream.asyncMap((_) => fetchGuardianSummary());
+    } catch (_) {
+      yield const MotherNotificationSummary(items: []);
+    }
+  }
+
+  Future<MotherNotificationSummary> fetchGuardianSummary() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AppAuthException('Please sign in to continue.');
+    }
+
+    final context = await _contextService.resolveCurrent();
+    final motherDoc = context.motherDoc;
+    final motherData = motherDoc.data() ?? <String, dynamic>{};
+    final readIds = await _readIds(_guardianReadKey);
+    final dismissedIds = await _readIds(_guardianDismissedKey);
+    final now = DateTime.now();
+
+    final notifications = <MotherNotificationItem>[];
+    notifications.addAll(
+      _buildGuardianCheckInNotifications(motherData, now, readIds),
+    );
+    notifications.addAll(
+      await _buildGuardianResourceNotifications(readIds: readIds),
+    );
+    notifications.addAll(
+      await _buildGuardianVisitNotifications(
+        motherUid: motherDoc.id,
+        now: now,
+        readIds: readIds,
+      ),
+    );
+
+    final visible = notifications
+        .where((item) => !dismissedIds.contains(item.id))
+        .toList()
+      ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+
+    final summary = MotherNotificationSummary(items: visible);
+    _updateLauncherBadge(summary.unreadCount);
+    return summary;
+  }
+
   void _updateLauncherBadge(int count) {
     try {
       AppBadgePlus.isSupported().then((supported) {
@@ -177,16 +258,34 @@ class NotificationService {
     await _writeIds(_readKey, ids);
   }
 
+  Future<void> markGuardianRead(String id) async {
+    final ids = await _readIds(_guardianReadKey);
+    ids.add(id);
+    await _writeIds(_guardianReadKey, ids);
+  }
+
   Future<void> dismiss(String id) async {
     final ids = await _readIds(_dismissedKey);
     ids.add(id);
     await _writeIds(_dismissedKey, ids);
   }
 
+  Future<void> dismissGuardian(String id) async {
+    final ids = await _readIds(_guardianDismissedKey);
+    ids.add(id);
+    await _writeIds(_guardianDismissedKey, ids);
+  }
+
   Future<void> markAllRead(List<String> ids) async {
     final current = await _readIds(_readKey);
     current.addAll(ids);
     await _writeIds(_readKey, current);
+  }
+
+  Future<void> markAllGuardianRead(List<String> ids) async {
+    final current = await _readIds(_guardianReadKey);
+    current.addAll(ids);
+    await _writeIds(_guardianReadKey, current);
   }
 
   List<MotherNotificationItem> _buildCheckInNotifications(
@@ -227,6 +326,57 @@ class NotificationService {
           description: overdueDays > 0
               ? 'Your next assessment was due on ${_formatDate(nextDue)}. Complete it when you can so your care team stays up to date.'
               : 'Your next weekly check-in is now available. A short check-in helps your care team support you early.',
+          type: 'Assessment',
+          priority: overdueDays > 0 ? 'high' : 'medium',
+          createdAt: nextDue,
+          read: readIds.contains(id),
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  List<MotherNotificationItem> _buildGuardianCheckInNotifications(
+    Map<String, dynamic> motherData,
+    DateTime now,
+    Set<String> readIds,
+  ) {
+    final items = <MotherNotificationItem>[];
+    final lastSubmittedAt = _readDate(motherData['latestEpdsSubmittedAt']);
+    final nextDue = lastSubmittedAt?.add(const Duration(days: 7));
+
+    if (nextDue == null) {
+      const id = 'guardian:epds:first-checkin';
+      items.add(
+        MotherNotificationItem(
+          id: id,
+          title: 'First EPDS assessment is still pending',
+          description:
+              'The linked mother has not completed the first EPDS assessment yet.',
+          type: 'Assessment',
+          priority: 'medium',
+          createdAt: now,
+          read: readIds.contains(id),
+        ),
+      );
+      return items;
+    }
+
+    if (!nextDue.isAfter(now)) {
+      final overdueDays = now.difference(nextDue).inDays;
+      final id = overdueDays > 0
+          ? 'guardian:epds:overdue:$overdueDays'
+          : 'guardian:epds:due';
+      items.add(
+        MotherNotificationItem(
+          id: id,
+          title: overdueDays > 0
+              ? 'EPDS assessment is overdue'
+              : 'EPDS assessment is due now',
+          description: overdueDays > 0
+              ? 'The linked mother\'s EPDS assessment was due on ${_formatDate(nextDue)}.'
+              : 'A weekly EPDS assessment is now due for the linked mother.',
           type: 'Assessment',
           priority: overdueDays > 0 ? 'high' : 'medium',
           createdAt: nextDue,
@@ -280,6 +430,9 @@ class NotificationService {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
+      if (!_matchesResourceAudience(data, audience: 'mother')) {
+        continue;
+      }
       final createdAt =
           _readDate(data['createdAt']) ?? _readDate(data['updatedAt']) ?? now;
       if (createdAt.isBefore(now.subtract(const Duration(days: 30)))) {
@@ -294,6 +447,49 @@ class NotificationService {
           title: 'New educational content is available',
           description:
               title.isEmpty ? 'A new learning resource has been added for you.' : '$title has been added to your educational resources.',
+          type: 'Resource',
+          priority: 'low',
+          createdAt: createdAt,
+          read: readIds.contains(id),
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  Future<List<MotherNotificationItem>> _buildGuardianResourceNotifications({
+    required Set<String> readIds,
+  }) async {
+    final snapshot = await _db
+        .collection('educationalContents')
+        .where('visibility', isEqualTo: 'visible')
+        .get();
+
+    final now = DateTime.now();
+    final items = <MotherNotificationItem>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      if (!_matchesResourceAudience(data, audience: 'guardian')) {
+        continue;
+      }
+
+      final createdAt =
+          _readDate(data['createdAt']) ?? _readDate(data['updatedAt']) ?? now;
+      if (createdAt.isBefore(now.subtract(const Duration(days: 30)))) {
+        continue;
+      }
+
+      final title = '${data['title'] ?? 'New resource'}'.trim();
+      final id = 'guardian:resource:${doc.id}';
+      items.add(
+        MotherNotificationItem(
+          id: id,
+          title: 'New guardian resource is available',
+          description: title.isEmpty
+              ? 'A new guardian-focused learning resource has been added.'
+              : '$title has been added to guardian educational resources.',
           type: 'Resource',
           priority: 'low',
           createdAt: createdAt,
@@ -434,6 +630,105 @@ class NotificationService {
             priority: 'medium',
             createdAt: createdAt,
             read: readIds.contains(id),
+          ),
+        );
+      }
+    }
+
+    return items;
+  }
+
+  Future<List<MotherNotificationItem>> _buildGuardianVisitNotifications({
+    required String motherUid,
+    required DateTime now,
+    required Set<String> readIds,
+  }) async {
+    final results = await Future.wait([
+      _db.collection('midwifeVisits').where('motherUid', isEqualTo: motherUid).get(),
+      _db.collection('doctorCheckups').where('motherUid', isEqualTo: motherUid).get(),
+    ]);
+
+    final items = <MotherNotificationItem>[];
+
+    for (final doc in results[0].docs) {
+      final data = doc.data();
+      final scheduledAt = _readDate(data['scheduledAt']);
+      if (scheduledAt == null) continue;
+
+      final status = '${data['status'] ?? ''}'.trim().toLowerCase();
+      final visitType = '${data['visitType'] ?? 'home'}'.trim().toLowerCase();
+      final label = visitType == 'clinic' ? 'clinic visit' : 'home visit';
+      final createdAt = _readDate(data['createdAt']) ?? scheduledAt;
+      final baseId = 'guardian:midwife:${doc.id}';
+
+      if (_isOverdue(status: status, scheduledAt: scheduledAt, now: now)) {
+        items.add(
+          MotherNotificationItem(
+            id: '$baseId:overdue',
+            title: '${_capitalize(label)} is overdue',
+            description:
+                'The $label scheduled for ${_formatDateTime(scheduledAt)} is now overdue.',
+            type: 'Visit',
+            priority: 'high',
+            createdAt: scheduledAt,
+            read: readIds.contains('$baseId:overdue'),
+          ),
+        );
+        continue;
+      }
+
+      if (scheduledAt.isAfter(now)) {
+        items.add(
+          MotherNotificationItem(
+            id: '$baseId:upcoming',
+            title: 'Upcoming ${label}',
+            description:
+                'A $label is scheduled for ${_formatDateTime(scheduledAt)}.',
+            type: 'Visit',
+            priority: scheduledAt.difference(now).inDays <= 2 ? 'high' : 'medium',
+            createdAt: createdAt,
+            read: readIds.contains('$baseId:upcoming'),
+          ),
+        );
+      }
+    }
+
+    for (final doc in results[1].docs) {
+      final data = doc.data();
+      final scheduledAt = _readDate(data['scheduledAt']);
+      if (scheduledAt == null) continue;
+
+      final status = '${data['status'] ?? ''}'.trim().toLowerCase();
+      final createdAt = _readDate(data['createdAt']) ?? scheduledAt;
+      final baseId = 'guardian:doctor:${doc.id}';
+
+      if (_isOverdue(status: status, scheduledAt: scheduledAt, now: now)) {
+        items.add(
+          MotherNotificationItem(
+            id: '$baseId:overdue',
+            title: 'Doctor checkup is overdue',
+            description:
+                'The doctor checkup scheduled for ${_formatDateTime(scheduledAt)} is now overdue.',
+            type: 'Checkup',
+            priority: 'high',
+            createdAt: scheduledAt,
+            read: readIds.contains('$baseId:overdue'),
+          ),
+        );
+        continue;
+      }
+
+      if (scheduledAt.isAfter(now)) {
+        items.add(
+          MotherNotificationItem(
+            id: '$baseId:upcoming',
+            title: 'Upcoming doctor checkup',
+            description:
+                'A doctor checkup is scheduled for ${_formatDateTime(scheduledAt)}.',
+            type: 'Checkup',
+            priority: scheduledAt.difference(now).inDays <= 2 ? 'high' : 'medium',
+            createdAt: createdAt,
+            read: readIds.contains('$baseId:upcoming'),
           ),
         );
       }
@@ -630,5 +925,51 @@ class NotificationService {
   String _capitalize(String value) {
     if (value.isEmpty) return value;
     return value[0].toUpperCase() + value.substring(1);
+  }
+
+  List<String> _readStringList(dynamic value) {
+    if (value is! Iterable) return const [];
+    return value.map((item) => '$item'.trim().toLowerCase()).where((item) => item.isNotEmpty).toList();
+  }
+
+  bool _matchesResourceAudience(
+    Map<String, dynamic> data, {
+    required String audience,
+  }) {
+    final normalized = <String>{};
+
+    final directAudience = data['audience'];
+    if (directAudience is String && directAudience.trim().isNotEmpty) {
+      normalized.add(directAudience.trim().toLowerCase());
+    }
+
+    final audienceTags = data['audienceTags'];
+    if (audienceTags is Iterable) {
+      normalized.addAll(
+        audienceTags
+            .map((value) => '$value'.trim().toLowerCase())
+            .where((value) => value.isNotEmpty),
+      );
+    }
+
+    final legacyAudiences = data['audiences'];
+    if (legacyAudiences is Iterable) {
+      normalized.addAll(
+        legacyAudiences
+            .map((value) => '$value'.trim().toLowerCase())
+            .where((value) => value.isNotEmpty),
+      );
+    }
+
+    if (audience == 'guardian') {
+      return normalized.contains('guardian') ||
+          normalized.contains('father');
+    }
+
+    if (normalized.isEmpty) {
+      return audience == 'mother';
+    }
+
+    return normalized.contains(audience) || normalized.contains('all');
   }
 }

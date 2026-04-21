@@ -132,12 +132,6 @@ Start the Flutter app with the same backend host used by the web application:
 flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://YOUR_PC_IP:3000
 ```
 
-Example:
-
-```powershell
-flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://192.168.1.5:3000
-```
-
 ### 6.6 Run on a Specific Device
 If more than one device is connected:
 
@@ -145,6 +139,17 @@ If more than one device is connected:
 flutter devices
 flutter run -d DEVICE_ID --dart-define=MAMABALANCE_API_BASE_URL=http://YOUR_PC_IP:3000
 ```
+
+### 6.7 Mobile Demo Login Options
+The mobile application can be demonstrated using either of the following login methods:
+
+- OTP login
+- email/password login
+
+Before the demonstration, ensure that at least one valid mother account is available for:
+
+- OTP-based sign-in using a registered phone number
+- email/password sign-in using a registered email and password
 
 ## 7. Recommended Demonstration Startup Sequence
 For a complete demonstration, use the following order:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'auth_service.dart';
 import 'biometric_auth_service.dart';
 
 class PostLoginBiometricFlow {
@@ -16,11 +17,12 @@ class PostLoginBiometricFlow {
     if (!context.mounted) return;
     final shouldRequireUnlock =
         await biometricService.isEnabledForCurrentUser();
+    final homeRoute = await AuthService.instance.homeRouteForCurrentUser();
     if (!context.mounted) return;
 
     Navigator.pushNamedAndRemoveUntil(
       context,
-      shouldRequireUnlock ? '/biometric-lock' : '/home',
+      shouldRequireUnlock ? '/biometric-lock' : homeRoute,
       (route) => false,
     );
   }

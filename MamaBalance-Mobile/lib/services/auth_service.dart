@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../models/app_session.dart';
 
 class AppAuthException implements Exception {
   final String message;
@@ -82,7 +83,7 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
-      await _ensureMotherAccess(credential.user);
+      await _ensureMobileAccess(credential.user);
       await _recordFreshFullLogin();
     } on FirebaseAuthException catch (error) {
       throw AppAuthException(_mapFirebaseError(error));
@@ -185,7 +186,7 @@ class AuthService {
       }
 
       final result = await _auth.signInWithCustomToken(customToken);
-      await _ensureMotherAccess(result.user);
+      await _ensureMobileAccess(result.user);
       await _recordFreshFullLogin();
     } on AppAuthException {
       rethrow;
@@ -236,7 +237,7 @@ class AuthService {
     }
 
     try {
-      await _ensureMotherAccess(user);
+      await _ensureMobileAccess(user);
       await user.updatePassword(newPassword.trim());
       await user.reload();
     } on FirebaseAuthException catch (error) {
@@ -244,7 +245,7 @@ class AuthService {
     }
   }
 
-  Future<SessionRestoreStatus> restoreMotherSession() async {
+  Future<SessionRestoreStatus> restoreSession() async {
     final user = _auth.currentUser;
 
     if (user == null) {
@@ -252,7 +253,7 @@ class AuthService {
     }
 
     try {
-      await _ensureMotherAccess(user);
+      await _ensureMobileAccess(user);
       final isFresh = await isFullLoginStillValid();
       if (!isFresh) {
         await signOut();
@@ -263,6 +264,10 @@ class AuthService {
     } catch (_) {
       return SessionRestoreStatus.noSession;
     }
+  }
+
+  Future<SessionRestoreStatus> restoreMotherSession() async {
+    return restoreSession();
   }
 
   Future<void> signOut() async {
@@ -308,12 +313,31 @@ class AuthService {
     return remaining;
   }
 
-  Future<void> _ensureMotherAccess(User? user) async {
+  Future<AppSession?> currentSession() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    final snapshot = await _resolveMobileUserDoc(user);
+    final data = snapshot?.data() ?? <String, dynamic>{};
+    return AppSession(
+      uid: snapshot?.id ?? user.uid,
+      role: AppUserRoleX.fromString(data['role']),
+    );
+  }
+
+  Future<String> homeRouteForCurrentUser() async {
+    final session = await currentSession();
+    return session?.role.homeRoute ?? '/home';
+  }
+
+  Future<void> _ensureMobileAccess(User? user) async {
     if (user == null) {
       throw const AppAuthException('Authentication failed. Please try again.');
     }
 
-    final snapshot = await _resolveMotherUserDoc(user);
+    final snapshot = await _resolveMobileUserDoc(user);
 
     if (snapshot == null || !snapshot.exists) {
       await signOut();
@@ -323,13 +347,13 @@ class AuthService {
     }
 
     final data = snapshot.data();
-    final role = data?['role'] as String?;
+    final role = AppUserRoleX.fromString(data?['role']);
     final status = data?['status'] as String?;
 
-    if (role != 'mother') {
+    if (!role.isMobileUser) {
       await signOut();
       throw const AppAuthException(
-        'This sign-in page is only for mothers. Staff must use the web portal.',
+        'This sign-in page is only for mothers and guardians. Staff must use the web portal.',
       );
     }
 
@@ -341,7 +365,7 @@ class AuthService {
     }
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>?> _resolveMotherUserDoc(
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _resolveMobileUserDoc(
     User user,
   ) async {
     final direct = await _db.collection('users').doc(user.uid).get();

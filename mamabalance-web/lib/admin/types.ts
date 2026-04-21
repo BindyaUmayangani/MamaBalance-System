@@ -34,6 +34,7 @@ export type ManagedMotherRow = ManagedUserRow & {
   address: string;
   guardianName: string;
   guardianContact: string;
+  guardianAccessEnabled?: boolean;
   deliveryDate: string;
   noOfChildren: number;
 };
@@ -71,4 +72,15 @@ export type CreatedCredentials = {
   temporaryPassword: string;
   deliveryEmail: string;
   deliveryQueued: boolean;
+  guardianProvisioning?: GuardianProvisioning;
+};
+
+export type GuardianProvisioning = {
+  uid: string;
+  userId: string;
+  displayName: string;
+  phoneNumber: string;
+  status: "created" | "linked";
+  loginMethod: "phone_otp";
+  smsDeliveryStatus?: "sent" | "failed";
 };

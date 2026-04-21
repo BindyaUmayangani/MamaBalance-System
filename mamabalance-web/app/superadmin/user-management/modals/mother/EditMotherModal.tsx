@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
-import { ManagedMotherRow } from "@/lib/admin/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, CheckCircle2, ChevronDown, MessageSquareText, ShieldCheck, UserRound } from "lucide-react";
+import { GuardianProvisioning, ManagedMotherRow } from "@/lib/admin/types";
 
 type RegionOption = {
   id: string;
@@ -49,7 +49,27 @@ export default function EditMotherModal({
   const [status, setStatus] = useState<"active" | "inactive">(
     mother.status === "inactive" ? "inactive" : "active"
   );
+  const guardianAccessAlreadyEnabled = Boolean(mother.guardianAccessEnabled);
+  const [enableGuardianMobileAccess, setEnableGuardianMobileAccess] = useState(
+    guardianAccessAlreadyEnabled,
+  );
   const [saving, setSaving] = useState(false);
+  const [saveOutcome, setSaveOutcome] = useState<{
+    updatedMother: ManagedMotherRow;
+    guardianProvisioning?: GuardianProvisioning;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!saveOutcome) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      onSave(saveOutcome.updatedMother);
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [onSave, saveOutcome]);
 
   const initialRegionId = useMemo(() => {
     const matched = regionOptions.find(
@@ -105,6 +125,111 @@ export default function EditMotherModal({
     input.click();
   }
 
+  if (saveOutcome) {
+    return (
+      <div className="modal-container success-popup">
+        <div className="success-popup-hero">
+          <div className="success-popup-icon">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <h2 className="modal-title success-popup-title">Changes saved successfully</h2>
+            <p className="success-popup-subtitle">
+              {saveOutcome.guardianProvisioning
+                ? "The mother record was updated and guardian mobile access is now ready."
+                : "The mother record has been updated and synced with the latest care details."}
+            </p>
+          </div>
+        </div>
+
+        <div className="success-summary-card">
+          <div className="success-summary-row">
+            <span className="success-summary-label">Mother</span>
+            <span className="success-summary-value">{saveOutcome.updatedMother.name}</span>
+          </div>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Region</span>
+            <span className="success-summary-value">{saveOutcome.updatedMother.region}</span>
+          </div>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Assigned Midwife</span>
+            <span className="success-summary-value">{saveOutcome.updatedMother.assignedMidwife}</span>
+          </div>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Assigned Doctor</span>
+            <span className="success-summary-value">{saveOutcome.updatedMother.assignedDoctor}</span>
+          </div>
+        </div>
+
+        {saveOutcome.guardianProvisioning ? (
+          <div className="guardian-success-card">
+            <div className="guardian-success-header">
+              <div className="guardian-success-badge">
+                <ShieldCheck size={18} />
+                <span>Guardian Mobile Access</span>
+              </div>
+              <span
+                className={`guardian-success-status ${
+                  saveOutcome.guardianProvisioning.status === "created"
+                    ? "is-created"
+                    : "is-linked"
+                }`}
+              >
+                {saveOutcome.guardianProvisioning.status === "created"
+                  ? "New access created"
+                  : "Existing account linked"}
+              </span>
+            </div>
+
+            <div className="guardian-success-grid">
+              <div className="guardian-success-item">
+                <UserRound size={16} />
+                <div>
+                  <span className="guardian-success-label">Guardian ID</span>
+                  <strong>{saveOutcome.guardianProvisioning.userId}</strong>
+                </div>
+              </div>
+              <div className="guardian-success-item">
+                <UserRound size={16} />
+                <div>
+                  <span className="guardian-success-label">Phone</span>
+                  <strong>{saveOutcome.guardianProvisioning.phoneNumber}</strong>
+                </div>
+              </div>
+              <div className="guardian-success-item">
+                <ShieldCheck size={16} />
+                <div>
+                  <span className="guardian-success-label">Login</span>
+                  <strong>Phone OTP</strong>
+                </div>
+              </div>
+              <div className="guardian-success-item">
+                <MessageSquareText size={16} />
+                <div>
+                  <span className="guardian-success-label">SMS delivery</span>
+                  <strong>
+                    {saveOutcome.guardianProvisioning.smsDeliveryStatus === "failed"
+                      ? "SMS sending failed"
+                      : "Onboarding SMS sent"}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="modal-actions">
+          <button
+            className="btn-primary"
+            onClick={() => onSave(saveOutcome.updatedMother)}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-container">
       <h2 className="modal-title">UPDATE MOTHER’S DETAILS</h2>
@@ -145,6 +270,32 @@ export default function EditMotherModal({
             value={guardianContact}
             onChange={(e) => setGuardianContact(e.target.value)}
           />
+        </div>
+
+        <div className="guardian-access-field">
+          <label>Guardian Mobile Access</label>
+          <label
+            className={`guardian-access-option ${guardianAccessAlreadyEnabled ? "is-enabled" : ""}`}
+          >
+            <input
+              type="checkbox"
+              checked={enableGuardianMobileAccess}
+              disabled={guardianAccessAlreadyEnabled}
+              onChange={(e) => setEnableGuardianMobileAccess(e.target.checked)}
+            />
+            <span className="guardian-access-copy">
+              <strong className="guardian-access-title">
+                {guardianAccessAlreadyEnabled
+                  ? "Guardian mobile access is already enabled"
+                  : "Enable guardian mobile access"}
+              </strong>
+              <span className="guardian-access-description">
+                {guardianAccessAlreadyEnabled
+                  ? "This guardian can already sign in to the mobile app with phone OTP."
+                  : "Create or link a guardian mobile account using the saved guardian name and contact number."}
+              </span>
+            </span>
+          </label>
         </div>
 
         <div>
@@ -333,10 +484,14 @@ export default function EditMotherModal({
                   address,
                   assignedMidwifeUid,
                   assignedDoctorUid,
+                  enableGuardianMobileAccess,
                 }),
               });
 
-              const data = await res.json();
+              const data = (await res.json()) as {
+                error?: string;
+                guardianProvisioning?: GuardianProvisioning;
+              };
 
               if (!res.ok) {
                 throw new Error(data.error || "Failed to update mother");
@@ -350,7 +505,8 @@ export default function EditMotherModal({
                 doctorOptions.find((item) => item.uid === assignedDoctorUid)?.name ||
                 (assignedDoctorUid ? mother.assignedDoctor : "-");
 
-              onSave({
+              setSaveOutcome({
+                updatedMother: {
                 ...mother,
                 personalEmail: email,
                 contact,
@@ -358,12 +514,16 @@ export default function EditMotherModal({
                 status,
                 guardianName,
                 guardianContact,
+                guardianAccessEnabled:
+                  guardianAccessAlreadyEnabled || enableGuardianMobileAccess,
                 deliveryDate,
                 birthdate,
                 noOfChildren: Number(noOfChildren || 0),
                 address,
                 assignedMidwife: selectedMidwifeName,
                 assignedDoctor: assignedDoctorUid ? selectedDoctorName : "-",
+                },
+                guardianProvisioning: data.guardianProvisioning,
               });
             } catch (error) {
               console.error(error);

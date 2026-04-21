@@ -9,6 +9,7 @@ import {
   Users,
   MapPin,
   BookOpen,
+  Pill,
   BarChart3,
   ClipboardList,
   Settings,
@@ -86,6 +87,14 @@ export default function Sidebar() {
         >
           <BookOpen size={20} />
           Educational Content
+        </Link>
+
+        <Link
+          href="/superadmin/medicine-management"
+          className={isActive("/superadmin/medicine-management")}
+        >
+          <Pill size={20} />
+          Medicine Management
         </Link>
 
         <Link

@@ -51,12 +51,12 @@ class _IntroScreenState extends State<IntroScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pushNamed(context, '/signin');
+      Navigator.pushReplacementNamed(context, '/signin');
     }
   }
 
   void _skipIntro() {
-    Navigator.pushNamed(context, '/signin');
+    Navigator.pushReplacementNamed(context, '/signin');
   }
 
   @override

@@ -10,7 +10,9 @@ import {
 
 import { firebaseStorage } from "@/lib/firebase/client";
 import {
+  EDUCATIONAL_CONTENT_AUDIENCES,
   EDUCATIONAL_CONTENT_TYPES,
+  EducationalContentAudience,
   EducationalContentPayload,
   EducationalContentRecord,
   EducationalContentType,
@@ -19,6 +21,7 @@ import {
 type Props = {
   mode: "create" | "edit";
   content?: EducationalContentRecord | null;
+  defaultAudience?: EducationalContentAudience;
   onClose: () => void;
   onSaved: (content: EducationalContentRecord) => void;
 };
@@ -55,11 +58,15 @@ function getResourcePlaceholder(type: EducationalContentType) {
 export default function ContentFormModal({
   mode,
   content,
+  defaultAudience = "mother",
   onClose,
   onSaved,
 }: Props) {
   const [title, setTitle] = useState(content?.title || "");
   const [description, setDescription] = useState(content?.description || "");
+  const [audience, setAudience] = useState<EducationalContentAudience>(
+    content?.audience || defaultAudience,
+  );
   const [type, setType] = useState<EducationalContentType>(content?.type || "link");
   const [visibility, setVisibility] = useState<"visible" | "hidden">(
     content?.visibility || "visible",
@@ -189,6 +196,7 @@ export default function ContentFormModal({
         ...(content?.id && { id: content.id }),
         title: title.trim(),
         description: description.trim(),
+        audience,
         type,
         visibility,
         posterUrl: uploadedPoster?.url || posterUrl || null,
@@ -237,171 +245,191 @@ export default function ContentFormModal({
     <>
       <h2 className="modal-title">{modalTitle}</h2>
 
-      <div className="modal-form-grid">
-        <div>
-          <label>Title</label>
-          <input
-            type="text"
-            value={title}
-            placeholder="Enter title"
-            onChange={(event) => setTitle(event.target.value)}
-          />
+      <div className="content-modal-scroll">
+        <div className="modal-form-grid">
+          <div>
+            <label>Title</label>
+            <input
+              type="text"
+              value={title}
+              placeholder="Enter title"
+              onChange={(event) => setTitle(event.target.value)}
+            />
 
-          <label>Description</label>
-          <textarea
-            rows={4}
-            value={description}
-            placeholder="Enter description"
-            onChange={(event) => setDescription(event.target.value)}
-          />
+            <label>Description</label>
+            <textarea
+              rows={4}
+              value={description}
+              placeholder="Enter description"
+              onChange={(event) => setDescription(event.target.value)}
+            />
 
-          <label>Content Type</label>
-          <div className="field-control">
-            <select
-              value={type}
-              onChange={(event) => {
-                const nextType = event.target.value as EducationalContentType;
-                const wasFileType = type === "video" || type === "pdf";
-                const nextIsFileType =
-                  nextType === "video" || nextType === "pdf";
-
-                setType(nextType);
-
-                if (wasFileType !== nextIsFileType) {
-                  setResourceUrl("");
-                  setResourcePath("");
-                  setResourceFile(null);
-                }
-              }}
-            >
-              {EDUCATIONAL_CONTENT_TYPES.map((item) => (
-                <option key={item} value={item}>
-                  {item === "youtube"
-                    ? "YouTube Video"
-                    : item === "pdf"
-                      ? "PDF"
-                      : item.charAt(0).toUpperCase() + item.slice(1)}
-                </option>
+            <label>Audience</label>
+            <div className="radio-group">
+              {EDUCATIONAL_CONTENT_AUDIENCES.map((item) => (
+                <label className="radio-option" key={item}>
+                  <input
+                    type="radio"
+                    name="audience"
+                    checked={audience === item}
+                    onChange={() => setAudience(item)}
+                  />
+                  <span className="custom-radio"></span>
+                  <span className="radio-text">
+                    {item === "father" ? "Fathers" : "Mothers"}
+                  </span>
+                </label>
               ))}
-            </select>
-            <span className="field-icon" aria-hidden="true">
-              <ChevronDown size={18} />
-            </span>
-          </div>
+            </div>
 
-          <label>Visibility</label>
-          <div className="radio-group">
-            <label className="radio-option">
-              <input
-                type="radio"
-                name="visibility"
-                checked={visibility === "visible"}
-                onChange={() => setVisibility("visible")}
-              />
-              <span className="custom-radio"></span>
-              <span className="radio-text">Visible</span>
-            </label>
-
-            <label className="radio-option">
-              <input
-                type="radio"
-                name="visibility"
-                checked={visibility === "hidden"}
-                onChange={() => setVisibility("hidden")}
-              />
-              <span className="custom-radio"></span>
-              <span className="radio-text">Hide</span>
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <label>Poster (Image) - Optional</label>
-          <div className="content-upload-box">
-            <input type="file" accept="image/*" onChange={handlePosterChange} />
-            <span className="content-upload-hint">
-              <ImageIcon size={16} />
-              Upload a cover image if you want a visual preview.
-            </span>
-          </div>
-
-          {posterUrl ? (
-            <a
-              className="content-resource-link"
-              href={posterUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={16} />
-              Open current poster
-            </a>
-          ) : null}
-
-          <label>{getResourceLabel(type)}</label>
-          {isFileType ? (
-            <>
-              <div className="content-upload-box">
-                <input
-                  type="file"
-                  accept={resourceAccept}
-                  onChange={handleResourceChange}
-                />
-                <span className="content-upload-hint">
-                  {type === "video" ? <Video size={16} /> : <FileText size={16} />}
-                  {type === "video"
-                    ? "Upload the video file that staff should watch."
-                    : "Upload the PDF file staff should open."}
-                </span>
-              </div>
-
-              {resourceUrl ? (
-                <a
-                  className="content-resource-link"
-                  href={resourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <ExternalLink size={16} />
-                  {resourcePreviewLabel}
-                </a>
-              ) : null}
-            </>
-          ) : (
+            <label>Content Type</label>
             <div className="field-control">
-              <input
-                type="url"
-                value={resourceUrl}
-                placeholder={getResourcePlaceholder(type)}
-                onChange={(event) => setResourceUrl(event.target.value)}
-              />
+              <select
+                value={type}
+                onChange={(event) => {
+                  const nextType = event.target.value as EducationalContentType;
+                  const wasFileType = type === "video" || type === "pdf";
+                  const nextIsFileType =
+                    nextType === "video" || nextType === "pdf";
+
+                  setType(nextType);
+
+                  if (wasFileType !== nextIsFileType) {
+                    setResourceUrl("");
+                    setResourcePath("");
+                    setResourceFile(null);
+                  }
+                }}
+              >
+                {EDUCATIONAL_CONTENT_TYPES.map((item) => (
+                  <option key={item} value={item}>
+                    {item === "youtube"
+                      ? "YouTube Video"
+                      : item === "pdf"
+                        ? "PDF"
+                        : item.charAt(0).toUpperCase() + item.slice(1)}
+                  </option>
+                ))}
+              </select>
               <span className="field-icon" aria-hidden="true">
-                <ExternalLink size={16} />
+                <ChevronDown size={18} />
               </span>
             </div>
-          )}
-        </div>
-      </div>
-
-      {error ? <p className="content-form-error">{error}</p> : null}
-      {statusMessage ? (
-        <div className="content-save-status" aria-live="polite">
-          <div className="content-save-status-row">
-            <span className="content-save-message">{statusMessage}</span>
-            {isSubmitting ? (
-              <span className="content-save-percent">{uploadProgress}%</span>
-            ) : null}
           </div>
 
-          {isSubmitting ? (
-            <div className="content-progress-track" aria-hidden="true">
-              <div
-                className="content-progress-bar"
-                style={{ width: `${uploadProgress}%` }}
-              />
+          <div>
+            <label>Poster (Image) - Optional</label>
+            <div className="content-upload-box">
+              <input type="file" accept="image/*" onChange={handlePosterChange} />
+              <span className="content-upload-hint">
+                <ImageIcon size={16} />
+                Upload a cover image if you want a visual preview.
+              </span>
             </div>
-          ) : null}
+
+            {posterUrl ? (
+              <a
+                className="content-resource-link"
+                href={posterUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={16} />
+                Open current poster
+              </a>
+            ) : null}
+
+            <label>{getResourceLabel(type)}</label>
+            {isFileType ? (
+              <>
+                <div className="content-upload-box">
+                  <input
+                    type="file"
+                    accept={resourceAccept}
+                    onChange={handleResourceChange}
+                  />
+                  <span className="content-upload-hint">
+                    {type === "video" ? <Video size={16} /> : <FileText size={16} />}
+                    {type === "video"
+                      ? "Upload the video file that staff should watch."
+                      : "Upload the PDF file staff should open."}
+                  </span>
+                </div>
+
+                {resourceUrl ? (
+                  <a
+                    className="content-resource-link"
+                    href={resourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink size={16} />
+                    {resourcePreviewLabel}
+                  </a>
+                ) : null}
+              </>
+            ) : (
+              <div className="field-control">
+                <input
+                  type="url"
+                  value={resourceUrl}
+                  placeholder={getResourcePlaceholder(type)}
+                  onChange={(event) => setResourceUrl(event.target.value)}
+                />
+                <span className="field-icon" aria-hidden="true">
+                  <ExternalLink size={16} />
+                </span>
+              </div>
+            )}
+
+            <label>Visibility</label>
+            <div className="radio-group">
+              <label className="radio-option">
+                <input
+                  type="radio"
+                  name="visibility"
+                  checked={visibility === "visible"}
+                  onChange={() => setVisibility("visible")}
+                />
+                <span className="custom-radio"></span>
+                <span className="radio-text">Visible</span>
+              </label>
+
+              <label className="radio-option">
+                <input
+                  type="radio"
+                  name="visibility"
+                  checked={visibility === "hidden"}
+                  onChange={() => setVisibility("hidden")}
+                />
+                <span className="custom-radio"></span>
+                <span className="radio-text">Hide</span>
+              </label>
+            </div>
+          </div>
         </div>
-      ) : null}
+
+        {error ? <p className="content-form-error">{error}</p> : null}
+        {statusMessage ? (
+          <div className="content-save-status" aria-live="polite">
+            <div className="content-save-status-row">
+              <span className="content-save-message">{statusMessage}</span>
+              {isSubmitting ? (
+                <span className="content-save-percent">{uploadProgress}%</span>
+              ) : null}
+            </div>
+
+            {isSubmitting ? (
+              <div className="content-progress-track" aria-hidden="true">
+                <div
+                  className="content-progress-bar"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <div className="modal-actions">
         <button className="btn-close" onClick={onClose} disabled={isSubmitting}>

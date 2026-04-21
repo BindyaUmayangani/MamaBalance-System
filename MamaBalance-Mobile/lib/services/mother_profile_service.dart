@@ -30,6 +30,12 @@ class MotherProfileService {
 
       final userData = userDoc.data() ?? <String, dynamic>{};
       final motherData = motherDoc.data() ?? <String, dynamic>{};
+      final doctorUid = _readString(motherData['assignedDoctorUid']);
+      final midwifeUid = _readString(motherData['assignedMidwifeUid']);
+      final staffAssignments = await _resolveAssignedStaff(
+        doctorUid: doctorUid,
+        midwifeUid: midwifeUid,
+      );
 
       final noOfChildrenValue = motherData['noOfChildren'];
       final noOfChildren = noOfChildrenValue is num
@@ -63,8 +69,12 @@ class MotherProfileService {
         profileImagePath: _readString(motherData['profileImagePath']) ??
             _readString(userData['profileImagePath']) ??
             '',
-        assignedDoctorUid: _readString(motherData['assignedDoctorUid']),
-        assignedMidwifeUid: _readString(motherData['assignedMidwifeUid']),
+        assignedDoctorUid: doctorUid,
+        assignedMidwifeUid: midwifeUid,
+        assignedDoctorName: staffAssignments.doctorName,
+        assignedDoctorPhoneNumber: staffAssignments.doctorPhoneNumber,
+        assignedMidwifeName: staffAssignments.midwifeName,
+        assignedMidwifePhoneNumber: staffAssignments.midwifePhoneNumber,
         latestEpdsScore: int.tryParse('${motherData['latestEpdsScore'] ?? 0}') ?? 0,
         latestEpdsDate: _parseLatestEpdsDate(motherData),
       );
@@ -210,7 +220,49 @@ class MotherProfileService {
       profileImageUrl: '',
       profileImagePath: '',
       assignedDoctorUid: null,
+      assignedDoctorName: '',
+      assignedDoctorPhoneNumber: '',
+      assignedMidwifeName: '',
+      assignedMidwifePhoneNumber: '',
     );
+  }
+
+  Future<_AssignedStaffDetails> _resolveAssignedStaff({
+    required String? doctorUid,
+    required String? midwifeUid,
+  }) async {
+    final staffDocs = await Future.wait([
+      _fetchStaffDoc(doctorUid),
+      _fetchStaffDoc(midwifeUid),
+    ]);
+
+    final doctorData = staffDocs[0];
+    final midwifeData = staffDocs[1];
+
+    return _AssignedStaffDetails(
+      doctorName: _readString(doctorData?['displayName']) ??
+          _readString(doctorData?['fullName']) ??
+          '',
+      doctorPhoneNumber: _readString(doctorData?['phoneNumber']) ?? '',
+      midwifeName: _readString(midwifeData?['displayName']) ??
+          _readString(midwifeData?['fullName']) ??
+          '',
+      midwifePhoneNumber: _readString(midwifeData?['phoneNumber']) ?? '',
+    );
+  }
+
+  Future<Map<String, dynamic>?> _fetchStaffDoc(String? uid) async {
+    final trimmedUid = uid?.trim() ?? '';
+    if (trimmedUid.isEmpty) {
+      return null;
+    }
+
+    try {
+      final snapshot = await _db.collection('users').doc(trimmedUid).get();
+      return snapshot.data();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<_ResolvedProfileDocs> _resolveCurrentProfileDocs() async {
@@ -332,6 +384,20 @@ class MotherProfileService {
 
     return directMotherDoc;
   }
+}
+
+class _AssignedStaffDetails {
+  final String doctorName;
+  final String doctorPhoneNumber;
+  final String midwifeName;
+  final String midwifePhoneNumber;
+
+  const _AssignedStaffDetails({
+    required this.doctorName,
+    required this.doctorPhoneNumber,
+    required this.midwifeName,
+    required this.midwifePhoneNumber,
+  });
 }
 
 class _ResolvedProfileDocs {

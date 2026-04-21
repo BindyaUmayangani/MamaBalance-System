@@ -16,7 +16,10 @@ import AddContentModal from "@/app/superadmin/educational-content/modals/AddCont
 import EditContentModal from "@/app/superadmin/educational-content/modals/EditContentModal";
 import DeleteContentModal from "@/app/superadmin/educational-content/modals/DeleteContentModal";
 import ViewContentModal from "@/app/superadmin/educational-content/modals/ViewContentModal";
-import { EducationalContentRecord } from "@/lib/education/types";
+import {
+  EducationalContentAudience,
+  EducationalContentRecord,
+} from "@/lib/education/types";
 
 type ModalType = "add" | "edit" | "view" | "delete" | null;
 
@@ -33,6 +36,8 @@ export default function EducationalContentPage({ role }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeAudience, setActiveAudience] =
+    useState<EducationalContentAudience>("mother");
 
   const isSuperAdmin = role === "superadmin";
   const isRegionalAdmin = role === "regionaladmin";
@@ -48,6 +53,7 @@ export default function EducationalContentPage({ role }: Props) {
 
     try {
       const response = await fetch("/api/admin/content", {
+        method: "GET",
         cache: "no-store",
       });
       const data = (await response.json()) as {
@@ -77,6 +83,7 @@ export default function EducationalContentPage({ role }: Props) {
 
   const filteredData = useMemo(() => {
     return contents.filter((item) => {
+      const matchesAudience = item.audience === activeAudience;
       const matchesSearch = `${item.contentId} ${item.title}`
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -85,9 +92,9 @@ export default function EducationalContentPage({ role }: Props) {
       const matchesVisibility =
         filterVisibility === "all" || item.visibility === filterVisibility;
 
-      return matchesSearch && matchesType && matchesVisibility;
+      return matchesAudience && matchesSearch && matchesType && matchesVisibility;
     });
-  }, [contents, filterType, filterVisibility, search]);
+  }, [activeAudience, contents, filterType, filterVisibility, search]);
 
   const totalItems = filteredData.length;
   const paginatedData = filteredData.slice(
@@ -195,7 +202,7 @@ export default function EducationalContentPage({ role }: Props) {
           <p>
             {isRegionalAdmin 
               ? "Review and manage learning resources shared with care teams across your assigned region."
-              : "Manage articles, videos, and resources for maternal health education across the system."}
+              : "Manage separate educational resources for mothers and fathers across the system."}
           </p>
         </div>
 
@@ -204,6 +211,29 @@ export default function EducationalContentPage({ role }: Props) {
             + Add Content
           </button>
         )}
+      </div>
+
+      <div className="tabs-row content-audience-tabs">
+        <div className="tabs">
+          <button
+            className={`tab ${activeAudience === "mother" ? "active" : ""}`}
+            onClick={() => {
+              setActiveAudience("mother");
+              setCurrentPage(1);
+            }}
+          >
+            Mother Resources
+          </button>
+          <button
+            className={`tab ${activeAudience === "father" ? "active" : ""}`}
+            onClick={() => {
+              setActiveAudience("father");
+              setCurrentPage(1);
+            }}
+          >
+            Father Resources
+          </button>
+        </div>
       </div>
 
       <div className="content-controls">
@@ -282,6 +312,7 @@ export default function EducationalContentPage({ role }: Props) {
         >
           {activeModal === "add" && isSuperAdmin && (
             <AddContentModal
+              defaultAudience={activeAudience}
               onClose={() => setActiveModal(null)}
               onSaved={(content) => {
                 setContents((prev) => [content, ...prev]);

@@ -10,17 +10,27 @@ export const EDUCATIONAL_CONTENT_VISIBILITIES = [
   "hidden",
 ] as const;
 
+export const EDUCATIONAL_CONTENT_AUDIENCES = [
+  "mother",
+  "father",
+] as const;
+
 export type EducationalContentType =
   (typeof EDUCATIONAL_CONTENT_TYPES)[number];
 
 export type EducationalContentVisibility =
   (typeof EDUCATIONAL_CONTENT_VISIBILITIES)[number];
 
+export type EducationalContentAudience =
+  (typeof EDUCATIONAL_CONTENT_AUDIENCES)[number];
+
 export type EducationalContentRecord = {
   id: string;
   contentId: string;
   title: string;
   description: string;
+  audience: EducationalContentAudience;
+  audienceLabel: string;
   type: EducationalContentType;
   typeLabel: string;
   dateAdded: string;
@@ -36,6 +46,7 @@ export type EducationalContentRecord = {
 export type EducationalContentPayload = {
   title: string;
   description: string;
+  audience: EducationalContentAudience;
   type: EducationalContentType;
   visibility: EducationalContentVisibility;
   posterUrl?: string | null;
@@ -60,6 +71,14 @@ export function isEducationalContentVisibility(
   );
 }
 
+export function isEducationalContentAudience(
+  value: string | null | undefined,
+): value is EducationalContentAudience {
+  return EDUCATIONAL_CONTENT_AUDIENCES.includes(
+    value as EducationalContentAudience,
+  );
+}
+
 export function getEducationalContentTypeLabel(
   type: EducationalContentType,
 ) {
@@ -81,6 +100,12 @@ export function getEducationalContentVisibilityLabel(
   return visibility === "visible" ? "Visible" : "Hidden";
 }
 
+export function getEducationalContentAudienceLabel(
+  audience: EducationalContentAudience,
+) {
+  return audience === "father" ? "Fathers" : "Mothers";
+}
+
 export function getEducationalContentResourceLabel(
   type: EducationalContentType,
 ) {
@@ -95,4 +120,3 @@ export function getEducationalContentResourceLabel(
       return "Open uploaded PDF";
   }
 }
-

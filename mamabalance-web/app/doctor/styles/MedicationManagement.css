@@ -450,15 +450,25 @@
   overflow-x: hidden;
   padding: 28px 32px;
   flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
 .medication-add-modal {
   width: 800px;
   min-width: 800px;
   max-width: calc(100vw - 48px);
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
-.medication-update-modal {}
+.medication-update-modal {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
 
 .medication-modal-small {
   width: 420px;
@@ -1136,6 +1146,68 @@
 .history-modal-meta,
 .mother-history-item {
   min-width: 0;
+}
+
+.medicine-mode-toggle {
+  display: inline-flex;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 12px;
+  background: #eef8f3;
+  border: 1px solid #d4e9e0;
+}
+
+.medicine-mode-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #56736a;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.medicine-mode-btn.active {
+  background: #499d85;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(73, 157, 133, 0.16);
+}
+
+.selected-catalog-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fffc 0%, #eef9f3 100%);
+  border: 1px solid #d2e9df;
+}
+
+.selected-catalog-card strong {
+  display: block;
+  color: #1f2937;
+}
+
+.selected-catalog-card p {
+  margin: 6px 0 0;
+  color: #5d766e;
+  font-size: 0.84rem;
+}
+
+.custom-suggestion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: #46685e;
+  font-size: 0.86rem;
+}
+
+.custom-suggestion-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #499d85;
 }
 
 .remove-med-btn {

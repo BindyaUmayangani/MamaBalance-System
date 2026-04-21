@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cryptography/cryptography.dart';
 
 import 'auth_service.dart';
+import '../models/app_session.dart';
+import 'mobile_user_context_service.dart';
 
 class SecureChatMessage {
   final String id;
@@ -27,6 +29,8 @@ class SecureChatMessage {
 class SecureConversation {
   final String id;
   final String motherUid;
+  final String participantUid;
+  final String participantRole;
   final String careTeamUid;
   final String careTeamRole;
   final String careTeamName;
@@ -34,17 +38,19 @@ class SecureConversation {
   const SecureConversation({
     required this.id,
     required this.motherUid,
+    required this.participantUid,
+    required this.participantRole,
     required this.careTeamUid,
     required this.careTeamRole,
     required this.careTeamName,
   });
 }
 
-class MotherChatOptions {
+class CareChatOptions {
   final SecureConversation? doctor;
   final SecureConversation midwife;
 
-  const MotherChatOptions({
+  const CareChatOptions({
     required this.doctor,
     required this.midwife,
   });
@@ -58,6 +64,8 @@ class MessagingService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AesGcm _cipher = AesGcm.with256bits();
+  final MobileUserContextService _contextService =
+      MobileUserContextService.instance;
   static const String _algorithm = 'AES-256-GCM';
   static const String _keyVersion = 'v1';
   static const String _defaultDevelopmentKey = 'MamaBalance demo message key v1!';
@@ -67,13 +75,19 @@ class MessagingService {
 
   User? get currentUser => _auth.currentUser;
 
-  Future<MotherChatOptions> resolveMotherChatOptions() async {
+  Future<CareChatOptions> resolveChatOptions() async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const AppAuthException('Please sign in to continue.');
     }
 
-    final motherDoc = await _resolveMotherDoc(user);
+    final context = await _contextService.resolveCurrent();
+    final role = context.role;
+    final participantUid =
+        role == AppUserRole.guardian ? context.userDoc.id : context.motherDoc.id;
+    final participantRole =
+        role == AppUserRole.guardian ? 'guardian' : 'mother';
+    final motherDoc = context.motherDoc;
     final mother = motherDoc.data() ?? {};
     final doctorUid = '${mother['assignedDoctorUid'] ?? ''}'.trim();
     final midwifeUid = '${mother['assignedMidwifeUid'] ?? ''}'.trim();
@@ -87,6 +101,8 @@ class MessagingService {
         : SecureConversation(
             id: _conversationId(motherDoc.id, doctorUid, 'doctor'),
             motherUid: motherDoc.id,
+            participantUid: participantUid,
+            participantRole: participantRole,
             careTeamUid: doctorUid,
             careTeamRole: 'doctor',
             careTeamName: await _resolveStaffName(
@@ -100,6 +116,8 @@ class MessagingService {
     final midwife = SecureConversation(
       id: _conversationId(motherDoc.id, midwifeUid, 'midwife'),
       motherUid: motherDoc.id,
+      participantUid: participantUid,
+      participantRole: participantRole,
       careTeamUid: midwifeUid,
       careTeamRole: 'midwife',
       careTeamName: await _resolveStaffName(
@@ -110,11 +128,15 @@ class MessagingService {
       ),
     );
 
-    return MotherChatOptions(doctor: doctor, midwife: midwife);
+    return CareChatOptions(doctor: doctor, midwife: midwife);
+  }
+
+  Future<CareChatOptions> resolveMotherChatOptions() async {
+    return resolveChatOptions();
   }
 
   Future<SecureConversation> resolveMotherConversation() async {
-    final options = await resolveMotherChatOptions();
+    final options = await resolveChatOptions();
     return options.doctor ?? options.midwife;
   }
 
@@ -196,12 +218,19 @@ class MessagingService {
           if (conversation.careTeamRole == 'midwife')
             'midwifeUid': conversation.careTeamUid,
           'careTeamRole': conversation.careTeamRole,
-          'participantUids': [conversation.motherUid, conversation.careTeamUid],
+          'participantUids': [
+            conversation.motherUid,
+            conversation.participantUid,
+            conversation.careTeamUid,
+          ].toSet().toList(),
           'isOpen': true,
           'lastMessageText': 'Secure message',
           'lastMessageAt': FieldValue.serverTimestamp(),
           'lastMessageSenderUid': user.uid,
-          'lastReadByMotherAt': FieldValue.serverTimestamp(),
+          if (conversation.participantRole == 'mother')
+            'lastReadByMotherAt': FieldValue.serverTimestamp(),
+          if (conversation.participantRole == 'guardian')
+            'lastReadByGuardianAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         },
@@ -210,7 +239,7 @@ class MessagingService {
 
       transaction.set(messageRef, {
         'senderUid': user.uid,
-        'senderRole': 'mother',
+        'senderRole': conversation.participantRole,
         ...encrypted,
         'attachments': [],
         'readBy': [user.uid],
@@ -220,56 +249,20 @@ class MessagingService {
   }
 
   Future<void> markConversationRead(String conversationId) async {
-    await _db.collection('conversations').doc(conversationId).set({
-      'lastReadByMotherAt': FieldValue.serverTimestamp(),
+    final context = await _contextService.resolveCurrent();
+    final payload = <String, dynamic>{
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  Future<DocumentSnapshot<Map<String, dynamic>>> _resolveMotherDoc(
-    User user,
-  ) async {
-    final directMotherDoc = await _db.collection('mothers').doc(user.uid).get();
-    if (directMotherDoc.exists) {
-      return directMotherDoc;
+    };
+    if (context.role == AppUserRole.guardian) {
+      payload['lastReadByGuardianAt'] = FieldValue.serverTimestamp();
+    } else {
+      payload['lastReadByMotherAt'] = FieldValue.serverTimestamp();
     }
 
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('mothers')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first;
-      }
-    }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byPersonalEmail = await _db
-          .collection('mothers')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first;
-      }
-
-      final byEmail = await _db
-          .collection('mothers')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byEmail.docs.isNotEmpty) {
-        return byEmail.docs.first;
-      }
-    }
-
-    throw const AppAuthException('Unable to find your mother profile.');
+    await _db
+        .collection('conversations')
+        .doc(conversationId)
+        .set(payload, SetOptions(merge: true));
   }
 
   DateTime? _readDate(dynamic value) {

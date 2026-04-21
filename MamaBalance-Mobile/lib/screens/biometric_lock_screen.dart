@@ -51,7 +51,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 
     if (!mounted) return;
     if (unlocked) {
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      final homeRoute = await AuthService.instance.homeRouteForCurrentUser();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, homeRoute, (route) => false);
       return;
     }
 

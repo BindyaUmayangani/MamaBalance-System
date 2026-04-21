@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class FAQPage extends StatelessWidget {
-  const FAQPage({super.key});
+  const FAQPage({
+    super.key,
+    this.audience = 'mother',
+  });
+
+  final String audience;
 
   static const Color _mint = Color(0xFF4FA38A);
   static const Color _bg = Color(0xFFEFF8F4);
@@ -9,7 +14,7 @@ class FAQPage extends StatelessWidget {
   static const Color _text = Color(0xFF203C35);
   static const Color _muted = Color(0xFF60756D);
 
-  static const List<Map<String, String>> _faqs = [
+  static const List<Map<String, String>> _motherFaqs = [
     {
       'question': 'How do I complete my weekly check-in?',
       'answer':
@@ -36,6 +41,39 @@ class FAQPage extends StatelessWidget {
           'Your information is intended for your care team and is handled according to the MamaBalance privacy and access controls.',
     },
   ];
+
+  static const List<Map<String, String>> _guardianFaqs = [
+    {
+      'question': 'What can guardians do in the app?',
+      'answer':
+          'Guardians can view the linked mother overview, check upcoming visits, see assigned care team details, open emergency support, and read guardian resources.',
+    },
+    {
+      'question': 'How do I sign in as a guardian?',
+      'answer':
+          'Use the guardian phone number linked to the mother account. Sign in with OTP, and if enabled on your device, use biometrics to unlock later sessions.',
+    },
+    {
+      'question': 'Can guardians send messages to the care team?',
+      'answer':
+          'No. Guardians can view the assigned care team and call them when urgent support is needed, but secure chat is not part of the guardian app view.',
+    },
+    {
+      'question': 'Why do I only see guardian resources?',
+      'answer':
+          'Admins upload a separate set of educational resources for guardians. The guardian app view shows only those guardian-relevant resources.',
+    },
+    {
+      'question': 'What notifications can guardians receive?',
+      'answer':
+          'Guardians can receive alerts for upcoming visits, overdue visits, overdue EPDS assessments, and newly published guardian resources.',
+    },
+  ];
+
+  bool get _isGuardian => audience.trim().toLowerCase() == 'guardian';
+
+  List<Map<String, String>> get _faqs =>
+      _isGuardian ? _guardianFaqs : _motherFaqs;
 
   @override
   Widget build(BuildContext context) {
@@ -69,11 +107,13 @@ class FAQPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              const Padding(
-                padding: EdgeInsets.only(left: 48),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
                 child: Text(
-                  'Quick answers to the questions mothers ask most often.',
-                  style: TextStyle(fontSize: 14, color: _muted, height: 1.45),
+                  _isGuardian
+                      ? 'Quick answers to the questions guardians ask most often.'
+                      : 'Quick answers to the questions mothers ask most often.',
+                  style: const TextStyle(fontSize: 14, color: _muted, height: 1.45),
                 ),
               ),
               const SizedBox(height: 20),

@@ -13,12 +13,12 @@
   top: 0;
   z-index: 1200;
 
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: visible;
 }
 
 .superadmin-sidebar {
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 /* ================= LAYOUT ================= */
@@ -42,6 +42,20 @@
 }
 
 /* MENU */
+.sidebar-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .sidebar-menu a {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_auth_service.dart';
 import 'screens/about_app_screen.dart';
+import 'screens/account_role_selection_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 import 'screens/chat_page.dart';
 import 'screens/chatbot_screen.dart';
@@ -14,6 +15,9 @@ import 'screens/emergency_contacts_page.dart';
 import 'screens/epds_trend_screen.dart';
 import 'screens/faq_page.dart';
 import 'screens/forgot_password_screen.dart';
+import 'screens/guardian_home_page.dart';
+import 'screens/guardian_profile_screen.dart';
+import 'screens/guardian_shell_screen.dart';
 import 'screens/home_page.dart';
 import 'screens/intro_screen.dart';
 import 'screens/notification_tab.dart';
@@ -180,10 +184,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       routes: {
         '/': (context) => SplashScreen(),
         '/intro': (context) => IntroScreen(),
-        '/signin': (context) => SignInScreen(),
+        '/signin': (context) => const AccountRoleSelectionScreen(),
+        '/mother-signin': (context) => const SignInScreen(),
+        '/guardian-signin': (context) => const SignInScreen(
+              audience: SignInAudience.guardian,
+              initialMethod: SignInMethod.phone,
+            ),
         '/forgot': (context) => ForgotPasswordScreen(),
         '/reset': (context) => ResetPasswordScreen(),
         '/home': (context) => HomePage(),
+        '/guardian-home': (context) => const GuardianShellScreen(),
+        '/guardian-profile': (context) => const GuardianShellScreen(initialIndex: 3),
+        '/guardian-notifications': (context) => const GuardianShellScreen(initialIndex: 1),
+        '/guardian-resources': (context) => const GuardianShellScreen(initialIndex: 2),
         '/biometric-lock': (context) => const BiometricLockScreen(),
         '/weekly-checkin': (context) => WeeklyCheckInPage(),
         '/profile': (context) => ProfileScreen(),

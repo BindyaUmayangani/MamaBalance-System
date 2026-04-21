@@ -18,7 +18,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
-  late Future<MotherChatOptions> _chatOptionsFuture;
+  late Future<CareChatOptions> _chatOptionsFuture;
   String _selectedRole = 'midwife';
   String? _lastMarkedConversationId;
 
@@ -32,7 +32,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    _chatOptionsFuture = MessagingService.instance.resolveMotherChatOptions();
+    _chatOptionsFuture = MessagingService.instance.resolveChatOptions();
   }
 
   @override
@@ -63,7 +63,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _reloadConversation() {
     setState(() {
-      _chatOptionsFuture = MessagingService.instance.resolveMotherChatOptions();
+      _chatOptionsFuture = MessagingService.instance.resolveChatOptions();
       _controller.clear();
     });
   }
@@ -210,7 +210,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<MotherChatOptions>(
+    return FutureBuilder<CareChatOptions>(
       future: _chatOptionsFuture,
       builder: (context, snapshot) {
         return Scaffold(
@@ -265,7 +265,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildBody(AsyncSnapshot<MotherChatOptions> snapshot) {
+  Widget _buildBody(AsyncSnapshot<CareChatOptions> snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Center(child: CircularProgressIndicator(color: _accent));
     }
@@ -467,7 +467,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  SecureConversation? _activeConversation(MotherChatOptions? options) {
+  SecureConversation? _activeConversation(CareChatOptions? options) {
     if (options == null) return null;
     if (_selectedRole == 'doctor' && options.doctor != null) {
       return options.doctor;
@@ -475,7 +475,7 @@ class _ChatPageState extends State<ChatPage> {
     return options.midwife;
   }
 
-  Widget _chatSelector(MotherChatOptions options) {
+  Widget _chatSelector(CareChatOptions options) {
     final doctorEnabled = options.doctor != null;
     return Container(
       margin: const EdgeInsets.fromLTRB(18, 8, 18, 0),

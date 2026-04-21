@@ -13,10 +13,17 @@ type MedicationStatus = "Active" | "Completed" | "Stopped";
 type MedicationRecord = {
   id: string;
   motherName: string;
-  motherId: string;
+  motherUid: string;
+  medicineId?: string | null;
+  medicineSource?: "catalog" | "custom";
+  customMedicineName?: string;
+  genericName?: string;
+  strength?: string;
+  form?: string;
   medicationName: string;
   dosage: string;
   frequency: string;
+  duration: string;
   startDate: string;
   endDate: string;
   prescribedBy: string;
@@ -27,6 +34,18 @@ type MedicationRecord = {
   reasonStopped?: string;
 };
 
+type CatalogMedicine = {
+  id: string;
+  medicineId: string;
+  brandName: string;
+  genericName: string;
+  strength: string;
+  form: string;
+  formLabel: string;
+  defaultNotes: string;
+  displayName: string;
+};
+
 type MotherProfile = {
   id: string;
   name: string;
@@ -35,9 +54,19 @@ type MotherProfile = {
 };
 
 type MedicineInput = {
+  medicineMode: "catalog" | "custom";
+  selectedMedicineId: string;
+  catalogQuery: string;
   medicationName: string;
+  customMedicineName: string;
+  brandName: string;
+  genericName: string;
+  strength: string;
+  form: string;
+  suggestToCatalog: boolean;
   dosage: string;
   frequency: string;
+  duration: string;
   startDate: string;
   endDate: string;
   notes: string;
@@ -54,9 +83,19 @@ type EditMedicationForm = MedicineInput;
 type StopMode = "single" | "all";
 
 const EMPTY_MEDICINE: MedicineInput = {
+  medicineMode: "catalog",
+  selectedMedicineId: "",
+  catalogQuery: "",
   medicationName: "",
+  customMedicineName: "",
+  brandName: "",
+  genericName: "",
+  strength: "",
+  form: "tablet",
+  suggestToCatalog: false,
   dosage: "",
   frequency: "",
+  duration: "",
   startDate: "",
   endDate: "",
   notes: "",
@@ -92,8 +131,53 @@ function findMother(query: string, mothers: MotherProfile[]) {
   );
 }
 
-function formatDosage(dosage: string) {
-  return dosage.replace(/mg/gi, "").trim();
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function resolveEndDateFromDuration(startDate: string, duration: string) {
+  const normalizedStart = startDate.trim();
+  const normalizedDuration = duration.trim().toLowerCase();
+
+  if (!normalizedStart || !normalizedDuration) {
+    return "";
+  }
+
+  const start = new Date(`${normalizedStart}T00:00:00`);
+  if (Number.isNaN(start.getTime())) {
+    return "";
+  }
+
+  const match = normalizedDuration.match(
+    /^(\d+)\s*(day|days|month|months|week|weeks)$/,
+  );
+
+  if (!match) {
+    return "";
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "";
+  }
+
+  const end = new Date(start);
+
+  if (unit.startsWith("day")) {
+    end.setDate(end.getDate() + (amount - 1));
+  } else if (unit.startsWith("week")) {
+    end.setDate(end.getDate() + (amount * 7 - 1));
+  } else if (unit.startsWith("month")) {
+    end.setMonth(end.getMonth() + amount);
+    end.setDate(end.getDate() - 1);
+  }
+
+  return formatDateInput(end);
 }
 
 export default function MedicationManagementWorkspace() {
@@ -101,26 +185,34 @@ export default function MedicationManagementWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<MedicationRecord[]>([]);
   const [mothers, setMothers] = useState<MotherProfile[]>([]);
+  const [catalogMedicines, setCatalogMedicines] = useState<CatalogMedicine[]>(
+    [],
+  );
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [statusFilter, setStatusFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
 
   const fetchData = async () => {
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/doctor/medications");
+      const [response, catalogResponse] = await Promise.all([
+        fetch("/api/doctor/medications"),
+        fetch("/api/doctor/medicine-catalog"),
+      ]);
       const data = await response.json();
+      const catalogData = await catalogResponse.json();
       setRecords(data.medications || []);
       setMothers(data.mothers || []);
+      setCatalogMedicines(catalogData.medicines || []);
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const [viewRecord, setViewRecord] = useState<MedicationRecord | null>(null);
@@ -138,22 +230,22 @@ export default function MedicationManagementWorkspace() {
 
   const matchedMother = useMemo(() => findMother(addForm.motherQuery, mothers), [addForm.motherQuery, mothers]);
   const editOptions = editRecord
-    ? records.filter((item) => item.motherId === editRecord.motherId)
+    ? records.filter((item) => item.motherUid === editRecord.motherUid)
     : [];
   const stopOptions = stopRecord
-    ? records.filter((item) => item.motherId === stopRecord.motherId && item.status === "Active")
+    ? records.filter((item) => item.motherUid === stopRecord.motherUid && item.status === "Active")
     : [];
   const viewRelatedRecords = viewRecord
-    ? records.filter((item) => item.motherId === viewRecord.motherId)
+    ? records.filter((item) => item.motherUid === viewRecord.motherUid)
     : [];
   const selectedHistoryRecords = historyMother
-    ? records.filter((item) => item.motherId === historyMother.id)
+    ? records.filter((item) => item.motherUid === historyMother.id)
     : [];
   const filteredRecords = useMemo(() => {
     const search = searchTerm.toLowerCase();
     return records
       .filter((item) =>
-        `${item.id} ${item.motherName} ${item.motherId} ${item.medicationName} ${item.prescribedBy}`
+        `${item.id} ${item.motherName} ${item.motherUid} ${item.medicationName} ${item.prescribedBy}`
           .toLowerCase()
           .includes(search),
       )
@@ -167,8 +259,20 @@ export default function MedicationManagementWorkspace() {
     safeCurrentPage * pageSize,
   );
 
-  const startItem = filteredRecords.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const endItem = Math.min(safeCurrentPage * pageSize, filteredRecords.length);
+  const openAddModal = () => {
+    setAddForm(EMPTY_ADD_FORM);
+    setShowAdd(true);
+  };
+
+  const closeAddModal = () => {
+    setAddForm(EMPTY_ADD_FORM);
+    setShowAdd(false);
+  };
+
+  const closeEditModal = () => {
+    setEditForm(EMPTY_EDIT_FORM);
+    setEditRecord(null);
+  };
 
   const getStatusClass = (status: MedicationStatus) => {
     if (status === "Active") return "active";
@@ -179,9 +283,11 @@ export default function MedicationManagementWorkspace() {
   const openEdit = (record: MedicationRecord) => {
     setEditRecord(record);
     setEditForm({
+      ...EMPTY_MEDICINE,
       medicationName: record.medicationName,
-      dosage: formatDosage(record.dosage),
+      dosage: record.dosage,
       frequency: record.frequency,
+      duration: record.duration || "",
       startDate: record.startDate,
       endDate: record.endDate,
       notes: record.notes,
@@ -191,7 +297,9 @@ export default function MedicationManagementWorkspace() {
 
   const openStop = (record: MedicationRecord) => {
     if (record.status !== "Active") return;
-    const activeForMother = records.filter((item) => item.motherId === record.motherId && item.status === "Active");
+    const activeForMother = records.filter(
+      (item) => item.motherUid === record.motherUid && item.status === "Active",
+    );
     setStopRecord(record);
     setSelectedStopMedicationId(activeForMother.length > 0 ? activeForMother[0].id : record.id);
     setStopMode("single");
@@ -218,9 +326,11 @@ export default function MedicationManagementWorkspace() {
     if (!target) return;
     setEditRecord(target);
     setEditForm({
+      ...EMPTY_MEDICINE,
       medicationName: target.medicationName,
-      dosage: formatDosage(target.dosage),
+      dosage: target.dosage,
       frequency: target.frequency,
+      duration: target.duration || "",
       startDate: target.startDate,
       endDate: target.endDate,
       notes: target.notes,
@@ -231,13 +341,65 @@ export default function MedicationManagementWorkspace() {
   const updateAddMedicine = (
     index: number,
     key: keyof MedicineInput,
-    value: string,
+    value: string | boolean,
   ) => {
     setAddForm((prev) => ({
       ...prev,
       medicines: prev.medicines.map((medicine, medicineIndex) =>
-        medicineIndex === index ? { ...medicine, [key]: value } : medicine,
+        medicineIndex === index
+          ? (() => {
+              const nextMedicine = { ...medicine, [key]: value };
+
+              if (
+                key === "duration" ||
+                key === "startDate"
+              ) {
+                const nextEndDate = resolveEndDateFromDuration(
+                  String(nextMedicine.startDate || ""),
+                  String(nextMedicine.duration || ""),
+                );
+
+                nextMedicine.endDate = nextEndDate;
+              }
+
+              return nextMedicine;
+            })()
+          : medicine,
       ),
+    }));
+  };
+
+  const selectCatalogMedicine = (index: number, selectedId: string) => {
+    const selected = catalogMedicines.find((item) => item.id === selectedId);
+
+    setAddForm((prev) => ({
+      ...prev,
+      medicines: prev.medicines.map((medicine, medicineIndex) => {
+        if (medicineIndex !== index) {
+          return medicine;
+        }
+
+        if (!selected) {
+          return {
+            ...medicine,
+            selectedMedicineId: "",
+            medicationName: "",
+          };
+        }
+
+        return {
+          ...medicine,
+          selectedMedicineId: selected.id,
+          catalogQuery: selected.displayName,
+          medicationName: selected.displayName,
+          brandName: selected.brandName,
+          genericName: selected.genericName,
+          strength: selected.strength,
+          form: selected.form,
+          notes: medicine.notes.trim() || selected.defaultNotes,
+          suggestToCatalog: false,
+        };
+      }),
     }));
   };
 
@@ -261,7 +423,10 @@ export default function MedicationManagementWorkspace() {
   const saveAdd = async () => {
     if (!matchedMother || isSubmitting) return;
     const validMedicines = addForm.medicines.filter(
-      (medicine) => medicine.medicationName && medicine.dosage,
+      (medicine) =>
+        (medicine.medicineMode === "catalog"
+          ? medicine.selectedMedicineId
+          : medicine.customMedicineName) && medicine.dosage,
     );
     if (validMedicines.length === 0) return;
 
@@ -277,7 +442,7 @@ export default function MedicationManagementWorkspace() {
       });
       await fetchData();
       setAddForm(EMPTY_ADD_FORM);
-      setShowAdd(false);
+      closeAddModal();
       setCurrentPage(1);
     } catch (e) {
       console.error(e);
@@ -299,6 +464,7 @@ export default function MedicationManagementWorkspace() {
           medicationName: editForm.medicationName,
           dosage: editForm.dosage,
           frequency: editForm.frequency,
+          duration: editForm.duration,
           startDate: editForm.startDate,
           endDate: editForm.endDate,
           notes: editForm.notes,
@@ -306,7 +472,7 @@ export default function MedicationManagementWorkspace() {
         }),
       });
       await fetchData();
-      setEditRecord(null);
+      closeEditModal();
     } catch (e) {
       console.error(e);
     }
@@ -353,7 +519,7 @@ export default function MedicationManagementWorkspace() {
           <h1>Medication Management</h1>
           <p>Manage active prescriptions, medication changes, and treatment history for assigned mothers.</p>
         </div>
-        <button className="add-btn" onClick={() => setShowAdd(true)}>
+        <button className="add-btn" onClick={openAddModal}>
           + Add New Medication
         </button>
       </div>
@@ -419,7 +585,7 @@ export default function MedicationManagementWorkspace() {
                     <th>Medication ID</th>
                     <th>Mother</th>
                     <th>Medication</th>
-                    <th>Dosage (mg)</th>
+                    <th>Dosage</th>
                     <th>Start Date</th>
                     <th>End Date</th>
                     <th>Status</th>
@@ -434,7 +600,7 @@ export default function MedicationManagementWorkspace() {
                       <td>{item.id}</td>
                       <td>{item.motherName}</td>
                       <td>{item.medicationName}</td>
-                      <td>{formatDosage(item.dosage)}</td>
+                      <td>{item.dosage || "-"}</td>
                       <td>{item.startDate}</td>
                       <td>{item.endDate || "-"}</td>
                       <td>
@@ -502,7 +668,7 @@ export default function MedicationManagementWorkspace() {
               <div className="med-view-summary-card">
                 <span className="med-view-summary-label">Current Medication</span>
                 <strong>{viewRecord.medicationName}</strong>
-                <p>{formatDosage(viewRecord.dosage)} mg</p>
+                <p>{viewRecord.dosage || "-"}</p>
               </div>
               <div className="med-view-summary-card">
                 <span className="med-view-summary-label">Mother History</span>
@@ -522,11 +688,15 @@ export default function MedicationManagementWorkspace() {
               </div>
               <div className="med-view-block">
                 <span className="med-view-field">Dosage</span>
-                <p>{formatDosage(viewRecord.dosage)} mg</p>
+                <p>{viewRecord.dosage || "-"}</p>
               </div>
               <div className="med-view-block">
                 <span className="med-view-field">Frequency</span>
                 <p>{viewRecord.frequency}</p>
+              </div>
+              <div className="med-view-block">
+                <span className="med-view-field">Duration</span>
+                <p>{viewRecord.duration || "-"}</p>
               </div>
               <div className="med-view-block">
                 <span className="med-view-field">Start Date</span>
@@ -575,7 +745,7 @@ export default function MedicationManagementWorkspace() {
                 {viewRelatedRecords.slice(0, 3).map((item) => (
                   <div className="mother-history-item" key={item.id}>
                     <strong>{item.medicationName}</strong>
-                    <span>{formatDosage(item.dosage)} mg</span>
+                    <span>{item.dosage || "-"}</span>
                     <span>{item.status}</span>
                   </div>
                 ))}
@@ -638,17 +808,74 @@ export default function MedicationManagementWorkspace() {
 
                     <div className="medicine-grid">
                       <div>
-                        <label>Medication Name</label>
-                        <input
-                          value={medicine.medicationName}
-                          onChange={(event) => updateAddMedicine(index, "medicationName", event.target.value)}
-                        />
+                        <label>Medicine Source</label>
+                        <div className="medicine-mode-toggle">
+                          <button
+                            type="button"
+                            className={`medicine-mode-btn ${medicine.medicineMode === "catalog" ? "active" : ""}`}
+                            onClick={() => updateAddMedicine(index, "medicineMode", "catalog")}
+                          >
+                            System Medicine
+                          </button>
+                          <button
+                            type="button"
+                            className={`medicine-mode-btn ${medicine.medicineMode === "custom" ? "active" : ""}`}
+                            onClick={() => updateAddMedicine(index, "medicineMode", "custom")}
+                          >
+                            Other / Custom
+                          </button>
+                        </div>
                       </div>
 
                       <div>
-                        <label>Dosage (mg)</label>
+                        <label>
+                          {medicine.medicineMode === "catalog"
+                            ? "Search Medicine"
+                            : "Custom Medicine Name"}
+                        </label>
+                        {medicine.medicineMode === "catalog" ? (
+                          <>
+                            <input
+                              list={`medicine-catalog-${index}`}
+                              value={medicine.catalogQuery}
+                              placeholder="Search by brand or generic name"
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                updateAddMedicine(index, "catalogQuery", value);
+                                const matched = catalogMedicines.find(
+                                  (item) => item.displayName === value,
+                                );
+                                if (matched) {
+                                  selectCatalogMedicine(index, matched.id);
+                                } else {
+                                  updateAddMedicine(index, "selectedMedicineId", "");
+                                  updateAddMedicine(index, "medicationName", "");
+                                }
+                              }}
+                            />
+                            <datalist id={`medicine-catalog-${index}`}>
+                              {catalogMedicines.map((item) => (
+                                <option key={item.id} value={item.displayName} />
+                              ))}
+                            </datalist>
+                          </>
+                        ) : (
+                          <input
+                            value={medicine.customMedicineName}
+                            onChange={(event) => {
+                              updateAddMedicine(index, "customMedicineName", event.target.value);
+                              updateAddMedicine(index, "medicationName", event.target.value);
+                              updateAddMedicine(index, "brandName", event.target.value);
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label>Dosage</label>
                         <input
                           value={medicine.dosage}
+                          placeholder="e.g. 1 tablet or 10 ml"
                           onChange={(event) => updateAddMedicine(index, "dosage", event.target.value)}
                         />
                       </div>
@@ -658,6 +885,15 @@ export default function MedicationManagementWorkspace() {
                         <input
                           value={medicine.frequency}
                           onChange={(event) => updateAddMedicine(index, "frequency", event.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Duration</label>
+                        <input
+                          value={medicine.duration}
+                          placeholder="e.g. 5 days"
+                          onChange={(event) => updateAddMedicine(index, "duration", event.target.value)}
                         />
                       </div>
 
@@ -709,6 +945,84 @@ export default function MedicationManagementWorkspace() {
                         </div>
                       </div>
 
+                      {medicine.medicineMode === "catalog" &&
+                      medicine.selectedMedicineId ? (
+                        <div className="form-span-2 selected-catalog-card">
+                          {(() => {
+                            const selected = catalogMedicines.find(
+                              (item) => item.id === medicine.selectedMedicineId,
+                            );
+
+                            if (!selected) {
+                              return null;
+                            }
+
+                            return (
+                              <>
+                                <strong>{selected.displayName}</strong>
+                                <p>
+                                  {selected.formLabel}
+                                  {selected.defaultNotes
+                                    ? " - Default notes available"
+                                    : ""}
+                                </p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      ) : null}
+
+                      {medicine.medicineMode === "custom" ? (
+                        <>
+                          <div>
+                            <label>Generic Name</label>
+                            <input
+                              value={medicine.genericName}
+                              onChange={(event) => updateAddMedicine(index, "genericName", event.target.value)}
+                            />
+                          </div>
+
+                          <div>
+                            <label>Strength</label>
+                            <input
+                              value={medicine.strength}
+                              placeholder="e.g. 500 mg"
+                              onChange={(event) => updateAddMedicine(index, "strength", event.target.value)}
+                            />
+                          </div>
+
+                          <div className="form-span-2">
+                            <label>Form</label>
+                            <div className="modal-input-icon">
+                              <select
+                                value={medicine.form}
+                                onChange={(event) => updateAddMedicine(index, "form", event.target.value)}
+                              >
+                                <option value="tablet">Tablet</option>
+                                <option value="capsule">Capsule</option>
+                                <option value="syrup">Syrup</option>
+                                <option value="injection">Injection</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <button type="button" className="modal-icon-trigger modal-select-trigger" tabIndex={-1}>
+                                <ChevronDown size={18} />
+                              </button>
+                            </div>
+
+                            <label className="custom-suggestion-toggle">
+                              <input
+                                type="checkbox"
+                                checked={medicine.suggestToCatalog}
+                                onChange={(event) =>
+                                  updateAddMedicine(index, "suggestToCatalog", event.target.checked)
+                                }
+                              />
+                              <span>Suggest this custom medicine for superadmin review</span>
+                            </label>
+                          </div>
+                        </>
+                      ) : null}
+
                       <div className="form-span-2">
                         <label>Notes</label>
                         <textarea
@@ -734,7 +1048,7 @@ export default function MedicationManagementWorkspace() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
+              <button className="btn-outline" onClick={closeAddModal}>Cancel</button>
               <button className="btn-primary" onClick={saveAdd}>Save</button>
             </div>
           </div>
@@ -757,7 +1071,7 @@ export default function MedicationManagementWorkspace() {
                     >
                       {editOptions.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.medicationName} ({formatDosage(item.dosage)} mg)
+                          {item.medicationName} ({item.dosage || "-"})
                         </option>
                       ))}
                     </select>
@@ -775,7 +1089,7 @@ export default function MedicationManagementWorkspace() {
                 />
               </div>
               <div>
-                <label>Dosage (mg)</label>
+                <label>Dosage</label>
                 <input
                   value={editForm.dosage}
                   onChange={(event) => setEditForm((prev) => ({ ...prev, dosage: event.target.value }))}
@@ -786,6 +1100,13 @@ export default function MedicationManagementWorkspace() {
                 <input
                   value={editForm.frequency}
                   onChange={(event) => setEditForm((prev) => ({ ...prev, frequency: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label>Duration</label>
+                <input
+                  value={editForm.duration}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, duration: event.target.value }))}
                 />
               </div>
               <div>
@@ -827,7 +1148,7 @@ export default function MedicationManagementWorkspace() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn-outline" onClick={() => setEditRecord(null)}>Cancel</button>
+              <button className="btn-outline" onClick={closeEditModal}>Cancel</button>
               <button className="btn-primary" onClick={saveEdit}>Save</button>
             </div>
           </div>
@@ -872,7 +1193,7 @@ export default function MedicationManagementWorkspace() {
                   >
                     {stopOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.medicationName} ({formatDosage(item.dosage)} mg)
+                        {item.medicationName} ({item.dosage || "-"})
                       </option>
                     ))}
                   </select>
@@ -887,7 +1208,7 @@ export default function MedicationManagementWorkspace() {
               </div>
             ) : (
               <p className="single-stop-med">
-                <strong>Medicine:</strong> {stopRecord.medicationName} ({formatDosage(stopRecord.dosage)} mg)
+                <strong>Medicine:</strong> {stopRecord.medicationName} ({stopRecord.dosage || "-"})
               </p>
             )}
 
@@ -922,7 +1243,10 @@ export default function MedicationManagementWorkspace() {
                 <div className="history-modal-item" key={item.id}>
                   <div>
                     <strong>{item.medicationName}</strong>
-                    <p>{formatDosage(item.dosage)} mg • {item.frequency}</p>
+                    <p>
+                      {item.dosage || "-"} - {item.frequency}
+                      {item.duration ? ` - ${item.duration}` : ""}
+                    </p>
                   </div>
                   <div className="history-modal-meta">
                     <span className={`med-status ${getStatusClass(item.status)}`}>{item.status}</span>

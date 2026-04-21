@@ -5,12 +5,16 @@ import '../services/post_login_biometric_flow.dart';
 
 enum SignInMethod { email, phone }
 
+enum SignInAudience { mother, guardian }
+
 class SignInScreen extends StatefulWidget {
   final SignInMethod initialMethod;
+  final SignInAudience audience;
 
   const SignInScreen({
     super.key,
     this.initialMethod = SignInMethod.email,
+    this.audience = SignInAudience.mother,
   });
 
   @override
@@ -30,7 +34,9 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedMethod = widget.initialMethod;
+    _selectedMethod = widget.audience == SignInAudience.guardian
+        ? SignInMethod.phone
+        : widget.initialMethod;
   }
 
   @override
@@ -194,12 +200,23 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
+  String get _welcomeTitle =>
+      widget.audience == SignInAudience.guardian ? 'Guardian Sign In' : 'Welcome Back';
+
+  String get _welcomeSubtitle => widget.audience == SignInAudience.guardian
+      ? 'Sign in with the guardian phone number linked to the mother account. After a successful OTP login, you can use biometrics to unlock saved sessions on this device.'
+      : 'Sign in to continue your wellbeing journey, view check-ins, and stay connected with your care team.';
+
+  String get _cardTitle => widget.audience == SignInAudience.guardian
+      ? 'Guardian access'
+      : 'Choose your sign-in method';
+
   Widget _buildEmailForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Sign in with the Firebase login email shared for your MamaBalance account, or use your phone number below.',
+          'Sign in with the Firebase login email shared for your MamaBalance mobile account, or use your phone number below.',
           style: TextStyle(
             fontSize: 14,
             color: Color(0xFF5E6F69),
@@ -297,9 +314,11 @@ class _SignInScreenState extends State<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Use the phone number saved on your MamaBalance account. You can enter it as +94 or 07XXXXXXXX.',
-          style: TextStyle(
+        Text(
+          widget.audience == SignInAudience.guardian
+              ? 'Use the guardian phone number saved in MamaBalance. Guardians sign in with OTP only, using +94 or 07XXXXXXXX format.'
+              : 'Use the phone number saved on your MamaBalance account. Mothers can sign in here with +94 or 07XXXXXXXX format.',
+          style: const TextStyle(
             fontSize: 14,
             color: Color(0xFF5E6F69),
             height: 1.45,
@@ -367,8 +386,8 @@ class _SignInScreenState extends State<SignInScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 18),
-              const Text(
-                'Welcome Back',
+              Text(
+                _welcomeTitle,
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -376,9 +395,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Sign in to continue your wellbeing journey, view check-ins, and stay connected with your care team.',
-                style: TextStyle(
+              Text(
+                _welcomeSubtitle,
+                style: const TextStyle(
                   fontSize: 15,
                   color: Color(0xFF5F736B),
                   height: 1.5,
@@ -425,8 +444,8 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Choose your sign-in method',
+                    Text(
+                      _cardTitle,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -434,13 +453,54 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildMethodToggle(),
-                    const SizedBox(height: 22),
+                    if (widget.audience == SignInAudience.mother) ...[
+                      _buildMethodToggle(),
+                      const SizedBox(height: 22),
+                    ] else ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2FAF7),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFD3EAE1)),
+                        ),
+                        child: const Text(
+                          'Guardian accounts use phone OTP for sign-in. Once a session is saved, quick fingerprint or face unlock can be enabled on this device.',
+                          style: TextStyle(
+                            color: Color(0xFF4D655D),
+                            fontWeight: FontWeight.w600,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                    ],
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
                       child: _selectedMethod == SignInMethod.email
                           ? _buildEmailForm()
                           : _buildPhoneForm(),
+                    ),
+                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/signin',
+                            (route) => false,
+                          );
+                        },
+                        child: const Text(
+                          'Switch account type',
+                          style: TextStyle(
+                            color: Color(0xFF4FA38A),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 16),

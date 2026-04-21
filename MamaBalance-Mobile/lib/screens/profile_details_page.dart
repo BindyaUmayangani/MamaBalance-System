@@ -120,6 +120,34 @@ class ProfileDetailsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
+                  if ((profile.assignedDoctorUid?.trim().isNotEmpty == true &&
+                          profile.assignedDoctorPhoneNumber.trim().isNotEmpty) ||
+                      (profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
+                          profile.assignedMidwifePhoneNumber.trim().isNotEmpty)) ...[
+                    _sectionCard(
+                      title: 'Assigned Care Team',
+                      icon: Icons.support_agent_rounded,
+                      children: [
+                        if (profile.assignedDoctorUid?.trim().isNotEmpty ==
+                                true &&
+                            profile.assignedDoctorPhoneNumber.trim().isNotEmpty)
+                          _buildDetailTile(
+                            Icons.local_hospital_outlined,
+                            'Assigned Doctor',
+                            '${profile.assignedDoctorName.trim().isNotEmpty ? profile.assignedDoctorName : 'Assigned doctor'}\n${profile.assignedDoctorPhoneNumber}',
+                          ),
+                        if (profile.assignedMidwifeUid?.trim().isNotEmpty ==
+                                true &&
+                            profile.assignedMidwifePhoneNumber.trim().isNotEmpty)
+                          _buildDetailTile(
+                            Icons.health_and_safety_outlined,
+                            'Assigned Midwife',
+                            '${profile.assignedMidwifeName.trim().isNotEmpty ? profile.assignedMidwifeName : 'Assigned midwife'}\n${profile.assignedMidwifePhoneNumber}',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   _sectionCard(
                     title: 'Family and Care Details',
                     icon: Icons.favorite_outline_rounded,

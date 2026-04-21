@@ -13,6 +13,7 @@ import { DEFAULT_REGIONS, normalizeRegionName } from "@/lib/admin/regions";
 import { logAuditEvent } from "@/lib/audit/log";
 import {
   CreatedCredentials,
+  GuardianProvisioning,
   ManagedMotherRow,
   ManagedRole,
   ManagedUserRow,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/admin/types";
 import { getCurrentSessionUser } from "@/lib/auth/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { sendNotifySms } from "@/lib/notify/sms";
 
 const MANAGED_ROLES: ManagedRole[] = [
   "regionaladmin",
@@ -202,6 +204,7 @@ function buildMotherRow(
     address: (mother?.address as string | undefined) || "-",
     guardianName: (mother?.guardianName as string | undefined) || "-",
     guardianContact: (mother?.guardianContact as string | undefined) || "-",
+    guardianAccessEnabled: Boolean(mother?.guardianUid),
     deliveryDate: formatDate(mother?.deliveryDate),
     noOfChildren: Number(mother?.noOfChildren ?? 0),
   };
@@ -375,6 +378,12 @@ async function createMotherAccount(
     updatedAt: createdAt,
   });
 
+  const guardianProvisioning = await createOrLinkGuardianAccount(payload, actor, {
+    motherId,
+    motherUid: userRecord.uid,
+    motherUserId: userId,
+  });
+
   const credentials = {
     userId,
     username,
@@ -389,9 +398,201 @@ async function createMotherAccount(
       deliveryEmail: personalEmail,
       deliveryQueued: false,
     }),
+    guardianProvisioning: guardianProvisioning || undefined,
   } satisfies CreatedCredentials;
 
   return credentials;
+}
+
+async function createOrLinkGuardianAccount(
+  payload: MotherCreatePayload,
+  actor: Awaited<ReturnType<typeof getCurrentSessionUser>>,
+  mother: {
+    motherId: string;
+    motherUid: string;
+    motherUserId: string;
+  },
+): Promise<GuardianProvisioning | null> {
+  const guardianName = payload.guardianName.trim();
+  const guardianPhone = normalizePhoneNumber(payload.guardianContact);
+
+  if (!guardianName || !guardianPhone) {
+    return null;
+  }
+
+  let authUid = "";
+  let created = false;
+
+  try {
+    const existingAuthUser = await adminAuth.getUserByPhoneNumber(guardianPhone);
+    authUid = existingAuthUser.uid;
+  } catch (error) {
+    const code = (error as { code?: string } | undefined)?.code;
+    if (code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+
+  let guardianDoc = authUid
+    ? await adminDb.collection("users").doc(authUid).get()
+    : null;
+
+  if (!guardianDoc?.exists) {
+    const existingUserByPhone = await adminDb
+      .collection("users")
+      .where("phoneNumber", "==", guardianPhone)
+      .limit(1)
+      .get();
+
+    if (!existingUserByPhone.empty) {
+      guardianDoc = existingUserByPhone.docs[0];
+      authUid = guardianDoc.id;
+    }
+  }
+
+  if (guardianDoc?.exists) {
+    const existingRole = String(guardianDoc.data()?.role || "").trim().toLowerCase();
+    if (existingRole && existingRole !== "guardian") {
+      throw new Error(
+        "Guardian contact number is already used by another MamaBalance account.",
+      );
+    }
+  }
+
+  if (!authUid) {
+    const userRecord = await adminAuth.createUser({
+      phoneNumber: guardianPhone,
+      displayName: guardianName,
+    });
+    authUid = userRecord.uid;
+    created = true;
+  } else {
+    try {
+      await adminAuth.getUser(authUid);
+      await adminAuth.updateUser(authUid, {
+        phoneNumber: guardianPhone,
+        displayName: guardianName,
+      });
+    } catch (error) {
+      const code = (error as { code?: string } | undefined)?.code;
+      if (code === "auth/user-not-found") {
+        await adminAuth.createUser({
+          uid: authUid,
+          phoneNumber: guardianPhone,
+          displayName: guardianName,
+        });
+        created = true;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  const createdAt = FieldValue.serverTimestamp();
+  const guardianUserId = buildRoleUserId("guardian", authUid);
+
+  await adminDb.collection("users").doc(authUid).set(
+    {
+      uid: authUid,
+      userId: guardianUserId,
+      role: "guardian",
+      status: "active",
+      displayName: guardianName,
+      username: buildSystemUsername(guardianName, "guardian"),
+      email: "",
+      personalEmail: "",
+      phoneNumber: guardianPhone,
+      regionId: payload.regionId,
+      clinicId: null,
+      createdAt,
+      updatedAt: createdAt,
+      createdByUid: actor?.uid || null,
+    },
+    { merge: true },
+  );
+
+  await adminDb.collection("guardianLinks").doc(`${authUid}_${mother.motherId}`).set(
+    {
+      guardianUid: authUid,
+      motherId: mother.motherId,
+      motherUid: mother.motherUid,
+      motherUserId: mother.motherUserId,
+      relationship: "guardian",
+      permissions: {
+        viewVisits: true,
+        viewEducation: true,
+        messageDoctor: true,
+        messageMidwife: true,
+        viewEmergencyContacts: true,
+      },
+      isActive: true,
+      createdAt,
+      updatedAt: createdAt,
+      createdByUid: actor?.uid || null,
+    },
+    { merge: true },
+  );
+
+  await adminDb.collection("mothers").doc(mother.motherId).set(
+    {
+      guardianContact: guardianPhone,
+      guardianName,
+      guardianRelationship: "guardian",
+      guardianUid: authUid,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const smsDeliveryStatus = await sendGuardianAccessSms({
+    guardianName,
+    guardianPhone,
+    motherName: payload.fullName.trim() || "the linked mother",
+  });
+
+  await adminDb.collection("guardianLinks").doc(`${authUid}_${mother.motherId}`).set(
+    {
+      lastOnboardingSmsSentAt:
+        smsDeliveryStatus === "sent" ? FieldValue.serverTimestamp() : null,
+      lastOnboardingSmsStatus: smsDeliveryStatus,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return {
+    uid: authUid,
+    userId: guardianUserId,
+    displayName: guardianName,
+    phoneNumber: guardianPhone,
+    status: created ? "created" : "linked",
+    loginMethod: "phone_otp",
+    smsDeliveryStatus,
+  };
+}
+
+async function sendGuardianAccessSms({
+  guardianName,
+  guardianPhone,
+  motherName,
+}: {
+  guardianName: string;
+  guardianPhone: string;
+  motherName: string;
+}): Promise<"sent" | "failed"> {
+  try {
+    await sendNotifySms({
+      phoneNumber: guardianPhone,
+      message:
+        `MamaBalance: Guardian mobile access is ready for ${motherName}. ` +
+        `Log in to the MamaBalance mobile app using this phone number ${guardianPhone} and verify with OTP.`,
+      contactFirstName: guardianName.split(" ").filter(Boolean)[0] || "Guardian",
+    });
+    return "sent";
+  } catch (error) {
+    console.error("Failed to send guardian onboarding SMS", error);
+    return "failed";
+  }
 }
 
 async function handleCreate(request: NextRequest) {
@@ -821,6 +1022,7 @@ async function handleUpdate(request: NextRequest) {
     birthdate,
     noOfChildren,
     address,
+    enableGuardianMobileAccess,
   } = payload;
 
   if (!uid) {
@@ -886,6 +1088,41 @@ async function handleUpdate(request: NextRequest) {
         ...(address !== undefined && { address }),
         updatedAt: FieldValue.serverTimestamp(),
       });
+
+      let guardianProvisioning: GuardianProvisioning | null = null;
+      if (enableGuardianMobileAccess === true) {
+        const motherUserId = String(user?.userId || "");
+        guardianProvisioning = await syncGuardianLinkForMother(
+          {
+            guardianName:
+              guardianName !== undefined ? String(guardianName || "") : "",
+            guardianContact:
+              guardianContact !== undefined ? String(guardianContact || "") : "",
+            regionId: String(regionId || user?.regionId || ""),
+          },
+          actor,
+          {
+            motherId: uid,
+            motherUid: uid,
+            motherUserId,
+          },
+        );
+      }
+
+      await logAuditEvent({
+        actor,
+        module: "Users",
+        actionType: "Update",
+        action: `Updated ${String(user?.role || "user")} profile`,
+        target: String(user?.displayName || user?.email || uid),
+        regionId: (regionId as string | undefined) || (user?.regionId as string | undefined) || actor.regionId || null,
+        metadata: {
+          changedStatus: status || null,
+          guardianMobileAccessEnabled: enableGuardianMobileAccess === true,
+        },
+      });
+
+      return NextResponse.json({ ok: true, guardianProvisioning });
     } else if (email) {
       await adminAuth.updateUser(uid, {
         email: normalizeEmail(email),
@@ -910,4 +1147,44 @@ async function handleUpdate(request: NextRequest) {
       error instanceof Error ? error.message : "Update failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
+}
+
+async function syncGuardianLinkForMother(
+  payload: {
+    guardianName: string;
+    guardianContact: string;
+    regionId: string;
+  },
+  actor: Awaited<ReturnType<typeof getCurrentSessionUser>>,
+  mother: {
+    motherId: string;
+    motherUid: string;
+    motherUserId: string;
+  },
+): Promise<GuardianProvisioning | null> {
+  const guardianName = payload.guardianName.trim();
+  const guardianPhone = normalizePhoneNumber(payload.guardianContact);
+
+  if (!guardianName || !guardianPhone) {
+    throw new Error("Guardian name and guardian contact are required to enable guardian mobile access.");
+  }
+
+  const createPayload = {
+    role: "mother" as const,
+    fullName: "",
+    personalEmail: "",
+    phoneNumber: "",
+    nic: "",
+    regionId: payload.regionId,
+    address: "",
+    guardianName,
+    guardianContact: guardianPhone,
+    deliveryDate: "",
+    birthdate: "",
+    noOfChildren: 0,
+    assignedMidwifeUid: "",
+    assignedDoctorUid: "",
+  };
+
+  return createOrLinkGuardianAccount(createPayload, actor, mother);
 }

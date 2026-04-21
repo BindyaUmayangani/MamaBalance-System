@@ -14,6 +14,10 @@ class MotherProfile {
   final String profileImagePath;
   final String? assignedDoctorUid;
   final String? assignedMidwifeUid;
+  final String assignedDoctorName;
+  final String assignedDoctorPhoneNumber;
+  final String assignedMidwifeName;
+  final String assignedMidwifePhoneNumber;
   final int latestEpdsScore;
   final DateTime? latestEpdsDate;
 
@@ -33,6 +37,10 @@ class MotherProfile {
     required this.profileImagePath,
     this.assignedDoctorUid,
     this.assignedMidwifeUid,
+    this.assignedDoctorName = '',
+    this.assignedDoctorPhoneNumber = '',
+    this.assignedMidwifeName = '',
+    this.assignedMidwifePhoneNumber = '',
     this.latestEpdsScore = 0,
     this.latestEpdsDate,
   });
@@ -57,6 +65,10 @@ class MotherProfile {
     String? profileImagePath,
     String? assignedDoctorUid,
     String? assignedMidwifeUid,
+    String? assignedDoctorName,
+    String? assignedDoctorPhoneNumber,
+    String? assignedMidwifeName,
+    String? assignedMidwifePhoneNumber,
     int? latestEpdsScore,
     DateTime? latestEpdsDate,
   }) {
@@ -76,6 +88,12 @@ class MotherProfile {
       profileImagePath: profileImagePath ?? this.profileImagePath,
       assignedDoctorUid: assignedDoctorUid ?? this.assignedDoctorUid,
       assignedMidwifeUid: assignedMidwifeUid ?? this.assignedMidwifeUid,
+      assignedDoctorName: assignedDoctorName ?? this.assignedDoctorName,
+      assignedDoctorPhoneNumber:
+          assignedDoctorPhoneNumber ?? this.assignedDoctorPhoneNumber,
+      assignedMidwifeName: assignedMidwifeName ?? this.assignedMidwifeName,
+      assignedMidwifePhoneNumber:
+          assignedMidwifePhoneNumber ?? this.assignedMidwifePhoneNumber,
       latestEpdsScore: latestEpdsScore ?? this.latestEpdsScore,
       latestEpdsDate: latestEpdsDate ?? this.latestEpdsDate,
     );

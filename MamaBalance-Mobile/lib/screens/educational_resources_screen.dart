@@ -68,9 +68,14 @@ class EducationalResource {
 }
 
 class EducationalResourcesScreen extends StatelessWidget {
-  const EducationalResourcesScreen({super.key, this.showBackButton = false});
+  const EducationalResourcesScreen({
+    super.key,
+    this.showBackButton = false,
+    this.audience = 'mother',
+  });
 
   final bool showBackButton;
+  final String audience;
 
   static const Color _mint = Color(0xFF4FA38A);
   static const Color _deepMint = Color(0xFF2F7D68);
@@ -88,6 +93,7 @@ class EducationalResourcesScreen extends StatelessWidget {
           (snapshot) {
             final resources =
                 snapshot.docs
+                    .where((doc) => _matchesAudience(doc.data()))
                     .map(EducationalResource.fromDoc)
                     .where((resource) => resource.hasResource)
                     .toList();
@@ -195,6 +201,45 @@ class EducationalResourcesScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool _matchesAudience(Map<String, dynamic> data) {
+    final normalized = <String>{};
+
+    final directAudience = data['audience'];
+    if (directAudience is String && directAudience.trim().isNotEmpty) {
+      normalized.add(directAudience.trim().toLowerCase());
+    }
+
+    final audienceTags = data['audienceTags'];
+    if (audienceTags is Iterable) {
+      normalized.addAll(
+        audienceTags
+            .map((value) => '$value'.trim().toLowerCase())
+            .where((value) => value.isNotEmpty),
+      );
+    }
+
+    final legacyAudience = data['audience'];
+    if (legacyAudience is Iterable) {
+      normalized.addAll(
+        legacyAudience
+            .map((value) => '$value'.trim().toLowerCase())
+            .where((value) => value.isNotEmpty),
+      );
+    }
+
+    final requested = audience.trim().toLowerCase();
+    if (requested == 'guardian') {
+      return normalized.contains('guardian') ||
+          normalized.contains('father');
+    }
+
+    if (normalized.isEmpty) {
+      return requested == 'mother';
+    }
+
+    return normalized.contains(requested) || normalized.contains('all');
   }
 }
 

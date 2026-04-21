@@ -126,14 +126,24 @@ Typical workflow:
 
 ## 8. Mother Mobile Application Operation
 
-### 8.1 OTP Login
-To log in to the mobile application:
+### 8.1 Mobile Login
+The mobile application supports both OTP login and email/password login.
+
+To log in using OTP:
 
 1. Open the app.
 2. Enter the required phone number or login details.
 3. Request OTP.
 4. Enter the OTP.
 5. After verification, the app opens the mother home screen.
+
+To log in using email and password:
+
+1. Open the app.
+2. Select the email/password sign-in option if shown.
+3. Enter a valid registered email and password.
+4. Tap `Login`.
+5. After successful authentication, the app opens the mother home screen.
 
 ### 8.2 Biometric Quick Unlock
 Biometric quick unlock is optional.
@@ -191,12 +201,22 @@ The chatbot is designed to:
 - avoid diagnosis
 - escalate more strongly when severe distress is detected
 
-### 8.6 Clearing Chat History
-To clear the saved chatbot conversation:
+### 8.6 Secure Messaging
+The mobile application also supports secure messaging between the mother and her assigned care team.
 
-1. Open the chatbot page.
-2. Tap the clear icon.
-3. Confirm the clear action in the confirmation dialog.
+The mother can use messaging to:
+
+- chat with the assigned doctor
+- chat with the assigned midwife
+- review ongoing conversation history
+- receive care-related replies inside the app
+
+To use secure messaging:
+
+1. Open the `Messages` or chat section.
+2. Select the assigned doctor or assigned midwife conversation.
+3. Type a message and send it.
+4. Wait for the reply from the care provider.
 
 ### 8.7 Notifications
 The notifications section informs the mother about:

@@ -25,7 +25,7 @@ export function buildUserCode(prefix: string, uid: string) {
 }
 
 export function buildRoleUserId(
-  role: "regionaladmin" | "doctor" | "midwife" | "mother",
+  role: "regionaladmin" | "doctor" | "midwife" | "mother" | "guardian",
   uid: string,
 ) {
   const prefixes = {
@@ -33,6 +33,7 @@ export function buildRoleUserId(
     doctor: "DOCTOR",
     midwife: "MIDWIFE",
     mother: "MOTHER",
+    guardian: "GUARDIAN",
   } as const;
 
   return `${prefixes[role]}-${uid.slice(0, 6).toUpperCase()}`;
@@ -40,13 +41,14 @@ export function buildRoleUserId(
 
 export function buildSystemUsername(
   fullName: string,
-  role: "regionaladmin" | "doctor" | "midwife" | "mother",
+  role: "regionaladmin" | "doctor" | "midwife" | "mother" | "guardian",
 ) {
   const suffixes = {
     regionaladmin: "admin",
     doctor: "doctor",
     midwife: "midwife",
     mother: "mother",
+    guardian: "guardian",
   } as const;
 
   return `${slugifyName(fullName)}.${suffixes[role]}`;
@@ -54,7 +56,7 @@ export function buildSystemUsername(
 
 export function buildSystemEmail(
   fullName: string,
-  role: "regionaladmin" | "doctor" | "midwife" | "mother",
+  role: "regionaladmin" | "doctor" | "midwife" | "mother" | "guardian",
 ) {
   const stamp = Date.now().toString().slice(-6);
   return `${buildSystemUsername(fullName, role)}.${stamp}@mamabalance.lk`;
@@ -62,7 +64,7 @@ export function buildSystemEmail(
 
 export function buildTemporaryPassword(
   fullName: string,
-  role: "regionaladmin" | "doctor" | "midwife" | "mother",
+  role: "regionaladmin" | "doctor" | "midwife" | "mother" | "guardian",
 ) {
   const firstName =
     fullName
@@ -76,6 +78,7 @@ export function buildTemporaryPassword(
     doctor: "Doctor",
     midwife: "Midwife",
     mother: "Mother",
+    guardian: "Guardian",
   }[role];
 
   const normalizedFirstName =

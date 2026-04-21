@@ -8,14 +8,18 @@ type NotificationRow = {
   id: string;
   title: string;
   message: string;
+  type: string | null;
   ticketId: string | null;
   ticketNumber: string | null;
   issueCategory: string | null;
+  contentId: string | null;
+  contentTitle: string | null;
   priority: "low" | "medium" | "high";
   read: boolean;
   createdAt: string | null;
   requesterName: string | null;
   requesterRole: string | null;
+  targetPath: string | null;
 };
 
 async function handleList() {
@@ -39,15 +43,19 @@ async function handleList() {
         id: doc.id,
         title: String(data.title || "Notification"),
         message: String(data.message || ""),
+        type: (data.type as string | undefined) || null,
         ticketId: (data.ticketId as string | undefined) || null,
         ticketNumber: (data.ticketNumber as string | undefined) || null,
         issueCategory: (data.issueCategory as string | undefined) || null,
+        contentId: (data.contentId as string | undefined) || null,
+        contentTitle: (data.contentTitle as string | undefined) || null,
         priority:
           data.priority === "low" || data.priority === "high" ? data.priority : "medium",
         read: Boolean(data.read),
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? null,
         requesterName: (data.requesterName as string | undefined) || null,
         requesterRole: (data.requesterRole as string | undefined) || null,
+        targetPath: (data.targetPath as string | undefined) || null,
       } satisfies NotificationRow;
     })
     .sort((left, right) => {

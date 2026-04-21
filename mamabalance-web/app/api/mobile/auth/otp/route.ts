@@ -17,7 +17,7 @@ function createOtpCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-async function findMotherByPhone(phoneNumber: string) {
+async function findMobileUserByPhone(phoneNumber: string) {
   const snapshot = await adminDb
     .collection("users")
     .where("phoneNumber", "==", phoneNumber)
@@ -29,7 +29,7 @@ async function findMotherByPhone(phoneNumber: string) {
   return (
     snapshot.docs.find((doc) => {
       const data = doc.data();
-      return data.role === "mother" && data.status === "active";
+      return ["mother", "guardian"].includes(String(data.role || "")) && data.status === "active";
     }) ?? null
   );
 }
@@ -75,7 +75,7 @@ async function sendSmsOtp({
     message:
       `MamaBalance: Your verification code is ${code}. ` +
       `Use it within 10 minutes to continue.`,
-    contactFirstName: displayName.split(" ").filter(Boolean)[0] || "Mother",
+    contactFirstName: displayName.split(" ").filter(Boolean)[0] || "User",
   });
 }
 
@@ -96,8 +96,8 @@ async function handleSendOtp(request: NextRequest) {
     return NextResponse.json({ error: "Unsupported OTP purpose." }, { status: 400 });
   }
 
-  const motherDoc = await findMotherByPhone(normalizedPhone);
-  if (!motherDoc) {
+  const mobileUserDoc = await findMobileUserByPhone(normalizedPhone);
+  if (!mobileUserDoc) {
     return NextResponse.json(
       { error: "This phone number has not been registered in MamaBalance yet." },
       { status: 404 },
@@ -108,8 +108,10 @@ async function handleSendOtp(request: NextRequest) {
     await assertCooldown(normalizedPhone);
     const code = createOtpCode();
     const requestId = randomUUID();
-    const mother = motherDoc.data();
-    const displayName = String(mother.displayName || "Mother").trim();
+    const mobileUser = mobileUserDoc.data();
+    const displayName = String(
+      mobileUser.displayName || mobileUser.fullName || "MamaBalance user",
+    ).trim();
 
     await sendSmsOtp({
       phoneNumber: normalizedPhone,
@@ -118,7 +120,8 @@ async function handleSendOtp(request: NextRequest) {
     });
 
     await adminDb.collection("mobileOtpRequests").doc(requestId).set({
-      uid: motherDoc.id,
+      uid: mobileUserDoc.id,
+      role: String(mobileUser.role || "mother"),
       phoneNumber: normalizedPhone,
       purpose,
       otpHash: hashValue(code),
@@ -191,12 +194,14 @@ async function handleVerifyOtp(request: NextRequest) {
   const userSnapshot = await adminDb.collection("users").doc(String(data.uid)).get();
   const user = userSnapshot.data();
 
-  if (!userSnapshot.exists || user?.role !== "mother" || user?.status !== "active") {
-    return NextResponse.json({ error: "This mother account is not active." }, { status: 400 });
+  const role = String(user?.role || "").trim().toLowerCase();
+
+  if (!userSnapshot.exists || !["mother", "guardian"].includes(role) || user?.status !== "active") {
+    return NextResponse.json({ error: "This mobile account is not active." }, { status: 400 });
   }
 
   const customToken = await adminAuth.createCustomToken(String(data.uid), {
-    role: "mother",
+    role,
     authMethod: "sms_otp",
   });
 

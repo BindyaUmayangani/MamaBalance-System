@@ -678,6 +678,48 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildCareTeamSection(MotherProfile profile) {
+    final hasDoctor = profile.assignedDoctorUid?.trim().isNotEmpty == true &&
+        profile.assignedDoctorPhoneNumber.trim().isNotEmpty;
+    final hasMidwife = profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
+        profile.assignedMidwifePhoneNumber.trim().isNotEmpty;
+
+    if (!hasDoctor && !hasMidwife) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Assigned care team',
+          subtitle:
+              'Reach the assigned midwife and doctor directly from your phone.',
+          icon: Icons.support_agent_rounded,
+        ),
+        const SizedBox(height: 14),
+        if (hasDoctor)
+          _buildHighlightCard(
+            title: profile.assignedDoctorName.trim().isNotEmpty
+                ? profile.assignedDoctorName
+                : 'Assigned doctor',
+            body: 'Doctor contact number: ${profile.assignedDoctorPhoneNumber}',
+            icon: Icons.local_hospital_outlined,
+          ),
+        if (hasDoctor && hasMidwife) const SizedBox(height: 12),
+        if (hasMidwife)
+          _buildHighlightCard(
+            title: profile.assignedMidwifeName.trim().isNotEmpty
+                ? profile.assignedMidwifeName
+                : 'Assigned midwife',
+            body:
+                'Midwife contact number: ${profile.assignedMidwifePhoneNumber}',
+            icon: Icons.health_and_safety_outlined,
+          ),
+      ],
+    );
+  }
+
   Widget _buildHomeContent(_DashboardData data) {
     final profile = data.profile;
     final today = DateTime.now().weekday;
@@ -847,6 +889,13 @@ class _HomePageState extends State<HomePage> {
             if (_hasUpcomingVisits(data)) ...[
               const SizedBox(height: 18),
               _buildUpcomingVisitsSection(data),
+            ],
+            if ((profile.assignedDoctorPhoneNumber.trim().isNotEmpty &&
+                    profile.assignedDoctorUid?.trim().isNotEmpty == true) ||
+                (profile.assignedMidwifePhoneNumber.trim().isNotEmpty &&
+                    profile.assignedMidwifeUid?.trim().isNotEmpty == true)) ...[
+              const SizedBox(height: 18),
+              _buildCareTeamSection(profile),
             ],
             const SizedBox(height: 6),
             _buildSectionHeader(

@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../services/notification_service.dart';
 
+enum NotificationAudience { mother, guardian }
+
 class NotificationTab extends StatefulWidget {
-  const NotificationTab({super.key});
+  const NotificationTab({
+    super.key,
+    this.audience = NotificationAudience.mother,
+    this.showBackButton = false,
+  });
+
+  final NotificationAudience audience;
+  final bool showBackButton;
 
   @override
   State<NotificationTab> createState() => _NotificationTabState();
@@ -22,20 +31,29 @@ class _NotificationTabState extends State<NotificationTab> {
   @override
   void initState() {
     super.initState();
-    _summaryFuture = NotificationService.instance.fetchSummary();
+    _summaryFuture = _fetchSummary();
+  }
+
+  Future<MotherNotificationSummary> _fetchSummary() {
+    return widget.audience == NotificationAudience.guardian
+        ? NotificationService.instance.fetchGuardianSummary()
+        : NotificationService.instance.fetchSummary();
   }
 
   Future<void> _reload() async {
     setState(() {
-      _summaryFuture = NotificationService.instance.fetchSummary();
+      _summaryFuture = _fetchSummary();
     });
     await _summaryFuture;
   }
 
   Future<void> _markAllRead(MotherNotificationSummary summary) async {
-    await NotificationService.instance.markAllRead(
-      summary.items.where((item) => !item.read).map((item) => item.id).toList(),
-    );
+    final ids = summary.items.where((item) => !item.read).map((item) => item.id).toList();
+    if (widget.audience == NotificationAudience.guardian) {
+      await NotificationService.instance.markAllGuardianRead(ids);
+    } else {
+      await NotificationService.instance.markAllRead(ids);
+    }
     await _reload();
   }
 
@@ -86,13 +104,21 @@ class _NotificationTabState extends State<NotificationTab> {
   }
 
   Future<void> _handleTap(MotherNotificationItem item) async {
-    await NotificationService.instance.markRead(item.id);
+    if (widget.audience == NotificationAudience.guardian) {
+      await NotificationService.instance.markGuardianRead(item.id);
+    } else {
+      await NotificationService.instance.markRead(item.id);
+    }
     if (!mounted) return;
     await _reload();
   }
 
   Future<void> _dismiss(MotherNotificationItem item) async {
-    await NotificationService.instance.dismiss(item.id);
+    if (widget.audience == NotificationAudience.guardian) {
+      await NotificationService.instance.dismissGuardian(item.id);
+    } else {
+      await NotificationService.instance.dismiss(item.id);
+    }
     if (!mounted) return;
     await _reload();
   }
@@ -140,6 +166,7 @@ class _NotificationTabState extends State<NotificationTab> {
           future: _summaryFuture,
           builder: (context, snapshot) {
             final summary = snapshot.data;
+            final isGuardian = widget.audience == NotificationAudience.guardian;
 
             return RefreshIndicator(
               color: _accent,
@@ -147,14 +174,44 @@ class _NotificationTabState extends State<NotificationTab> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                 children: [
-                  const Text(
-                    'Notifications',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _text),
+                  Row(
+                    children: [
+                      if (widget.showBackButton) ...[
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: _text,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: Text(
+                          isGuardian ? 'Guardian Notifications' : 'Notifications',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: _text,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Stay updated with check-in reminders, care team messages, visits, resources, and schedule changes.',
-                    style: TextStyle(fontSize: 14, color: _muted, height: 1.4),
+                  Padding(
+                    padding: EdgeInsets.only(left: widget.showBackButton ? 48 : 0),
+                    child: Text(
+                      isGuardian
+                          ? 'Stay updated with upcoming visits, overdue visits, EPDS reminders, and newly added guardian resources.'
+                          : 'Stay updated with check-in reminders, care team messages, visits, resources, and schedule changes.',
+                      style: const TextStyle(fontSize: 14, color: _muted, height: 1.4),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Container(
@@ -221,10 +278,12 @@ class _NotificationTabState extends State<NotificationTab> {
                       message: '${snapshot.error}',
                     )
                   else if (summary == null || summary.items.isEmpty)
-                    const _NotificationMessageState(
+                    _NotificationMessageState(
                       icon: Icons.notifications_none_rounded,
                       title: 'No notifications yet',
-                      message: 'When there are new reminders, care updates, messages, or resources, they will appear here.',
+                      message: isGuardian
+                          ? 'Upcoming visits, overdue reminders, EPDS alerts, and new resources will appear here for guardians.'
+                          : 'When there are new reminders, care updates, messages, or resources, they will appear here.',
                     )
                   else if (_filterItems(summary.items).isEmpty)
                     _NotificationMessageState(

@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  CalendarDays,
+  MapPin,
+  Phone,
+  UserRound,
+} from "lucide-react";
+
 import { ManagedMotherRow, ManagedUserRow } from "@/lib/admin/types";
 
 type Props = {
@@ -16,14 +23,11 @@ export default function UserSummaryModal({ title, user, onClose }: Props) {
   }
 
   const rows = [
-    ["User ID", user.userId],
     ["Full Name", user.name],
     ["Username", user.username],
     ["Email", user.email],
     ["Current Email", user.personalEmail || "-"],
-    ["Contact", user.contact],
     ["NIC", user.nic],
-    ["Region", user.region],
     ["Created On", user.createdOn],
   ];
 
@@ -45,40 +49,70 @@ export default function UserSummaryModal({ title, user, onClose }: Props) {
         ]
       : [];
 
+  const summaryItems = [
+    { label: "User ID", value: user.userId, icon: <UserRound size={16} /> },
+    { label: "Contact", value: user.contact || "-", icon: <Phone size={16} /> },
+    { label: "Region", value: user.region || "-", icon: <MapPin size={16} /> },
+  ];
+
   return (
     <div className="modal-container">
-      <h2 className="modal-title">{title}</h2>
-
-      <div className="modal-body-scroll user-summary-scroll">
-        <div className="view-details view-user-modal">
-
-        {/* NORMAL ROWS */}
-        {[...rows, ...motherRows].map(([label, value]) => (
-          <div className="detail-row" key={label}>
-            <span className="detail-label">{label}</span>
-            <span className="detail-value">
-              {label === "Risk Status" ? (
-                <span className={`risk-pill ${String(user.riskStatus || "").toLowerCase()}`}>
-                  {formatRisk(user.riskStatus)}
-                </span>
-              ) : (
-                value || "-"
-              )}
-            </span>
-          </div>
-        ))}
-
-        {/* ✅ STATUS ROW (CUSTOM UI) */}
-        <div className="detail-row">
-          <span className="detail-label">Status</span>
-          <span className="detail-value">
-            <span className={`status ${user.status}`}>
-              <span className="status-dot" />
-              {user.status === "active" ? "Active" : "Inactive"}
-            </span>
-          </span>
+      <div className="user-summary-hero">
+        <div>
+          <p className="user-summary-eyebrow">User profile</p>
+          <h2 className="modal-title user-summary-title">{title}</h2>
+          <p className="user-summary-subtitle">
+            Review account identity, contact details, and region assignment in one place.
+          </p>
         </div>
 
+        <div className="user-summary-status-card">
+          <span className="user-summary-status-label">Account Status</span>
+          <span className={`status ${user.status}`}>
+            <span className="status-dot" />
+            {user.status === "active" ? "Active" : "Inactive"}
+          </span>
+        </div>
+      </div>
+
+      <div className="user-summary-highlights">
+        {summaryItems.map((item) => (
+          <div className="user-summary-highlight-card" key={item.label}>
+            <span className="user-summary-highlight-icon" aria-hidden="true">
+              {item.icon}
+            </span>
+            <span className="user-summary-highlight-label">{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="modal-body-scroll user-summary-scroll">
+        <div className="view-details view-user-modal user-summary-grid">
+          {[...rows, ...motherRows].map(([label, value]) => (
+            <div className="detail-row user-summary-detail-card" key={label}>
+              <span className="detail-label">{label}</span>
+              <span className="detail-value">
+                {label === "Risk Status" ? (
+                  <span
+                    className={`risk-pill ${String(user.role === "mother" ? user.riskStatus || "" : "").toLowerCase()}`}
+                  >
+                    {user.role === "mother" ? formatRisk(user.riskStatus) : "-"}
+                  </span>
+                ) : (
+                  value || "-"
+                )}
+              </span>
+            </div>
+          ))}
+
+          <div className="detail-row user-summary-detail-card">
+            <span className="detail-label">Timeline</span>
+            <span className="detail-value user-summary-inline-icon">
+              <CalendarDays size={15} />
+              {user.createdOn || "-"}
+            </span>
+          </div>
         </div>
       </div>
 

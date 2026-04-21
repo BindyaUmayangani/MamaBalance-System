@@ -26,6 +26,10 @@ service cloud.firestore {
       return userRole() == "mother" && isActive();
     }
 
+    function isGuardian() {
+      return userRole() == "guardian" && isActive();
+    }
+
     function isDoctor() {
       return userRole() == "doctor" && isActive();
     }
@@ -71,6 +75,21 @@ service cloud.firestore {
         );
     }
 
+    function matchesGuardianForMother(data) {
+      return isGuardian()
+        && (
+          request.auth.uid == data.guardianUid
+          || (
+            request.auth.token.phone_number != null
+            && data.guardianContact == request.auth.token.phone_number
+          )
+        );
+    }
+
+    function canReadMotherRecord(data, motherId) {
+      return matchesMotherRecord(data, motherId) || matchesGuardianForMother(data);
+    }
+
     function motherDocById(motherId) {
       return get(/databases/$(database)/documents/mothers/$(motherId));
     }
@@ -78,7 +97,7 @@ service cloud.firestore {
     function canAccessMotherRecord(motherId) {
       return signedIn()
         && exists(/databases/$(database)/documents/mothers/$(motherId))
-        && matchesMotherRecord(motherDocById(motherId).data, motherId);
+        && canReadMotherRecord(motherDocById(motherId).data, motherId);
     }
 
     function isAssignedDoctorForMother(motherId) {
@@ -133,7 +152,7 @@ service cloud.firestore {
       let conversation = getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data;
       return canAccessConversation(conversation)
         && request.resource.data.senderUid == request.auth.uid
-        && request.resource.data.senderRole in ["mother", "doctor", "midwife"]
+        && request.resource.data.senderRole in ["mother", "guardian", "doctor", "midwife"]
         && request.resource.data.algorithm == "AES-256-GCM"
         && request.resource.data.keyVersion is string
         && request.resource.data.ciphertext is string
@@ -151,6 +170,7 @@ service cloud.firestore {
         && request.resource.data.createdAt is timestamp
         && (
           (request.resource.data.senderRole == "mother" && canAccessMotherRecord(conversation.motherUid))
+          || (request.resource.data.senderRole == "guardian" && canAccessMotherRecord(conversation.motherUid) && isGuardian())
           || (request.resource.data.senderRole == "doctor" && conversation.doctorUid == request.auth.uid && isDoctor())
           || (request.resource.data.senderRole == "midwife" && conversation.midwifeUid == request.auth.uid && userRole() == "midwife" && isActive())
         );
@@ -247,7 +267,7 @@ service cloud.firestore {
     }
 
     match /mothers/{motherId} {
-      allow read: if signedIn() && matchesMotherRecord(resource.data, motherId);
+      allow read: if signedIn() && canReadMotherRecord(resource.data, motherId);
       allow update: if signedIn()
         && matchesMotherRecord(resource.data, motherId)
         && (validMotherCheckInUpdate() || validMotherProfileUpdate());

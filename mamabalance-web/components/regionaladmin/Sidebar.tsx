@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
+  Pill,
   BarChart3,
   ClipboardList,
   Settings,
@@ -70,6 +71,14 @@ export default function RegionalAdminSidebar() {
         >
           <BookOpen size={20} />
           Educational Content
+        </Link>
+
+        <Link
+          href="/regionaladmin/medicine-management"
+          className={isActive("/regionaladmin/medicine-management")}
+        >
+          <Pill size={20} />
+          Medicine Management
         </Link>
 
         <Link

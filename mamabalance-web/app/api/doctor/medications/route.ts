@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue, type DocumentData } from "firebase-admin/firestore";
 
+import { buildUserCode } from "@/lib/admin/format";
 import { getCurrentSessionUser } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { logAuditEvent } from "@/lib/audit/log";
 import { resolveLinkedDoctorUids } from "@/lib/doctor/identity";
+import {
+  buildMedicineDisplayName,
+  buildMedicineSearchText,
+  isMedicineForm,
+} from "@/lib/medicine/types";
 
 type MedicationStatus = "Active" | "Completed" | "Stopped";
 
 type MedicationRecord = {
   id: string;
   motherUid: string;
+  motherId: string;
   motherName: string;
   motherUsername: string;
+  medicineId?: string | null;
+  medicineSource?: "catalog" | "custom";
+  customMedicineName?: string;
+  genericName?: string;
+  strength?: string;
+  form?: string;
   medicationName: string;
   dosage: string;
   frequency: string;
+  duration: string;
   startDate: string;
   endDate: string;
   prescribedBy: string;
@@ -26,10 +40,6 @@ type MedicationRecord = {
   reasonStopped?: string;
 };
 
-function formatDosage(dosage: string) {
-  return dosage ? dosage.replace(/mg/gi, "").trim() : "";
-}
-
 function chunk<T>(items: T[], size: number) {
   const output: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -38,9 +48,122 @@ function chunk<T>(items: T[], size: number) {
   return output;
 }
 
-function formatDate(dateValue: any) {
+type DoctorMedicineInput = {
+  medicineId?: string;
+  medicationName?: string;
+  medicineMode?: "catalog" | "custom";
+  customMedicineName?: string;
+  brandName?: string;
+  genericName?: string;
+  strength?: string;
+  form?: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  instructions?: string;
+  suggestToCatalog?: boolean;
+};
+
+function buildSuggestionKey(input: {
+  brandName?: string;
+  genericName?: string;
+  strength?: string;
+  form?: string;
+}) {
+  return [
+    input.brandName,
+    input.genericName,
+    input.strength,
+    input.form,
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean)
+    .join("|");
+}
+
+async function upsertPendingSuggestion(args: {
+  actorUid: string;
+  actorName: string;
+  input: DoctorMedicineInput;
+}) {
+  const brandName = String(
+    args.input.brandName || args.input.customMedicineName || args.input.medicationName || "",
+  ).trim();
+  const genericName = String(args.input.genericName || brandName).trim();
+  const strength = String(args.input.strength || "").trim();
+  const form = isMedicineForm(args.input.form) ? args.input.form : "other";
+
+  if (!brandName || !genericName || !strength) {
+    return null;
+  }
+
+  const suggestionKey = buildSuggestionKey({
+    brandName,
+    genericName,
+    strength,
+    form,
+  });
+
+  const existingSnapshot = await adminDb
+    .collection("medicineSuggestions")
+    .where("suggestionKey", "==", suggestionKey)
+    .where("status", "==", "pending")
+    .limit(1)
+    .get();
+
+  if (!existingSnapshot.empty) {
+    const existingDoc = existingSnapshot.docs[0];
+    await existingDoc.ref.update({
+      updatedAt: FieldValue.serverTimestamp(),
+      lastSuggestedAt: FieldValue.serverTimestamp(),
+      suggestedByUid: args.actorUid,
+      suggestedByName: args.actorName,
+      suggestedByRole: "doctor",
+    });
+    return existingDoc.id;
+  }
+
+  const suggestionRef = adminDb.collection("medicineSuggestions").doc();
+  await suggestionRef.set({
+    suggestionId: buildUserCode("MSG", suggestionRef.id),
+    brandName,
+    genericName,
+    strength,
+    form,
+    defaultNotes: String(args.input.notes || "").trim(),
+    searchText: buildMedicineSearchText({
+      brandName,
+      genericName,
+      strength,
+      form,
+    }),
+    suggestionKey,
+    status: "pending",
+    suggestedByUid: args.actorUid,
+    suggestedByName: args.actorName,
+    suggestedByRole: "doctor",
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    lastSuggestedAt: FieldValue.serverTimestamp(),
+  });
+
+  return suggestionRef.id;
+}
+
+function formatDate(dateValue: unknown) {
   if (!dateValue) return "";
-  const dateObj = dateValue instanceof Date ? dateValue : dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+  const dateObj =
+    dateValue instanceof Date
+      ? dateValue
+      : typeof dateValue === "object" &&
+          dateValue !== null &&
+          "toDate" in dateValue &&
+          typeof (dateValue as { toDate?: unknown }).toDate === "function"
+        ? (dateValue as { toDate: () => Date }).toDate()
+        : new Date(String(dateValue));
   if (Number.isNaN(dateObj.getTime())) return "";
   const yyyy = dateObj.getFullYear();
   const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -130,11 +253,22 @@ async function handleList() {
       medications.push({
         id: doc.id,
         motherUid: String(data.motherUid || ""),
+        motherId: String(data.motherUid || ""),
         motherName: mother?.name || "Unknown Mother",
         motherUsername: mother?.username || "-",
+        medicineId: data.medicineId ? String(data.medicineId) : null,
+        medicineSource:
+          data.medicineSource === "custom" ? "custom" : "catalog",
+        customMedicineName: data.customMedicineName
+          ? String(data.customMedicineName)
+          : "",
+        genericName: data.genericName ? String(data.genericName) : "",
+        strength: data.strength ? String(data.strength) : "",
+        form: data.form ? String(data.form) : "",
         medicationName: String(data.medicationName || ""),
-        dosage: formatDosage(String(data.dosage || "")),
+        dosage: String(data.dosage || "").trim(),
         frequency: String(data.frequency || ""),
+        duration: String(data.duration || ""),
         startDate: formatDate(data.startDate || data.createdAt),
         endDate: formatDate(data.endDate),
         prescribedBy: doctorName,
@@ -183,21 +317,112 @@ async function handleAdd(request: NextRequest) {
   }
 
   const batch = adminDb.batch();
+  let suggestedCount = 0;
   
   for (const med of medicines) {
-    if (!med.medicationName) continue;
+    const medicineInput = med as DoctorMedicineInput;
+    const medicineMode =
+      medicineInput.medicineMode === "custom" ? "custom" : "catalog";
+
+    let selectedMedicineDoc: DocumentData | null = null;
+    let selectedMedicineRefId: string | null = null;
+
+    if (medicineInput.medicineId?.trim()) {
+      const medicineDoc = await adminDb
+        .collection("medicines")
+        .doc(medicineInput.medicineId.trim())
+        .get();
+
+      if (medicineDoc.exists && medicineDoc.data()?.status === "active") {
+        selectedMedicineDoc = medicineDoc.data() || null;
+        selectedMedicineRefId = medicineDoc.id;
+      }
+    }
+
+    const customMedicineName = String(
+      medicineInput.customMedicineName ||
+        medicineInput.medicationName ||
+        "",
+    ).trim();
+    const catalogBrandName = String(selectedMedicineDoc?.brandName || "").trim();
+    const catalogGenericName = String(selectedMedicineDoc?.genericName || "").trim();
+    const catalogStrength = String(selectedMedicineDoc?.strength || "").trim();
+    const catalogForm = String(selectedMedicineDoc?.form || "").trim();
+
+    const brandName =
+      medicineMode === "custom"
+        ? String(medicineInput.brandName || customMedicineName).trim()
+        : catalogBrandName;
+    const genericName =
+      medicineMode === "custom"
+        ? String(medicineInput.genericName || brandName).trim()
+        : catalogGenericName;
+    const strength =
+      medicineMode === "custom"
+        ? String(medicineInput.strength || "").trim()
+        : catalogStrength;
+    const form =
+      medicineMode === "custom"
+        ? (isMedicineForm(medicineInput.form) ? medicineInput.form : "other")
+        : (catalogForm || "other");
+    const medicationName =
+      medicineMode === "custom"
+        ? customMedicineName
+        : buildMedicineDisplayName({
+            brandName: catalogBrandName,
+            genericName: catalogGenericName,
+            strength: catalogStrength,
+          });
+
+    if (!medicationName) continue;
+
+    let suggestionId: string | null = null;
+    if (medicineMode === "custom" && medicineInput.suggestToCatalog) {
+      suggestionId = await upsertPendingSuggestion({
+        actorUid: actor.uid,
+        actorName: actor.displayName || "Doctor",
+        input: {
+          ...medicineInput,
+          brandName,
+          genericName,
+          strength,
+          form,
+          medicationName,
+        },
+      });
+      if (suggestionId) {
+        suggestedCount += 1;
+      }
+    }
+
     const docRef = adminDb.collection("careMedications").doc();
     batch.set(docRef, {
       motherUid,
-      medicationName: med.medicationName,
-      dosage: med.dosage || "",
-      frequency: med.frequency || "",
-      startDate: med.startDate ? new Date(med.startDate) : FieldValue.serverTimestamp(),
-      endDate: med.endDate ? new Date(med.endDate) : null,
+      medicineId: selectedMedicineRefId,
+      medicineSource: medicineMode,
+      medicationName,
+      customMedicineName: medicineMode === "custom" ? customMedicineName : "",
+      brandName,
+      genericName,
+      strength,
+      form,
+      dosage: medicineInput.dosage?.trim() || "",
+      frequency: medicineInput.frequency?.trim() || "",
+      duration: medicineInput.duration?.trim() || "",
+      startDate: medicineInput.startDate
+        ? new Date(medicineInput.startDate)
+        : FieldValue.serverTimestamp(),
+      endDate: medicineInput.endDate ? new Date(medicineInput.endDate) : null,
       prescribedByUid: prescribedByUid || actor.uid,
       prescribedBy: prescribedBy || actor.displayName || "Doctor",
-      notes: med.notes || "",
-      instructions: med.instructions || "",
+      notes:
+        medicineInput.notes?.trim() ||
+        (selectedMedicineDoc?.defaultNotes
+          ? String(selectedMedicineDoc.defaultNotes)
+          : ""),
+      instructions: medicineInput.instructions?.trim() || "",
+      customSuggestionId: suggestionId,
+      suggestionStatus: suggestionId ? "pending" : "none",
       status: "Active",
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -215,6 +440,7 @@ async function handleAdd(request: NextRequest) {
     metadata: {
       motherUid,
       medicinesCount: medicines.length,
+      suggestedCount,
     },
   });
 
@@ -267,6 +493,7 @@ async function handleUpdate(request: NextRequest) {
     medicationName: updates.medicationName ?? medicationDoc.data()?.medicationName,
     dosage: updates.dosage ?? medicationDoc.data()?.dosage,
     frequency: updates.frequency ?? medicationDoc.data()?.frequency,
+    duration: updates.duration ?? medicationDoc.data()?.duration,
     startDate: updates.startDate ? new Date(updates.startDate) : medicationDoc.data()?.startDate,
     endDate: updates.endDate ? new Date(updates.endDate) : medicationDoc.data()?.endDate,
     notes: updates.notes ?? medicationDoc.data()?.notes,
@@ -286,7 +513,7 @@ async function handleUpdate(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   return handleList();
 }
 

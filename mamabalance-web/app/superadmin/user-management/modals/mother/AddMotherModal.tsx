@@ -5,6 +5,7 @@ import { CalendarDays, ChevronDown } from "lucide-react";
 
 import {
   CreatedCredentials,
+  GuardianProvisioning,
   ManagedUserRow,
   MotherCreatePayload,
   RegionOption,
@@ -178,6 +179,12 @@ export default function AddMotherModal({
             </span>
           </div>
         </div>
+
+        {createdCredentials.guardianProvisioning ? (
+          <GuardianProvisioningCard
+            guardian={createdCredentials.guardianProvisioning}
+          />
+        ) : null}
 
         <div className="modal-actions">
           <button className="btn-primary" onClick={onClose}>
@@ -438,5 +445,51 @@ export default function AddMotherModal({
         </button>
       </div>
     </div>
+  );
+}
+
+function GuardianProvisioningCard({
+  guardian,
+}: {
+  guardian: GuardianProvisioning;
+}) {
+  return (
+    <>
+      <h3 className="modal-title" style={{ fontSize: "1rem", marginTop: "1rem" }}>
+        GUARDIAN MOBILE ACCESS
+      </h3>
+      <div className="view-details view-user-modal">
+        <div className="detail-row">
+          <span className="detail-label">Status</span>
+          <span className="detail-value">
+            {guardian.status === "created" ? "Created automatically" : "Linked to existing guardian"}
+          </span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Guardian ID</span>
+          <span className="detail-value">{guardian.userId}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Guardian Name</span>
+          <span className="detail-value">{guardian.displayName}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Guardian Phone</span>
+          <span className="detail-value">{guardian.phoneNumber}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Login Method</span>
+          <span className="detail-value">Phone OTP</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Guardian SMS</span>
+          <span className="detail-value">
+            {guardian.smsDeliveryStatus === "failed"
+              ? "Guardian account created, but onboarding SMS failed"
+              : "Onboarding SMS sent"}
+          </span>
+        </div>
+      </div>
+    </>
   );
 }

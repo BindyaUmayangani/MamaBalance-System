@@ -6,10 +6,13 @@ import { logAuditEvent } from "@/lib/audit/log";
 import { getCurrentSessionUser } from "@/lib/auth/server";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import {
+  EducationalContentAudience,
   EducationalContentPayload,
   EducationalContentRecord,
+  getEducationalContentAudienceLabel,
   getEducationalContentTypeLabel,
   getEducationalContentVisibilityLabel,
+  isEducationalContentAudience,
   isEducationalContentType,
   isEducationalContentVisibility,
 } from "@/lib/education/types";
@@ -63,6 +66,9 @@ function buildContentRecord(
   userNameMap: Map<string, string>,
 ): EducationalContentRecord {
   const type = isEducationalContentType(data.type) ? data.type : "link";
+  const audience = isEducationalContentAudience(data.audience)
+    ? data.audience
+    : "mother";
   const visibility =
     data.visibility === "hidden" ? "hidden" : "visible";
 
@@ -71,6 +77,8 @@ function buildContentRecord(
     contentId: (data.contentId as string | undefined) || buildUserCode("CT", id),
     title: (data.title as string | undefined) || "-",
     description: (data.description as string | undefined) || "-",
+    audience,
+    audienceLabel: getEducationalContentAudienceLabel(audience),
     type,
     typeLabel: getEducationalContentTypeLabel(type),
     dateAdded: formatTimestamp(data.createdAt),
@@ -94,6 +102,63 @@ async function loadCreatorNameMap() {
       doc.id,
       ((doc.data().displayName as string | undefined) || doc.id) as string,
     ]),
+  );
+}
+
+async function notifyRegionalAdminsAboutContentChange(args: {
+  actorUid: string;
+  actorName: string;
+  action: "created" | "updated";
+  contentId: string;
+  contentTitle: string;
+  audience: EducationalContentAudience;
+}) {
+  const regionalAdminSnapshot = await adminDb
+    .collection("users")
+    .where("role", "==", "regionaladmin")
+    .get();
+
+  const recipients = regionalAdminSnapshot.docs.filter((doc) => {
+    const data = doc.data();
+    return data.status === "active";
+  });
+
+  if (recipients.length === 0) {
+    return;
+  }
+
+  const audienceLabel =
+    args.audience === "father" ? "guardian and father" : "mother";
+  const title =
+    args.action === "created"
+      ? "New educational resource added"
+      : "Educational resource updated";
+  const message =
+    args.action === "created"
+      ? `${args.contentTitle} was added for ${audienceLabel} resources by ${args.actorName}.`
+      : `${args.contentTitle} was updated in the ${audienceLabel} resource library by ${args.actorName}.`;
+
+  await Promise.all(
+    recipients.map((doc) =>
+      adminDb.collection("notifications").add({
+        recipientUid: doc.id,
+        recipientRole: "regionaladmin",
+        type: "educational-content",
+        title,
+        message,
+        contentId: args.contentId,
+        contentTitle: args.contentTitle,
+        requesterUid: args.actorUid,
+        requesterName: args.actorName,
+        requesterRole: "superadmin",
+        issueCategory: "Educational Content",
+        priority: "medium",
+        targetPath: "/regionaladmin/educational-content",
+        read: false,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+    ),
   );
 }
 
@@ -122,6 +187,10 @@ function validatePayload(payload: Partial<EducationalContentPayload>) {
     return "Invalid content type.";
   }
 
+  if (!isEducationalContentAudience(payload.audience)) {
+    return "Invalid educational audience.";
+  }
+
   if (!isEducationalContentVisibility(payload.visibility)) {
     return "Invalid visibility value.";
   }
@@ -145,18 +214,23 @@ function validatePayload(payload: Partial<EducationalContentPayload>) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const actor = await getCurrentSessionUser();
 
   if (!actor || !["superadmin", "regionaladmin"].includes(actor.role)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const audienceFilter = request.nextUrl.searchParams.get("audience");
+  const scopedAudience: EducationalContentAudience | null =
+    isEducationalContentAudience(audienceFilter) ? audienceFilter : null;
+
   const snapshot = await adminDb.collection(COLLECTION_NAME).get();
   const creators = await loadCreatorNameMap();
 
   const contents = snapshot.docs
     .map((doc) => buildContentRecord(doc.id, doc.data(), creators))
+    .filter((item) => (scopedAudience ? item.audience === scopedAudience : true))
     .sort((left, right) => right.dateAdded.localeCompare(left.dateAdded));
 
   return NextResponse.json({ contents });
@@ -183,6 +257,9 @@ export async function POST(request: NextRequest) {
     contentId: buildUserCode("CT", docRef.id),
     title: payload.title.trim(),
     description: payload.description.trim(),
+    audience: payload.audience,
+    audienceTags:
+      payload.audience === "father" ? ["father", "guardian"] : ["mother"],
     type: payload.type,
     visibility: payload.visibility,
     posterUrl: payload.posterUrl?.trim() || null,
@@ -200,6 +277,15 @@ export async function POST(request: NextRequest) {
     actionType: "Create",
     action: "Created educational content",
     target: payload.title.trim(),
+  });
+
+  await notifyRegionalAdminsAboutContentChange({
+    actorUid: actor.uid,
+    actorName: actor.displayName || actor.uid,
+    action: "created",
+    contentId: buildUserCode("CT", docRef.id),
+    contentTitle: payload.title.trim(),
+    audience: payload.audience,
   });
 
   const storedSnapshot = await docRef.get();
@@ -244,6 +330,9 @@ export async function PATCH(request: NextRequest) {
   await docRef.update({
     title: payload.title.trim(),
     description: payload.description.trim(),
+    audience: payload.audience,
+    audienceTags:
+      payload.audience === "father" ? ["father", "guardian"] : ["mother"],
     type: payload.type,
     visibility: payload.visibility,
     posterUrl: payload.posterUrl?.trim() || null,
@@ -271,6 +360,15 @@ export async function PATCH(request: NextRequest) {
     actionType: "Update",
     action: "Updated educational content",
     target: payload.title.trim(),
+  });
+
+  await notifyRegionalAdminsAboutContentChange({
+    actorUid: actor.uid,
+    actorName: actor.displayName || actor.uid,
+    action: "updated",
+    contentId: String(previous.contentId || buildUserCode("CT", payload.id)),
+    contentTitle: payload.title.trim(),
+    audience: payload.audience,
   });
 
   return NextResponse.json({
