@@ -626,8 +626,8 @@
 
 .med-table th:last-child,
 .med-table td:last-child {
-  width: 124px;
-  min-width: 124px;
+  width: 188px;
+  min-width: 188px;
 }
 
 .med-table th {
@@ -689,7 +689,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 94px;
+  width: 158px;
   margin-left: auto;
 }
 
@@ -729,6 +729,22 @@
   color: #b91c1c;
 }
 
+.med-actions .icon-btn.restart {
+  color: #0f766e;
+}
+
+.med-actions .icon-btn.restart:hover {
+  color: #115e59;
+}
+
+.med-actions .icon-btn.delete {
+  color: #ef4444;
+}
+
+.med-actions .icon-btn.delete:hover {
+  color: #b91c1c;
+}
+
 .med-actions .icon-btn:disabled {
   cursor: not-allowed;
   opacity: 0.4;
@@ -739,6 +755,14 @@
 }
 
 .med-actions .icon-btn.stop:disabled:hover {
+  color: #c7cdd4;
+}
+
+.med-actions .icon-btn.restart:disabled {
+  color: #c7cdd4;
+}
+
+.med-actions .icon-btn.restart:disabled:hover {
   color: #c7cdd4;
 }
 

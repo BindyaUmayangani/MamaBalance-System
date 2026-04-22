@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import 'messaging_service.dart';
 import 'mobile_user_context_service.dart';
+import 'weekly_checkin_service.dart';
 
 class MotherNotificationItem {
   final String id;
@@ -295,7 +296,7 @@ class NotificationService {
   ) {
     final items = <MotherNotificationItem>[];
     final lastSubmittedAt = _readDate(motherData['latestEpdsSubmittedAt']);
-    final nextDue = lastSubmittedAt?.add(const Duration(days: 7));
+    final nextDue = WeeklyCheckInService.nextAvailableAtFrom(lastSubmittedAt);
 
     if (nextDue == null) {
       const id = 'epds:first-checkin';
@@ -344,7 +345,7 @@ class NotificationService {
   ) {
     final items = <MotherNotificationItem>[];
     final lastSubmittedAt = _readDate(motherData['latestEpdsSubmittedAt']);
-    final nextDue = lastSubmittedAt?.add(const Duration(days: 7));
+    final nextDue = WeeklyCheckInService.nextAvailableAtFrom(lastSubmittedAt);
 
     if (nextDue == null) {
       const id = 'guardian:epds:first-checkin';
@@ -430,7 +431,11 @@ class NotificationService {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      if (!_matchesResourceAudience(data, audience: 'mother')) {
+      if (!_matchesResourceAudience(
+        data,
+        audience: 'mother',
+        allowEmptyAudienceForMother: false,
+      )) {
         continue;
       }
       final createdAt =
@@ -935,6 +940,7 @@ class NotificationService {
   bool _matchesResourceAudience(
     Map<String, dynamic> data, {
     required String audience,
+    bool allowEmptyAudienceForMother = true,
   }) {
     final normalized = <String>{};
 
@@ -967,7 +973,7 @@ class NotificationService {
     }
 
     if (normalized.isEmpty) {
-      return audience == 'mother';
+      return audience == 'mother' && allowEmptyAudienceForMother;
     }
 
     return normalized.contains(audience) || normalized.contains('all');

@@ -152,27 +152,85 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
       </div>
 
       <div className="profile-top-grid">
-        <div className="profile-panel">
-          <h3>Personal Info</h3>
-          <div className="profile-info-list">
-            <p><span>Name:</span> <strong>{displayMother.name}</strong></p>
-            <p><span>NIC:</span> <strong>{displayMother.nic || "-"}</strong></p>
-            <p><span>MamaBalance Email:</span> <strong>{displayMother.email || "-"}</strong></p>
-            <p><span>Personal Email:</span> <strong>{displayMother.personalEmail || "-"}</strong></p>
-            <p><span>Region:</span> <strong>{displayMother.region || "-"}</strong></p>
-            <p><span>Assigned Midwife:</span> <strong>{displayMother.assignedMidwife || "-"}</strong></p>
-            <p><span>Assigned Doctor:</span> <strong>{displayMother.assignedDoctor || "-"}</strong></p>
-            <p><span>Last EPDS Test Date:</span> <strong>{displayMother.lastEpdTestDate || "-"}</strong></p>
-            <p><span>Created On:</span> <strong>{displayMother.createdOn || "-"}</strong></p>
-            <p><span>Status:</span> <strong>{displayMother.status === "active" ? "Active" : "Inactive"}</strong></p>
-            <p><span>Contact No:</span> <strong>{displayMother.contact || "-"}</strong></p>
-            <p><span>Birthday:</span> <strong>{displayMother.birthdate || "-"}</strong></p>
-            <p><span>Age:</span> <strong>{displayMother.age || "-"}</strong></p>
-            <p><span>Address:</span> <strong>{displayMother.address || "-"}</strong></p>
-            <p><span>Guardian Name:</span> <strong>{displayMother.guardianName || "-"}</strong></p>
-            <p><span>Guardian Contact No:</span> <strong>{displayMother.guardianContact || "-"}</strong></p>
-            <p><span>Delivery Date:</span> <strong>{displayMother.deliveryDate || "-"}</strong></p>
-            <p><span>No of Children:</span> <strong>{displayMother.noOfChildren ?? "-"}</strong></p>
+        <div className="profile-panel personal-info-panel">
+          <div className="profile-panel-header">
+            <div>
+              <h3>Personal Info</h3>
+              <p className="profile-panel-subtitle">Key profile, contact, and care assignment details.</p>
+            </div>
+            <span className={`profile-status-chip ${displayMother.status === "active" ? "active" : "inactive"}`}>
+              {displayMother.status === "active" ? "Active" : "Inactive"}
+            </span>
+          </div>
+          <div className="profile-info-grid">
+            <div className="profile-info-item profile-info-item-wide">
+              <span className="profile-info-label">Full Name</span>
+              <strong className="profile-info-value">{displayMother.name}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">NIC</span>
+              <strong className="profile-info-value">{displayMother.nic || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Region</span>
+              <strong className="profile-info-value">{displayMother.region || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">MamaBalance Email</span>
+              <strong className="profile-info-value">{displayMother.email || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Personal Email</span>
+              <strong className="profile-info-value">{displayMother.personalEmail || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Assigned Midwife</span>
+              <strong className="profile-info-value">{displayMother.assignedMidwife || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Assigned Doctor</span>
+              <strong className="profile-info-value">{displayMother.assignedDoctor || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Last EPDS Test Date</span>
+              <strong className="profile-info-value">{displayMother.lastEpdTestDate || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Created On</span>
+              <strong className="profile-info-value">{displayMother.createdOn || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Contact No</span>
+              <strong className="profile-info-value">{displayMother.contact || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Birthday</span>
+              <strong className="profile-info-value">{displayMother.birthdate || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Age</span>
+              <strong className="profile-info-value">{displayMother.age || "-"}</strong>
+            </div>
+            <div className="profile-info-item profile-info-item-wide">
+              <span className="profile-info-label">Address</span>
+              <strong className="profile-info-value">{displayMother.address || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Guardian Name</span>
+              <strong className="profile-info-value">{displayMother.guardianName || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Guardian Contact No</span>
+              <strong className="profile-info-value">{displayMother.guardianContact || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Delivery Date</span>
+              <strong className="profile-info-value">{displayMother.deliveryDate || "-"}</strong>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">No of Children</span>
+              <strong className="profile-info-value">{displayMother.noOfChildren ?? "-"}</strong>
+            </div>
           </div>
         </div>
 

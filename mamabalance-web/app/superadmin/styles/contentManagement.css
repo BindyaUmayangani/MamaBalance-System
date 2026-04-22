@@ -136,12 +136,25 @@ td.actions {
   overflow: hidden;
 }
 
+.modal-card.view-modal {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .content-modal-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-right: 8px;
   margin-right: -8px;
+}
+
+.modal-card.view-modal .content-modal-scroll {
+  flex: initial;
+  min-height: auto;
+  overflow: visible;
+  padding-right: 0;
+  margin-right: 0;
 }
 
 .content-upload-box {

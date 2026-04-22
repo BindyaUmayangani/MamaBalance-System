@@ -1141,20 +1141,58 @@ export default function HighRiskMothersTable() {
             </div>
 
             <div className="profile-top-grid">
-              <div className="profile-panel">
-                <h3>Personal Info</h3>
-                <div className="profile-info-list">
-                  <p><span>Name:</span> <strong>{selectedProfileDetails.name}</strong></p>
-                  <p><span>NIC:</span> <strong>{selectedProfileDetails.nic}</strong></p>
-                  <p><span>Email:</span> <strong>{selectedProfileDetails.email}</strong></p>
-                  <p><span>Region:</span> <strong>{selectedProfileDetails.region}</strong></p>
-                  <p><span>Contact No:</span> <strong>{selectedProfileDetails.contact}</strong></p>
-                  <p><span>Birthday:</span> <strong>{selectedProfileDetails.birthday}</strong></p>
-                  <p><span>Address:</span> <strong>{selectedProfileDetails.address}</strong></p>
-                  <p><span>Guardian Name:</span> <strong>{selectedProfileDetails.guardianName}</strong></p>
-                  <p><span>Guardian Contact No:</span> <strong>{selectedProfileDetails.guardianContact}</strong></p>
-                  <p><span>Delivery Date:</span> <strong>{selectedProfileDetails.deliveryDate}</strong></p>
-                  <p><span>No of Children:</span> <strong>{selectedProfileDetails.children}</strong></p>
+              <div className="profile-panel personal-info-panel">
+                <div className="profile-panel-header">
+                  <div>
+                    <h3>Personal Info</h3>
+                    <p className="profile-panel-subtitle">Cleaner personal and guardian details for faster review.</p>
+                  </div>
+                </div>
+                <div className="profile-info-grid">
+                  <div className="profile-info-item profile-info-item-wide">
+                    <span className="profile-info-label">Full Name</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.name}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">NIC</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.nic}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Region</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.region}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Email</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.email}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Contact No</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.contact}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Birthday</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.birthday}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Delivery Date</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.deliveryDate}</strong>
+                  </div>
+                  <div className="profile-info-item profile-info-item-wide">
+                    <span className="profile-info-label">Address</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.address}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Guardian Name</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.guardianName}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">Guardian Contact No</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.guardianContact}</strong>
+                  </div>
+                  <div className="profile-info-item">
+                    <span className="profile-info-label">No of Children</span>
+                    <strong className="profile-info-value">{selectedProfileDetails.children}</strong>
+                  </div>
                 </div>
               </div>
 

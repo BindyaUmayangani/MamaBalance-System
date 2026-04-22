@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronDown, Eye, History, Pencil, Plus, Search, SquareX } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, History, Pencil, Plus, RotateCcw, Search, SquareX, Trash2 } from "lucide-react";
 import LoadingState from "@/components/admin/LoadingState";
 import Pagination from "@/app/superadmin/components/Pagination";
 import "@/app/doctor/styles/MedicationManagement.css";
@@ -17,6 +17,7 @@ type MedicationRecord = {
   medicineId?: string | null;
   medicineSource?: "catalog" | "custom";
   customMedicineName?: string;
+  brandName?: string;
   genericName?: string;
   strength?: string;
   form?: string;
@@ -81,6 +82,11 @@ type AddMedicationForm = {
 type EditMedicationForm = MedicineInput;
 
 type StopMode = "single" | "all";
+type RestartForm = {
+  startDate: string;
+  duration: string;
+  endDate: string;
+};
 
 const EMPTY_MEDICINE: MedicineInput = {
   medicineMode: "catalog",
@@ -109,6 +115,12 @@ const EMPTY_ADD_FORM: AddMedicationForm = {
 
 const EMPTY_EDIT_FORM: EditMedicationForm = {
   ...EMPTY_MEDICINE,
+};
+
+const EMPTY_RESTART_FORM: RestartForm = {
+  startDate: "",
+  duration: "",
+  endDate: "",
 };
 
 function findMother(query: string, mothers: MotherProfile[]) {
@@ -180,6 +192,33 @@ function resolveEndDateFromDuration(startDate: string, duration: string) {
   return formatDateInput(end);
 }
 
+function formatMedicationDisplay(input: {
+  genericName?: string | null;
+  brandName?: string | null;
+  medicationName?: string | null;
+  customMedicineName?: string | null;
+  medicineId?: string | null;
+  id?: string | null;
+}) {
+  const genericName = `${input.genericName || ""}`.trim();
+  const brandName = `${input.brandName || ""}`.trim();
+  const medicationName = `${input.medicationName || ""}`.trim();
+  const customMedicineName = `${input.customMedicineName || ""}`.trim();
+  const fallbackName = medicationName.toLowerCase() === "unnamed medicine" ? "" : medicationName;
+
+  if (genericName && brandName && genericName.toLowerCase() !== brandName.toLowerCase()) {
+    return `${genericName} (${brandName})`;
+  }
+
+  return (
+    genericName ||
+    brandName ||
+    customMedicineName ||
+    fallbackName ||
+    `${input.medicineId || input.id || "Medicine"}`
+  );
+}
+
 export default function MedicationManagementWorkspace() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
@@ -218,6 +257,9 @@ export default function MedicationManagementWorkspace() {
   const [viewRecord, setViewRecord] = useState<MedicationRecord | null>(null);
   const [editRecord, setEditRecord] = useState<MedicationRecord | null>(null);
   const [stopRecord, setStopRecord] = useState<MedicationRecord | null>(null);
+  const [deleteRecord, setDeleteRecord] = useState<MedicationRecord | null>(null);
+  const [restartRecord, setRestartRecord] = useState<MedicationRecord | null>(null);
+  const [restartForm, setRestartForm] = useState<RestartForm>(EMPTY_RESTART_FORM);
   const [historyMother, setHistoryMother] = useState<MotherProfile | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -321,6 +363,73 @@ export default function MedicationManagementWorkspace() {
     }
   };
 
+  const deleteMedication = async () => {
+    if (!deleteRecord || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await fetch("/api/doctor/medications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medicationId: deleteRecord.id,
+        }),
+      });
+      await fetchData();
+      setDeleteRecord(null);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsSubmitting(false);
+  };
+
+  const restartMedication = async () => {
+    if (!restartRecord || isSubmitting || !restartForm.startDate || !restartForm.duration) return;
+
+    setIsSubmitting(true);
+    try {
+      await fetch("/api/doctor/medications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medicationId: restartRecord.id,
+          action: "RESTART",
+          startDate: restartForm.startDate,
+          duration: restartForm.duration,
+          endDate: restartForm.endDate,
+        }),
+      });
+      await fetchData();
+      setRestartRecord(null);
+      setRestartForm(EMPTY_RESTART_FORM);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsSubmitting(false);
+  };
+
+  const openRestart = (record: MedicationRecord) => {
+    if (record.status !== "Stopped") return;
+    const today = formatDateInput(new Date());
+    const duration = record.duration || "01 month";
+    setRestartRecord(record);
+    setRestartForm({
+      startDate: today,
+      duration,
+      endDate: resolveEndDateFromDuration(today, duration),
+    });
+  };
+
+  const updateRestartForm = (key: keyof RestartForm, value: string) => {
+    setRestartForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "startDate" || key === "duration") {
+        next.endDate = resolveEndDateFromDuration(next.startDate, next.duration);
+      }
+      return next;
+    });
+  };
+
   const changeEditTarget = (medicationId: string) => {
     const target = records.find((item) => item.id === medicationId);
     if (!target) return;
@@ -390,8 +499,8 @@ export default function MedicationManagementWorkspace() {
         return {
           ...medicine,
           selectedMedicineId: selected.id,
-          catalogQuery: selected.displayName,
-          medicationName: selected.displayName,
+          catalogQuery: formatMedicationDisplay(selected),
+          medicationName: formatMedicationDisplay(selected),
           brandName: selected.brandName,
           genericName: selected.genericName,
           strength: selected.strength,
@@ -599,7 +708,7 @@ export default function MedicationManagementWorkspace() {
                     <tr key={item.id}>
                       <td>{item.id}</td>
                       <td>{item.motherName}</td>
-                      <td>{item.medicationName}</td>
+                      <td>{formatMedicationDisplay(item)}</td>
                       <td>{item.dosage || "-"}</td>
                       <td>{item.startDate}</td>
                       <td>{item.endDate || "-"}</td>
@@ -634,6 +743,23 @@ export default function MedicationManagementWorkspace() {
                           >
                             <SquareX size={17} />
                           </button>
+                          <button
+                            type="button"
+                            className="icon-btn restart"
+                            title={item.status === "Stopped" ? "Restart medication" : "Restart unavailable"}
+                            disabled={item.status !== "Stopped"}
+                            onClick={() => openRestart(item)}
+                          >
+                            <RotateCcw size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn delete"
+                            title="Delete medication"
+                            onClick={() => setDeleteRecord(item)}
+                          >
+                            <Trash2 size={17} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -667,7 +793,7 @@ export default function MedicationManagementWorkspace() {
             <div className="med-view-summary">
               <div className="med-view-summary-card">
                 <span className="med-view-summary-label">Current Medication</span>
-                <strong>{viewRecord.medicationName}</strong>
+                <strong>{formatMedicationDisplay(viewRecord)}</strong>
                 <p>{viewRecord.dosage || "-"}</p>
               </div>
               <div className="med-view-summary-card">
@@ -744,7 +870,7 @@ export default function MedicationManagementWorkspace() {
               <div className="mother-history-list">
                 {viewRelatedRecords.slice(0, 3).map((item) => (
                   <div className="mother-history-item" key={item.id}>
-                    <strong>{item.medicationName}</strong>
+                    <strong>{formatMedicationDisplay(item)}</strong>
                     <span>{item.dosage || "-"}</span>
                     <span>{item.status}</span>
                   </div>
@@ -838,12 +964,12 @@ export default function MedicationManagementWorkspace() {
                             <input
                               list={`medicine-catalog-${index}`}
                               value={medicine.catalogQuery}
-                              placeholder="Search by brand or generic name"
+                              placeholder="Search by generic or brand name"
                               onChange={(event) => {
                                 const value = event.target.value;
                                 updateAddMedicine(index, "catalogQuery", value);
                                 const matched = catalogMedicines.find(
-                                  (item) => item.displayName === value,
+                                  (item) => formatMedicationDisplay(item) === value,
                                 );
                                 if (matched) {
                                   selectCatalogMedicine(index, matched.id);
@@ -855,7 +981,10 @@ export default function MedicationManagementWorkspace() {
                             />
                             <datalist id={`medicine-catalog-${index}`}>
                               {catalogMedicines.map((item) => (
-                                <option key={item.id} value={item.displayName} />
+                                <option
+                                  key={item.id}
+                                  value={formatMedicationDisplay(item)}
+                                />
                               ))}
                             </datalist>
                           </>
@@ -959,7 +1088,7 @@ export default function MedicationManagementWorkspace() {
 
                             return (
                               <>
-                                <strong>{selected.displayName}</strong>
+                                <strong>{formatMedicationDisplay(selected)}</strong>
                                 <p>
                                   {selected.formLabel}
                                   {selected.defaultNotes
@@ -1071,7 +1200,7 @@ export default function MedicationManagementWorkspace() {
                     >
                       {editOptions.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.medicationName} ({item.dosage || "-"})
+                          {formatMedicationDisplay(item)} ({item.dosage || "-"})
                         </option>
                       ))}
                     </select>
@@ -1193,7 +1322,7 @@ export default function MedicationManagementWorkspace() {
                   >
                     {stopOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.medicationName} ({item.dosage || "-"})
+                        {formatMedicationDisplay(item)} ({item.dosage || "-"})
                       </option>
                     ))}
                   </select>
@@ -1208,7 +1337,7 @@ export default function MedicationManagementWorkspace() {
               </div>
             ) : (
               <p className="single-stop-med">
-                <strong>Medicine:</strong> {stopRecord.medicationName} ({stopRecord.dosage || "-"})
+                <strong>Medicine:</strong> {formatMedicationDisplay(stopRecord)} ({stopRecord.dosage || "-"})
               </p>
             )}
 
@@ -1221,6 +1350,127 @@ export default function MedicationManagementWorkspace() {
             <div className="modal-actions">
               <button className="btn-outline" onClick={() => setStopRecord(null)}>Cancel</button>
               <button className="btn-primary" onClick={stopMedication}>Stop</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteRecord && (
+        <div className="modal-overlay">
+          <div className="modal-card medication-modal medication-modal-small">
+            <h2 className="modal-title danger">DELETE MEDICATION</h2>
+            <p className="stop-copy">
+              Delete{" "}
+              <strong>{formatMedicationDisplay(deleteRecord)}</strong> for{" "}
+              <strong>{deleteRecord.motherName}</strong>?
+            </p>
+            <p className="stop-copy">
+              This will permanently remove the medication record from the doctor medication list.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="btn-outline"
+                onClick={() => setDeleteRecord(null)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={deleteMedication}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {restartRecord && (
+        <div className="modal-overlay">
+          <div className="modal-card medication-modal medication-modal-small">
+            <h2 className="modal-title">RESTART MEDICATION</h2>
+            <p className="stop-copy">
+              Restart{" "}
+              <strong>{formatMedicationDisplay(restartRecord)}</strong> for{" "}
+              <strong>{restartRecord.motherName}</strong>?
+            </p>
+            <p className="stop-copy">
+              This will set the medication back to active without adding a new prescription.
+            </p>
+            <div>
+              <label>Start Date</label>
+              <div className="modal-input-icon">
+                <input
+                  type="date"
+                  value={restartForm.startDate}
+                  onChange={(event) => updateRestartForm("startDate", event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="modal-icon-trigger"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                    if (input && typeof input.showPicker === "function") {
+                      input.showPicker();
+                    }
+                  }}
+                >
+                  <CalendarDays size={18} />
+                </button>
+              </div>
+            </div>
+            <div>
+              <label>Duration</label>
+              <input
+                value={restartForm.duration}
+                placeholder="e.g. 01 month"
+                onChange={(event) => updateRestartForm("duration", event.target.value)}
+              />
+            </div>
+            <div>
+              <label>End Date</label>
+              <div className="modal-input-icon">
+                <input
+                  type="date"
+                  value={restartForm.endDate}
+                  onChange={(event) => updateRestartForm("endDate", event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="modal-icon-trigger"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                    if (input && typeof input.showPicker === "function") {
+                      input.showPicker();
+                    }
+                  }}
+                >
+                  <CalendarDays size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-outline"
+                onClick={() => {
+                  setRestartRecord(null);
+                  setRestartForm(EMPTY_RESTART_FORM);
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={restartMedication}
+                disabled={isSubmitting || !restartForm.startDate || !restartForm.duration}
+              >
+                {isSubmitting ? "Restarting..." : "Restart"}
+              </button>
             </div>
           </div>
         </div>
@@ -1242,7 +1492,7 @@ export default function MedicationManagementWorkspace() {
               {selectedHistoryRecords.map((item) => (
                 <div className="history-modal-item" key={item.id}>
                   <div>
-                    <strong>{item.medicationName}</strong>
+                    <strong>{formatMedicationDisplay(item)}</strong>
                     <p>
                       {item.dosage || "-"} - {item.frequency}
                       {item.duration ? ` - ${item.duration}` : ""}

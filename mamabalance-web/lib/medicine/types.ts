@@ -10,8 +10,7 @@ export const MEDICINE_CATEGORIES = [
   "SSRI",
   "SNRI",
   "Other Antidepressant",
-  "Anti-anxiety",
-  "Sleep Support",
+  "Anxiety / Sleep",
   "Supplement",
   "Other",
 ] as const;
@@ -94,7 +93,21 @@ export function isMedicineStatus(
 export function isMedicineCategory(
   value: string | null | undefined,
 ): value is MedicineCategory {
-  return MEDICINE_CATEGORIES.includes(value as MedicineCategory);
+  return normalizeMedicineCategory(value) !== null;
+}
+
+export function normalizeMedicineCategory(
+  value: string | null | undefined,
+): MedicineCategory | null {
+  const normalized = `${value || ""}`.trim();
+
+  if (normalized === "Anti-anxiety" || normalized === "Sleep Support") {
+    return "Anxiety / Sleep";
+  }
+
+  return MEDICINE_CATEGORIES.includes(normalized as MedicineCategory)
+    ? (normalized as MedicineCategory)
+    : null;
 }
 
 export function isMedicineSuggestionStatus(

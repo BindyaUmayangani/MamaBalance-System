@@ -132,6 +132,86 @@ function assessmentDate(assessment: DocumentData) {
   );
 }
 
+type EpdsHistoryItem = {
+  id: string;
+  score: number;
+  submittedAt: string | null;
+  label: string;
+};
+
+const EPDS_HISTORY_START_DATE = new Date("2026-04-15T00:00:00+05:30");
+
+function buildEpdsHistoryItem(id: string, assessment: DocumentData): EpdsHistoryItem {
+  const submittedAt = assessmentDate(assessment);
+  const score = Number(assessment.totalScore ?? assessment.score ?? assessment.epdsScore ?? 0);
+
+  return {
+    id,
+    score: Number.isFinite(score) ? score : 0,
+    submittedAt: submittedAt?.toISOString() ?? null,
+    label: submittedAt
+      ? submittedAt.toLocaleDateString("en-LK", { month: "short", day: "numeric" })
+      : String(assessment.weekLabel || "EPDS"),
+  };
+}
+
+function isCompleteEpdsAttempt(assessment: DocumentData) {
+  const answers = Array.isArray(assessment.answers) ? assessment.answers : [];
+  const language = String(assessment.language || "").trim();
+  return answers.length > 0 || language.length > 0;
+}
+
+function isVisibleEpdsHistoryItem(item: EpdsHistoryItem) {
+  if (!item.submittedAt && item.score <= 0) {
+    return false;
+  }
+
+  const submittedAt = item.submittedAt ? new Date(item.submittedAt) : null;
+  if (!submittedAt || Number.isNaN(submittedAt.getTime())) {
+    return false;
+  }
+
+  return submittedAt.getTime() >= EPDS_HISTORY_START_DATE.getTime();
+}
+
+async function loadEpdsHistory(uid: string, userUid: string, motherUserId: string) {
+  const attemptSnapshot = await adminDb
+    .collection("mothers")
+    .doc(uid)
+    .collection("epdsAttempts")
+    .get();
+  const epdsSnapshot = await adminDb.collection("epdsAssessments").get();
+
+  const allAttemptDocs = attemptSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    data: doc.data(),
+  }));
+  const completeAttemptDocs = allAttemptDocs.filter(({ data }) => isCompleteEpdsAttempt(data));
+  const attemptDocs = completeAttemptDocs.length > 0 ? completeAttemptDocs : allAttemptDocs;
+  const attemptHistory = attemptDocs
+    .map((doc) => buildEpdsHistoryItem(doc.id, doc.data))
+    .filter(isVisibleEpdsHistoryItem);
+  const assessmentHistory = epdsSnapshot.docs
+    .map((doc) => {
+      const assessment = doc.data();
+
+      if (!matchesMotherRecord(assessment, uid, userUid, motherUserId)) {
+        return null;
+      }
+
+      return buildEpdsHistoryItem(doc.id, assessment);
+    })
+    .filter((item): item is EpdsHistoryItem => Boolean(item))
+    .filter(isVisibleEpdsHistoryItem);
+
+  return [...attemptHistory, ...assessmentHistory]
+    .sort((left, right) => {
+      const leftTime = left.submittedAt ? new Date(left.submittedAt).getTime() : 0;
+      const rightTime = right.submittedAt ? new Date(right.submittedAt).getTime() : 0;
+      return leftTime - rightTime;
+    });
+}
+
 function isoSortValue(value: unknown) {
   return toDate(value)?.toISOString() ?? "";
 }
@@ -232,40 +312,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const userUid = String(mother?.userUid || user?.uid || uid);
   const motherUserId = String(user?.userId || mother?.userId || "");
 
-  const [epdsSnapshot, careObservationSnapshot, midwifeObservationSnapshot, medicationSnapshot] =
+  const [epdsHistory, careObservationSnapshot, midwifeObservationSnapshot, medicationSnapshot] =
     await Promise.all([
-      adminDb.collection("epdsAssessments").get(),
+      loadEpdsHistory(uid, userUid, motherUserId),
       adminDb.collection("careObservations").where("motherUid", "==", uid).get(),
       adminDb.collection("midwifeObservations").where("motherUid", "==", uid).get(),
       adminDb.collection("careMedications").where("motherUid", "==", uid).get(),
     ]);
-
-  const epdsHistory = epdsSnapshot.docs
-    .map((doc) => {
-      const assessment = doc.data();
-
-      if (!matchesMotherRecord(assessment, uid, userUid, motherUserId)) {
-        return null;
-      }
-
-      const submittedAt = assessmentDate(assessment);
-      const score = Number(assessment.totalScore ?? assessment.score ?? assessment.epdsScore ?? 0);
-
-      return {
-        id: doc.id,
-        score: Number.isFinite(score) ? score : 0,
-        submittedAt: submittedAt?.toISOString() ?? null,
-        label: submittedAt
-          ? submittedAt.toLocaleDateString("en-LK", { month: "short", day: "numeric" })
-          : String(assessment.weekLabel || "EPDS"),
-      };
-    })
-    .filter((item): item is { id: string; score: number; submittedAt: string | null; label: string } => Boolean(item))
-    .sort((left, right) => {
-      const leftTime = left.submittedAt ? new Date(left.submittedAt).getTime() : 0;
-      const rightTime = right.submittedAt ? new Date(right.submittedAt).getTime() : 0;
-      return leftTime - rightTime;
-    });
 
   const observationDocs = [
     ...careObservationSnapshot.docs.map((doc) => ({

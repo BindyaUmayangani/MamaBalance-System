@@ -233,7 +233,7 @@ export default function MedicineManagementWorkspace({
         <div className="search-box">
           <Search size={18} />
           <input
-            placeholder="Search by medicine ID, brand, or generic name"
+            placeholder="Search by medicine ID, generic name, or brand name"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -320,8 +320,8 @@ export default function MedicineManagementWorkspace({
                       <td>{item.medicineId}</td>
                       <td>
                         <div className="medicine-name-cell">
-                          <strong>{item.brandName}</strong>
-                          <span>{item.genericName}</span>
+                          <strong>{item.genericName}</strong>
+                          <span>{item.brandName}</span>
                         </div>
                       </td>
                       <td>{item.formLabel}</td>
@@ -413,12 +413,12 @@ export default function MedicineManagementWorkspace({
                     <strong>{selectedMedicine.statusLabel}</strong>
                   </div>
                   <div>
-                    <span className="medicine-view-label">Brand Name</span>
-                    <strong>{selectedMedicine.brandName}</strong>
-                  </div>
-                  <div>
                     <span className="medicine-view-label">Generic Name</span>
                     <strong>{selectedMedicine.genericName}</strong>
+                  </div>
+                  <div>
+                    <span className="medicine-view-label">Brand Name</span>
+                    <strong>{selectedMedicine.brandName}</strong>
                   </div>
                   <div>
                     <span className="medicine-view-label">Category</span>
@@ -449,20 +449,20 @@ export default function MedicineManagementWorkspace({
 
                 <div className="modal-form-grid medicine-form-grid">
                   <div>
-                    <label>Brand Name</label>
-                    <input
-                      value={form.brandName}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, brandName: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
                     <label>Generic Name</label>
                     <input
                       value={form.genericName}
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, genericName: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label>Brand Name</label>
+                    <input
+                      value={form.brandName}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, brandName: event.target.value }))
                       }
                     />
                   </div>

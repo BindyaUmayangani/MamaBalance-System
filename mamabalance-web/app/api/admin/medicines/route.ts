@@ -10,9 +10,9 @@ import {
   buildMedicineSearchText,
   getMedicineFormLabel,
   getMedicineStatusLabel,
-  isMedicineCategory,
   isMedicineForm,
   isMedicineStatus,
+  normalizeMedicineCategory,
   type MedicinePayload,
   type MedicineRecord,
 } from "@/lib/medicine/types";
@@ -61,9 +61,7 @@ function buildMedicineRecord(
   const brandName = String(data.brandName || "-");
   const genericName = String(data.genericName || "-");
   const strength = String(data.strength || "-");
-  const category = isMedicineCategory(data.category)
-    ? data.category
-    : "Other";
+  const category = normalizeMedicineCategory(data.category) || "Other";
   const defaultNotes = String(data.defaultNotes || "");
   const displayName = buildMedicineDisplayName({
     brandName,
@@ -115,7 +113,7 @@ function validatePayload(payload: Partial<MedicinePayload>) {
     return "Invalid medicine form.";
   }
 
-  if (!isMedicineCategory(payload.category)) {
+  if (!normalizeMedicineCategory(payload.category)) {
     return "Invalid medicine category.";
   }
 
@@ -166,7 +164,7 @@ export async function POST(request: NextRequest) {
   const createdAt = FieldValue.serverTimestamp();
   const brandName = payload.brandName.trim();
   const genericName = payload.genericName.trim();
-  const category = payload.category.trim();
+  const category = normalizeMedicineCategory(payload.category) || "Other";
 
   await docRef.set({
     medicineId: buildUserCode("MED", docRef.id),
@@ -234,7 +232,7 @@ export async function PATCH(request: NextRequest) {
 
   const brandName = payload.brandName.trim();
   const genericName = payload.genericName.trim();
-  const category = payload.category.trim();
+  const category = normalizeMedicineCategory(payload.category) || "Other";
 
   await docRef.update({
     brandName,

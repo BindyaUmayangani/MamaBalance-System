@@ -38,7 +38,18 @@ class WeeklyCheckInService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  static const Duration _checkInWindow = Duration(days: 7);
+  static const int _checkInWindowDays = 7;
+
+  static DateTime? nextAvailableAtFrom(DateTime? lastSubmittedAt) {
+    if (lastSubmittedAt == null) return null;
+
+    final local = lastSubmittedAt.toLocal();
+    return DateTime(
+      local.year,
+      local.month,
+      local.day + _checkInWindowDays,
+    );
+  }
 
   Future<WeeklyCheckInAvailability> fetchAvailability() async {
     final user = _auth.currentUser;
@@ -49,8 +60,8 @@ class WeeklyCheckInService {
     final motherSnapshot = await _resolveMotherDoc(user);
     final motherData = motherSnapshot.data() ?? <String, dynamic>{};
     final lastSubmittedAt = _readSubmittedAt(motherData['latestEpdsSubmittedAt']);
-    final nextAvailableAt = lastSubmittedAt?.add(_checkInWindow);
-    final now = DateTime.now().toUtc();
+    final nextAvailableAt = nextAvailableAtFrom(lastSubmittedAt);
+    final now = DateTime.now();
 
     return WeeklyCheckInAvailability(
       canStart: nextAvailableAt == null || !nextAvailableAt.isAfter(now),
@@ -133,14 +144,13 @@ class WeeklyCheckInService {
   void _ensureCheckInUnlocked(DateTime? lastSubmittedAt) {
     if (lastSubmittedAt == null) return;
 
-    final nextAvailableAt = lastSubmittedAt.add(_checkInWindow);
-    final now = DateTime.now().toUtc();
+    final nextAvailableAt = nextAvailableAtFrom(lastSubmittedAt)!;
+    final now = DateTime.now();
 
     if (nextAvailableAt.isAfter(now)) {
-      final local = nextAvailableAt.toLocal();
-      final day = local.day.toString().padLeft(2, '0');
-      final month = _monthName(local.month);
-      final year = local.year;
+      final day = nextAvailableAt.day.toString().padLeft(2, '0');
+      final month = _monthName(nextAvailableAt.month);
+      final year = nextAvailableAt.year;
       throw AppAuthException(
         'You can complete your next weekly check-in after $day $month $year.',
       );

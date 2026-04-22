@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/mother_profile.dart';
 import '../services/mother_profile_service.dart';
+import '../services/weekly_checkin_service.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'chat_page.dart';
 import 'educational_resources_screen.dart';
@@ -105,7 +107,7 @@ class _HomePageState extends State<HomePage> {
   DateTime? _nextEPDSTestDate(MotherProfile profile) {
     final submittedAt = profile.latestEpdsDate;
     if (submittedAt == null) return null;
-    return submittedAt.toLocal().add(const Duration(days: 7));
+    return WeeklyCheckInService.nextAvailableAtFrom(submittedAt);
   }
 
   String _formatCheckInDate(DateTime? date) {
@@ -873,10 +875,19 @@ class _HomePageState extends State<HomePage> {
             Row(
               children: [
                 _buildQuickAction(
-                  title: 'Messages',
-                  subtitle: 'Check in with your doctor and midwife',
-                  icon: Icons.chat_bubble_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatPage(doctorName: 'Dr. Smith', showBackButton: true))),
+                  title: 'Assigned Care Team',
+                  subtitle: 'View the assigned doctor and midwife details',
+                  icon: Icons.groups_2_outlined,
+                  onTap: () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (sheetContext) => _AssignedCareTeamSheet(
+                        profile: profile,
+                      ),
+                    );
+                  },
                 ),
                 _buildQuickAction(
                   title: 'Resources',
@@ -889,13 +900,6 @@ class _HomePageState extends State<HomePage> {
             if (_hasUpcomingVisits(data)) ...[
               const SizedBox(height: 18),
               _buildUpcomingVisitsSection(data),
-            ],
-            if ((profile.assignedDoctorPhoneNumber.trim().isNotEmpty &&
-                    profile.assignedDoctorUid?.trim().isNotEmpty == true) ||
-                (profile.assignedMidwifePhoneNumber.trim().isNotEmpty &&
-                    profile.assignedMidwifeUid?.trim().isNotEmpty == true)) ...[
-              const SizedBox(height: 18),
-              _buildCareTeamSection(profile),
             ],
             const SizedBox(height: 6),
             _buildSectionHeader(
@@ -1017,6 +1021,257 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _AssignedCareTeamSheet extends StatelessWidget {
+  const _AssignedCareTeamSheet({required this.profile});
+
+  final MotherProfile profile;
+
+  String _doctorDisplayName(String value) {
+    final name = value.trim();
+    if (name.isEmpty) return 'Dr. Assigned doctor';
+    return name.toLowerCase().startsWith('dr.') ? name : 'Dr. $name';
+  }
+
+  String _midwifeDisplayName(String value) {
+    final name = value.trim();
+    if (name.isEmpty) return 'Midwife Assigned midwife';
+    return name.toLowerCase().startsWith('midwife ') ? name : 'Midwife $name';
+  }
+
+  static Future<void> _callContact(
+    BuildContext context,
+    String phoneNumber,
+  ) async {
+    final trimmed = phoneNumber.trim();
+    if (trimmed.isEmpty || trimmed == '-') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This contact number is not available yet.'),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri(scheme: 'tel', path: trimmed);
+    final opened = await launchUrl(uri);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open the phone dialer right now.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDoctor = profile.assignedDoctorUid?.trim().isNotEmpty == true &&
+        profile.assignedDoctorPhoneNumber.trim().isNotEmpty;
+    final hasMidwife = profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
+        profile.assignedMidwifePhoneNumber.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD5E6DF),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Assigned Care Team',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: _HomePageState._text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'These are the care team members currently assigned to support you.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: _HomePageState._muted,
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (hasDoctor) ...[
+              _CareTeamTile(
+                icon: Icons.medical_services_outlined,
+                title: _doctorDisplayName(profile.assignedDoctorName),
+                subtitle:
+                    'Assigned doctor | ${profile.assignedDoctorPhoneNumber}',
+                onCall: () =>
+                    _callContact(context, profile.assignedDoctorPhoneNumber),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (hasMidwife)
+              _CareTeamTile(
+                icon: Icons.health_and_safety_outlined,
+                title: _midwifeDisplayName(profile.assignedMidwifeName),
+                subtitle:
+                    'Assigned midwife | ${profile.assignedMidwifePhoneNumber}',
+                onCall: () =>
+                    _callContact(context, profile.assignedMidwifePhoneNumber),
+              ),
+            if (!hasDoctor && !hasMidwife)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _HomePageState._surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFD7EAE3)),
+                ),
+                child: const Text(
+                  'Your assigned care team details are not available yet.',
+                  style: TextStyle(
+                    color: _HomePageState._muted,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _HomePageState._surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFD7EAE3)),
+              ),
+              child: const Text(
+                'If urgent support is needed, use the call button for the assigned doctor or midwife.',
+                style: TextStyle(
+                  color: _HomePageState._muted,
+                  height: 1.45,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _HomePageState._accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CareTeamTile extends StatelessWidget {
+  const _CareTeamTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onCall,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onCall;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD7EAE3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _HomePageState._surface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: _HomePageState._accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _HomePageState._text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: _HomePageState._muted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.tonalIcon(
+            onPressed: onCall,
+            style: FilledButton.styleFrom(
+              backgroundColor: _HomePageState._surface,
+              foregroundColor: _HomePageState._accent,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            icon: const Icon(Icons.call_outlined, size: 18),
+            label: const Text(
+              'Call',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

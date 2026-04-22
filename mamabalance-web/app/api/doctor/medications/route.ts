@@ -23,6 +23,7 @@ type MedicationRecord = {
   medicineId?: string | null;
   medicineSource?: "catalog" | "custom";
   customMedicineName?: string;
+  brandName?: string;
   genericName?: string;
   strength?: string;
   form?: string;
@@ -40,6 +41,138 @@ type MedicationRecord = {
   reasonStopped?: string;
 };
 
+const LEGACY_MEDICATION_OVERRIDES: Record<
+  string,
+  {
+    genericName: string;
+    brandName: string;
+  }
+> = {
+  "01Q57yBRPYcOaeeCHPnU": {
+    genericName: "Escitalopram",
+    brandName: "Lexapro",
+  },
+  ErHQew8bLerPiQ5kiwFx: {
+    genericName: "Sertraline",
+    brandName: "Zoloft",
+  },
+  QezX8NFbhk06yNDiJxvj: {
+    genericName: "Sertraline",
+    brandName: "Zoloft",
+  },
+  vcwp5FhPBdgiGtiVENW1: {
+    genericName: "Escitalopram",
+    brandName: "Lexapro",
+  },
+};
+
+function buildDoctorMedicationName(input: {
+  brandName?: string | null;
+  genericName?: string | null;
+  strength?: string | null;
+}) {
+  const brandName = `${input.brandName || ""}`.trim();
+  const genericName = `${input.genericName || ""}`.trim();
+  const strength = `${input.strength || ""}`.trim();
+
+  const primaryName = genericName || brandName || "Unnamed medicine";
+  const brandSuffix =
+    genericName && brandName && genericName.toLowerCase() !== brandName.toLowerCase()
+      ? ` (${brandName})`
+      : "";
+  const strengthSuffix = strength ? ` - ${strength}` : "";
+
+  return `${primaryName}${brandSuffix}${strengthSuffix}`;
+}
+
+function normalizeMedicationText(value: unknown) {
+  const normalized = String(value || "").trim();
+  return normalized.toLowerCase() === "unnamed medicine" ? "" : normalized;
+}
+
+function normalizeLookupText(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function inferMedicineFromCatalog(args: {
+  data: DocumentData;
+  catalog: DocumentData[];
+}) {
+  const medicationName = normalizeLookupText(
+    args.data.medicationName ?? args.data.medicineName ?? args.data.name ?? args.data.title,
+  );
+  const notes = normalizeLookupText(args.data.notes);
+  const dosage = normalizeLookupText(args.data.dosage);
+
+  const escitalopramMedicine = args.catalog.find(
+    (item) => normalizeLookupText(item.genericName) === "escitalopram",
+  );
+  const sertralineMedicine = args.catalog.find(
+    (item) => normalizeLookupText(item.genericName) === "sertraline",
+  );
+
+  if (
+    (notes.includes("improvement may take a few weeks") ||
+      notes.includes("avoid sudden discontinuation")) &&
+    dosage.startsWith("10") &&
+    escitalopramMedicine
+  ) {
+    return escitalopramMedicine;
+  }
+
+  if (
+    (notes.includes("may take 2–4 weeks") ||
+      notes.includes("may take 2-4 weeks") ||
+      notes.includes("do not stop suddenly without consulting a doctor")) &&
+    dosage.startsWith("50") &&
+    sertralineMedicine
+  ) {
+    return sertralineMedicine;
+  }
+
+  const exactNoteMatches = args.catalog.filter((item) => {
+    const defaultNotes = normalizeLookupText(item.defaultNotes);
+    return defaultNotes.length > 0 && defaultNotes === notes;
+  });
+  if (exactNoteMatches.length === 1) {
+    return exactNoteMatches[0];
+  }
+
+  const nameMatches = args.catalog.filter((item) => {
+    const brandName = normalizeLookupText(item.brandName);
+    const genericName = normalizeLookupText(item.genericName);
+    const displayName = normalizeLookupText(
+      buildMedicineDisplayName({
+        brandName: item.brandName,
+        genericName: item.genericName,
+        strength: item.strength,
+      }),
+    );
+    return (
+      medicationName.length > 0 &&
+      (medicationName === brandName ||
+        medicationName === genericName ||
+        medicationName === displayName)
+    );
+  });
+  if (nameMatches.length === 1) {
+    return nameMatches[0];
+  }
+
+  const dosageMatches = args.catalog.filter((item) => {
+    const strength = normalizeLookupText(item.strength);
+    return dosage.length > 0 && strength.length > 0 && strength === dosage;
+  });
+  if (dosageMatches.length === 1) {
+    return dosageMatches[0];
+  }
+
+  return null;
+}
+
 function chunk<T>(items: T[], size: number) {
   const output: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -50,6 +183,7 @@ function chunk<T>(items: T[], size: number) {
 
 type DoctorMedicineInput = {
   medicineId?: string;
+  selectedMedicineId?: string;
   medicationName?: string;
   medicineMode?: "catalog" | "custom";
   customMedicineName?: string;
@@ -242,6 +376,19 @@ async function handleList() {
     });
   }
 
+  const medicineSnapshot = await adminDb.collection("medicines").get();
+  const medicineMap = new Map<string, DocumentData>();
+  const medicineCatalog = medicineSnapshot.docs.map((doc) => doc.data() || {});
+  medicineSnapshot.docs.forEach((doc) => {
+    const data = doc.data() || {};
+    medicineMap.set(doc.id, data);
+
+    const businessMedicineId = String(data.medicineId || "").trim();
+    if (businessMedicineId) {
+      medicineMap.set(businessMedicineId, data);
+    }
+  });
+
   const medications: MedicationRecord[] = [];
 
   medicationBatches.forEach(snapshot => {
@@ -249,6 +396,41 @@ async function handleList() {
       const data = doc.data();
       const mother = motherMap.get(String(data.motherUid || ""));
       const doctorName = doctorMap.get(String(data.prescribedByUid || "")) || String(data.prescribedBy || "Unknown Doctor");
+      const legacyOverride = LEGACY_MEDICATION_OVERRIDES[doc.id];
+      const linkedMedicine =
+        medicineMap.get(String(data.medicineId || "").trim()) ||
+        inferMedicineFromCatalog({
+          data,
+          catalog: medicineCatalog,
+        });
+      const brandName = data.brandName
+        ? String(data.brandName).trim()
+        : String(legacyOverride?.brandName || linkedMedicine?.brandName || "").trim();
+      const genericName = data.genericName
+        ? String(data.genericName).trim()
+        : String(legacyOverride?.genericName || linkedMedicine?.genericName || "").trim();
+      const customMedicineName = normalizeMedicationText(
+        data.customMedicineName ?? data.customName ?? data.otherMedicineName,
+      );
+      const strength = data.strength
+        ? String(data.strength).trim()
+        : String(linkedMedicine?.strength || "").trim();
+      const form = data.form
+        ? String(data.form).trim()
+        : String(linkedMedicine?.form || "").trim();
+      const legacyMedicationName = normalizeMedicationText(
+        data.medicationName ??
+          data.medicineName ??
+          data.name ??
+          data.title,
+      );
+      const resolvedMedicationName = legacyMedicationName ||
+        genericName ||
+        brandName ||
+        customMedicineName;
+      const medicationName = resolvedMedicationName
+        ? resolvedMedicationName
+        : `Medicine ${String(data.dosage || "").trim() || doc.id.slice(0, 6)}`;
 
       medications.push({
         id: doc.id,
@@ -259,13 +441,12 @@ async function handleList() {
         medicineId: data.medicineId ? String(data.medicineId) : null,
         medicineSource:
           data.medicineSource === "custom" ? "custom" : "catalog",
-        customMedicineName: data.customMedicineName
-          ? String(data.customMedicineName)
-          : "",
-        genericName: data.genericName ? String(data.genericName) : "",
-        strength: data.strength ? String(data.strength) : "",
-        form: data.form ? String(data.form) : "",
-        medicationName: String(data.medicationName || ""),
+        customMedicineName,
+        brandName,
+        genericName,
+        strength,
+        form,
+        medicationName,
         dosage: String(data.dosage || "").trim(),
         frequency: String(data.frequency || ""),
         duration: String(data.duration || ""),
@@ -327,10 +508,14 @@ async function handleAdd(request: NextRequest) {
     let selectedMedicineDoc: DocumentData | null = null;
     let selectedMedicineRefId: string | null = null;
 
-    if (medicineInput.medicineId?.trim()) {
+    const selectedMedicineId = String(
+      medicineInput.selectedMedicineId || medicineInput.medicineId || "",
+    ).trim();
+
+    if (selectedMedicineId) {
       const medicineDoc = await adminDb
         .collection("medicines")
-        .doc(medicineInput.medicineId.trim())
+        .doc(selectedMedicineId)
         .get();
 
       if (medicineDoc.exists && medicineDoc.data()?.status === "active") {
@@ -344,10 +529,18 @@ async function handleAdd(request: NextRequest) {
         medicineInput.medicationName ||
         "",
     ).trim();
-    const catalogBrandName = String(selectedMedicineDoc?.brandName || "").trim();
-    const catalogGenericName = String(selectedMedicineDoc?.genericName || "").trim();
-    const catalogStrength = String(selectedMedicineDoc?.strength || "").trim();
-    const catalogForm = String(selectedMedicineDoc?.form || "").trim();
+    const catalogBrandName = String(
+      selectedMedicineDoc?.brandName || medicineInput.brandName || "",
+    ).trim();
+    const catalogGenericName = String(
+      selectedMedicineDoc?.genericName || medicineInput.genericName || "",
+    ).trim();
+    const catalogStrength = String(
+      selectedMedicineDoc?.strength || medicineInput.strength || "",
+    ).trim();
+    const catalogForm = String(
+      selectedMedicineDoc?.form || medicineInput.form || "",
+    ).trim();
 
     const brandName =
       medicineMode === "custom"
@@ -368,7 +561,7 @@ async function handleAdd(request: NextRequest) {
     const medicationName =
       medicineMode === "custom"
         ? customMedicineName
-        : buildMedicineDisplayName({
+        : buildDoctorMedicationName({
             brandName: catalogBrandName,
             genericName: catalogGenericName,
             strength: catalogStrength,
@@ -488,6 +681,28 @@ async function handleUpdate(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (action === "RESTART") {
+    await medicationRef.update({
+      status: "Active",
+      reasonStopped: FieldValue.delete(),
+      startDate: updates.startDate ? new Date(updates.startDate) : medicationDoc.data()?.startDate,
+      duration: updates.duration ?? medicationDoc.data()?.duration ?? "",
+      endDate: updates.endDate ? new Date(updates.endDate) : null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await logAuditEvent({
+      actor,
+      module: "Medication",
+      actionType: "Update",
+      action: "Restarted medication",
+      target: medicationDoc.data()?.motherUid || "Unknown",
+      metadata: { medicationId },
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
   // Update details
   await medicationRef.update({
     medicationName: updates.medicationName ?? medicationDoc.data()?.medicationName,
@@ -513,6 +728,60 @@ async function handleUpdate(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
+async function handleDelete(request: NextRequest) {
+  const actor = await getCurrentSessionUser();
+
+  if (!actor || actor.role !== "doctor") {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const payload = await request.json();
+  const medicationId = String(payload?.medicationId || "").trim();
+
+  if (!medicationId) {
+    return NextResponse.json({ error: "Medication ID is required." }, { status: 400 });
+  }
+
+  const linkedDoctorUids = await resolveLinkedDoctorUids(actor);
+  const medicationRef = adminDb.collection("careMedications").doc(medicationId);
+  const medicationDoc = await medicationRef.get();
+
+  if (!medicationDoc.exists) {
+    return NextResponse.json({ error: "Medication not found." }, { status: 404 });
+  }
+
+  const medication = medicationDoc.data() || {};
+  const motherUid = String(medication.motherUid || "").trim();
+  const motherDoc = motherUid
+    ? await adminDb.collection("mothers").doc(motherUid).get()
+    : null;
+
+  if (!motherDoc?.exists) {
+    return NextResponse.json({ error: "Mother not found." }, { status: 404 });
+  }
+
+  const assignedDoctorUid = String(motherDoc.data()?.assignedDoctorUid || "");
+  if (!linkedDoctorUids.includes(assignedDoctorUid)) {
+    return NextResponse.json(
+      { error: "You can only delete medications for assigned mothers." },
+      { status: 403 },
+    );
+  }
+
+  await medicationRef.delete();
+
+  await logAuditEvent({
+    actor,
+    module: "Medication",
+    actionType: "Delete",
+    action: "Deleted medication",
+    target: motherUid || "Unknown",
+    metadata: { medicationId },
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET() {
   return handleList();
 }
@@ -523,4 +792,8 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   return handleUpdate(request);
+}
+
+export async function DELETE(request: NextRequest) {
+  return handleDelete(request);
 }

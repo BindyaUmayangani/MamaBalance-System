@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'mobile_user_context_service.dart';
+import 'weekly_checkin_service.dart';
 
 class GuardianVisitSummary {
   final String label;
@@ -286,10 +287,7 @@ class GuardianDashboardService {
 
   DateTime? _nextEpdsAssessmentDate(Map<String, dynamic> motherData) {
     final latestSubmittedAt = _readDate(motherData['latestEpdsSubmittedAt']);
-    if (latestSubmittedAt == null) {
-      return null;
-    }
-    return latestSubmittedAt.toLocal().add(const Duration(days: 7));
+    return WeeklyCheckInService.nextAvailableAtFrom(latestSubmittedAt);
   }
 
   String? _readString(dynamic value) {
