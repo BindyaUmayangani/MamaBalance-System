@@ -1,14 +1,13 @@
 # MamaBalance 💜
 
-MamaBalance is a Flutter-based mobile application designed to support mothers by detecting postpartum depression risk and providing personalized mood recommendations.  
-It integrates **EPDS score assessments**, **AI-powered mood prediction**, and **empathetic self-care suggestions**.
+MamaBalance is a Flutter-based mobile application designed to support mothers by tracking postpartum depression risk and providing empathetic self-care suggestions.
+It integrates **EPDS score assessments**, care reminders, emergency contacts, and supportive resources.
 
 ---
 
 ## 📱 Features
 
 - 📝 Weekly **EPDS (Edinburgh Postnatal Depression Scale)** check-in
-- 🤖 AI-powered **mood detection** from facial expressions
 - 💡 Personalized **recommendations & self-care tips**
 - 📊 Progress visualization with circular indicators
 - 📞 **Emergency contacts** for quick help
@@ -54,7 +53,7 @@ mamabalance/
 ├── ios/                  # iOS native files
 ├── lib/                  # Main Flutter code
 │   ├── main.dart         # Entry point
-│   ├── screens/          # App screens (ScoreScreen, MoodCapture, etc.)
+│   ├── screens/          # App screens
 │   ├── widgets/          # Reusable UI components
 │   ├── models/           # Data models (if any)
 │   └── services/         # API/ML integration
@@ -94,23 +93,9 @@ flutter:
 
 ---
 
-## 📊 AI Model Integration
-
-* Facial expression recognition is trained on the [Kaggle FER dataset](https://www.kaggle.com/datasets/deadskull7/fer2013).
-* Model converted into **TensorFlow Lite** and integrated with `tflite_flutter` package.
-* Prediction pipeline:
-
-  1. Capture image →
-  2. Preprocess (resize, grayscale) →
-  3. Run inference →
-  4. Display predicted mood
-
----
-
 ## 🛠️ Built With
 
 * [Flutter](https://flutter.dev/) - Cross-platform UI toolkit
-* [TensorFlow Lite](https://www.tensorflow.org/lite) - AI/ML model inference
 * [Provider](https://pub.dev/packages/provider) - State management
 * [flutter_launcher_icons](https://pub.dev/packages/flutter_launcher_icons) - App icons
 * [image_picker](https://pub.dev/packages/image_picker) - Capture images
@@ -136,9 +121,8 @@ See the [LICENSE](LICENSE) file for details.
 
 ## 👩‍👧 Acknowledgments
 
-* Kaggle [FER2013 Dataset](https://www.kaggle.com/datasets/deadskull7/fer2013)
 * Edinburgh Postnatal Depression Scale (EPDS)
-* Open-source Flutter & TensorFlow community
+* Open-source Flutter community
 
 ```
 

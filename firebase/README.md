@@ -1,100 +1,243 @@
-# MamaBalance Firebase Setup
+# MamaBalance Firestore Setup
 
-This repo now assumes a shared Firebase backend for:
+This folder contains the Firebase Firestore configuration for the MamaBalance system.
 
-- `mamabalance-web`: staff-only email/password sign-in
-- `MamaBalance-Mobile`: mother email/password sign-in and mother phone OTP sign-in
+Files in this directory:
 
-## 1. Enable Firebase Authentication
+- `firestore.rules`: security rules for mobile and staff access
+- `firestore.indexes.json`: Firestore composite indexes
+- `firestore-schema.md`: recommended collection structure and field model
 
-Turn on these providers in Firebase Authentication:
+This setup currently supports:
+
+- `MamaBalance-Mobile` for mothers
+- staff-facing access for doctors, midwives, regional admins, and superadmins
+- Firebase Authentication with Firestore-backed role and profile checks
+
+## Authentication Assumptions
+
+Enable these Firebase Authentication providers:
 
 - Email/Password
 - Phone
 
-Recommended:
+Each authenticated user must have a matching Firestore profile in:
 
-- Configure an approved SMS region list for phone auth.
-- Add authorized domains for the web app before testing email sign-in.
+```text
+users/{uid}
+```
 
-## 2. Use One Role Directory
-
-Create a `users/{uid}` document for every authenticated account.
-
-Minimum document shape:
+Minimum expected fields:
 
 ```json
 {
-  "displayName": "Jane Doe",
-  "email": "jane@example.com",
-  "phoneNumber": "+94771234567",
+  "uid": "firebase-auth-uid",
   "role": "mother",
   "status": "active",
-  "regionId": "western",
-  "createdAt": "server timestamp",
-  "updatedAt": "server timestamp"
+  "displayName": "Nimali Perera",
+  "email": "nimali@example.com",
+  "phoneNumber": "+94771234567",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
 }
 ```
 
-Allowed `role` values:
+Supported `role` values in the current rules:
 
 - `mother`
-- `superadmin`
-- `regionaladmin`
+- `guardian`
 - `doctor`
 - `midwife`
+- `regionaladmin`
+- `superadmin`
 
-Allowed `status` values:
+Supported `status` values:
 
 - `active`
 - `pending`
 - `disabled`
 
-## 3. How Access Works
+## Current Firestore Access Model
 
-### Mothers
+The rules in [`firestore.rules`](/d:/MamaBalance-System/firebase/firestore.rules) currently enforce these access patterns:
 
-- Mobile email/password login succeeds only when `users/{uid}.role == "mother"` and `status == "active"`.
-- Mobile phone OTP login also checks the same document after Firebase verifies the phone number.
-- For SMS login and OTP-based recovery to work for real mother accounts, the Firebase Auth user must also have the same `phoneNumber` provisioned on the auth record, not only in Firestore.
+- mothers can read their own `users/{uid}` profile and their linked mother record
+- guardians can access a mother record only when the guardian identity matches the mother document
+- doctors can access records only when assigned to that mother
+- midwives can access records tied to their assigned mothers and visits
+- staff roles can read staff-facing collections such as `regions`, `staff`, and notifications
+- public client apps cannot create arbitrary users, mother profiles, or staff records directly
 
-### Staff
+## Main Collections In Use
 
-- Web login accepts Firebase email/password sign-in first.
-- The server then reads `users/{uid}` and creates a secure session cookie only for active staff roles.
-- Each protected dashboard layout validates the cookie and the user role before rendering.
+The schema reference in [`firestore-schema.md`](/d:/MamaBalance-System/firebase/firestore-schema.md) describes the broader target model. The current rules file already contains logic for these active collections:
 
-## 4. Web Environment Variables
+- `users`
+- `mothers`
+- `mothers/{motherId}/epdsAttempts`
+- `notifications`
+- `educationalContents`
+- `careMedications`
+- `medications`
+- `midwifeVisits`
+- `doctorCheckups`
+- `conversations`
+- `conversations/{conversationId}/messages`
+- `staff`
+- `regions`
 
-Copy `mamabalance-web/.env.example` to `.env.local` and fill in your Firebase project values.
+There is also one composite index currently defined in [`firestore.indexes.json`](/d:/MamaBalance-System/firebase/firestore.indexes.json):
 
-The web app needs:
+- collection group `mobileOtpRequests` on `phoneNumber ASC`, `createdAtMs DESC`
 
-- public Firebase web config
-- Firebase Admin service account credentials for secure session cookies
+If the app starts querying additional collection combinations, you will likely need to add more indexes later.
 
-## 5. Mobile Firebase Options
+## Mother Record Expectations
 
-Replace the placeholder values in `MamaBalance-Mobile/lib/firebase_options.dart` with your project values.
+The rules rely on mother-facing documents in:
 
-If you prefer, you can regenerate that file with FlutterFire CLI and keep the rest of the auth code unchanged.
+```text
+mothers/{motherId}
+```
 
-## 6. Firestore Rules
+These records are used to validate:
 
-Deploy `firebase/firestore.rules` after reviewing the collection names you plan to use.
+- self-access for mothers
+- guardian-linked access
+- assigned doctor access
+- assigned midwife access
+- notification routing for high-risk EPDS results
+- conversation eligibility
 
-Current assumptions:
+Important fields referenced by the rules include:
 
-- mothers can read and update only their own profile-shaped mother document
-- staff can read staff-facing collections
-- account creation and role changes are handled by an admin workflow, not by public clients
+- `uid` or `userUid`
+- `email` or `personalEmail`
+- `phoneNumber`
+- `guardianUid`
+- `guardianContact`
+- `assignedDoctorUid`
+- `assignedMidwifeUid`
 
-## 7. Provisioning Accounts
+For profile updates, the rules currently allow mothers to update only these fields:
 
-For this first auth phase, accounts should be provisioned before login:
+- `fullName`
+- `personalEmail`
+- `phoneNumber`
+- `birthdate`
+- `address`
+- `guardianName`
+- `guardianContact`
+- `deliveryDate`
+- `noOfChildren`
+- `profileImage`
+- `profileImagePath`
+- `updatedAt`
 
-- Mothers: create Firebase Auth user, then create `users/{uid}` with role `mother`
-- Mothers must be provisioned in Firebase Auth with both the login email/password and the normalized `phoneNumber`
-- Staff: create Firebase Auth user, then create `users/{uid}` with one of the staff roles
+For EPDS summary updates, only these fields are allowed to change:
 
-This prevents unregistered users from gaining access just by verifying a phone number or knowing a password.
+- `latestEpdsScore`
+- `latestEpdsAttemptId`
+- `latestEpdsLanguage`
+- `latestEpdsSubmittedAt`
+- `riskLevel`
+- `isHighRisk`
+- `updatedAt`
+
+## EPDS Attempts
+
+The current rules allow mothers and valid guardians to create EPDS submissions in:
+
+```text
+mothers/{motherId}/epdsAttempts/{attemptId}
+```
+
+Each attempt must include:
+
+- `motherUid`
+- `answers` as a 10-item list
+- `language`
+- `score`
+- `riskLevel` as `low`, `moderate`, or `high`
+- `attemptedAt`
+
+Old attempts are intended to remain immutable.
+
+## Conversations And Messages
+
+Conversation access is restricted to the linked mother plus the assigned doctor or assigned midwife.
+
+Collections:
+
+```text
+conversations/{conversationId}
+conversations/{conversationId}/messages/{messageId}
+```
+
+The current message rules expect encrypted message payload fields:
+
+- `algorithm`
+- `keyVersion`
+- `ciphertext`
+- `iv`
+- `authTag`
+- `attachments`
+- `readBy`
+- `createdAt`
+
+Allowed sender roles:
+
+- `mother`
+- `guardian`
+- `doctor`
+- `midwife`
+
+## Notifications
+
+The current rules explicitly allow creation of one mother-triggered notification flow for high-risk EPDS cases:
+
+- recipient role must be `midwife`
+- type must be `high-risk-epds`
+- priority must be `high`
+- the notification must point to the mother's assigned midwife
+
+Staff can read notifications, but clients cannot update or delete them through Firestore directly.
+
+## Deployment
+
+Deploy rules:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Deploy indexes:
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+If you are deploying the full Firebase config from the repo root:
+
+```bash
+firebase deploy
+```
+
+## Provisioning Guidance
+
+Before a user can successfully access app data:
+
+1. Create the Firebase Auth account.
+2. Create the matching `users/{uid}` document.
+3. If the user is a mother, create the corresponding `mothers/{motherId}` document and link it correctly.
+4. If the user is a guardian, doctor, or midwife, ensure the relationship fields on the mother record are already populated.
+
+Recommended rule of thumb:
+
+- use `users` for auth identity and role
+- use `mothers` for the mother domain profile
+- use assignment fields on the mother record to drive doctor and midwife access
+
+## Important Note
+
+[`firestore-schema.md`](/d:/MamaBalance-System/firebase/firestore-schema.md) is broader than the collections currently enforced in [`firestore.rules`](/d:/MamaBalance-System/firebase/firestore.rules). If you add new app features using collections from the schema document, review and extend the rules before shipping them.

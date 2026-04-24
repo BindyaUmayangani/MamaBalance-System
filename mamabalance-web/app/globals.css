@@ -24,3 +24,119 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.toast-region {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  width: min(420px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.app-toast {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 14px;
+  min-height: 68px;
+  overflow: hidden;
+  padding: 14px 12px 14px 14px;
+  border: 1px solid rgba(23, 60, 58, 0.08);
+  border-left: 5px solid var(--toast-accent);
+  border-radius: 14px;
+  background: #ffffff;
+  color: #173c3a;
+  box-shadow: 0 18px 44px rgba(20, 49, 45, 0.18);
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: auto;
+  animation: toast-slide-in 180ms ease-out;
+}
+
+.app-toast-create {
+  --toast-accent: #2f9b75;
+  --toast-soft: #e9f8f1;
+}
+
+.app-toast-update {
+  --toast-accent: #2d7ed8;
+  --toast-soft: #eaf3ff;
+}
+
+.app-toast-delete {
+  --toast-accent: #d94f45;
+  --toast-soft: #fff0ef;
+}
+
+.app-toast-icon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--toast-soft);
+  color: var(--toast-accent);
+}
+
+.app-toast-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.app-toast-copy strong {
+  color: #173c3a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.app-toast-copy span {
+  color: #60756d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.app-toast button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #60756d;
+  cursor: pointer;
+}
+
+.app-toast button:hover {
+  background: #ecf8f4;
+  color: #173c3a;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-region {
+    top: 14px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
