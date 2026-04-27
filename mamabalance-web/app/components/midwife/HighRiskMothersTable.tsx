@@ -1084,18 +1084,21 @@ export default function HighRiskMothersTable() {
             </p>
 
             <label htmlFor="doctor-select">Select Doctor</label>
-            <select
-              id="doctor-select"
-              value={selectedDoctor}
-              onChange={(event) => setSelectedDoctor(event.target.value)}
-            >
-              <option value="">Select a doctor</option>
-              {doctorOptions.map((doctor) => (
-                <option key={doctor.uid} value={doctor.uid}>
-                  {doctor.name}
-                </option>
-              ))}
-            </select>
+            <div className="assign-doctor-select-wrap">
+              <select
+                id="doctor-select"
+                value={selectedDoctor}
+                onChange={(event) => setSelectedDoctor(event.target.value)}
+              >
+                <option value="">Select a doctor</option>
+                {doctorOptions.map((doctor) => (
+                  <option key={doctor.uid} value={doctor.uid}>
+                    {doctor.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="assign-doctor-select-icon" size={18} strokeWidth={2.5} />
+            </div>
 
             {assignmentError ? (
               <p style={{ color: "#dc2626", marginTop: "12px" }}>{assignmentError}</p>

@@ -13,6 +13,7 @@ import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
 import { generatePatientSummaryPdf, type PatientSummaryResponse } from "@/lib/doctor/patientSummaryPdf";
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/doctor/styles/AssignedMothers.css";
+import "@/app/midwife/styles/HighRiskMothers.css";
 
 type ObservationEntry = {
   id?: string;
@@ -81,6 +82,8 @@ type MotherRecord = {
   lastEPDS: string;
   lastEPDSTestDate: string;
   assignedDoctor: string | null;
+  assignedDoctorUid?: string | null;
+  assignedAt?: string | null;
   nic: string;
   email: string;
   region: string;
@@ -100,7 +103,13 @@ type MotherRecord = {
 export default function MidwifeAssignedMothersTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { mothers: backendMothers, isLoading, error } = useMidwifeMothers("assigned");
+  const {
+    mothers: backendMothers,
+    doctors,
+    isLoading,
+    error,
+    assignDoctor,
+  } = useMidwifeMothers("assigned");
   const [searchTerm, setSearchTerm] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -119,6 +128,10 @@ export default function MidwifeAssignedMothersTable() {
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [detailsError, setDetailsError] = useState("");
   const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
+  const [editingMotherId, setEditingMotherId] = useState<string | null>(null);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [assignmentError, setAssignmentError] = useState("");
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [localHighlightedUserId, setLocalHighlightedUserId] = useState("");
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -165,6 +178,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Ayesha Perera",
       risk: "moderate",
       assignedDoctor: null,
+      assignedDoctorUid: null,
+      assignedAt: null,
       upcomingCheckup: "2026-04-12 10:00 AM",
       lastStatus: "upcoming",
       lastEPDS: "16",
@@ -231,6 +246,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Dinali Silva",
       risk: "high",
       assignedDoctor: "Dr. Nipuni Harshika",
+      assignedDoctorUid: null,
+      assignedAt: "2026-04-05 10:00 AM",
       upcomingCheckup: "2026-04-10 11:30 AM",
       lastStatus: "overdue",
       lastEPDS: "12",
@@ -297,6 +314,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Kavindi Fernando",
       risk: "low",
       assignedDoctor: null,
+      assignedDoctorUid: null,
+      assignedAt: null,
       upcomingCheckup: "2026-04-14 09:00 AM",
       lastStatus: "completed",
       lastEPDS: "7",
@@ -333,6 +352,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Tharushi Nimal",
       risk: "high",
       assignedDoctor: "Dr. Shehan Perera",
+      assignedDoctorUid: null,
+      assignedAt: "2026-04-06 09:45 AM",
       upcomingCheckup: "2026-04-09 02:30 PM",
       lastStatus: "upcoming",
       lastEPDS: "19",
@@ -380,6 +401,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Nimali Fernando",
       risk: "moderate",
       assignedDoctor: null,
+      assignedDoctorUid: null,
+      assignedAt: null,
       upcomingCheckup: "2026-04-16 09:30 AM",
       lastStatus: "upcoming",
       lastEPDS: "15",
@@ -427,6 +450,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Sachini Perera",
       risk: "high",
       assignedDoctor: "Dr. Nadeeja Rathnayake",
+      assignedDoctorUid: null,
+      assignedAt: "2026-04-07 09:15 AM",
       upcomingCheckup: "2026-04-11 01:30 PM",
       lastStatus: "overdue",
       lastEPDS: "20",
@@ -483,6 +508,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Vidushi Silva",
       risk: "low",
       assignedDoctor: null,
+      assignedDoctorUid: null,
+      assignedAt: null,
       upcomingCheckup: "2026-04-18 11:00 AM",
       lastStatus: "completed",
       lastEPDS: "8",
@@ -519,6 +546,8 @@ export default function MidwifeAssignedMothersTable() {
       name: "Tharanga Kularathna",
       risk: "moderate",
       assignedDoctor: null,
+      assignedDoctorUid: null,
+      assignedAt: null,
       upcomingCheckup: "2026-04-13 10:15 AM",
       lastStatus: "upcoming",
       lastEPDS: "13",
@@ -809,6 +838,9 @@ export default function MidwifeAssignedMothersTable() {
     (effectiveCurrentPage - 1) * pageSize,
     effectiveCurrentPage * pageSize,
   );
+  const doctorOptions = useMemo(() => {
+    return doctors;
+  }, [doctors]);
   const observationItemsPerPage = 3;
   const medicationItemsPerPage = 1;
   const selectedObservationDetails = selectedObservationMother
@@ -878,6 +910,36 @@ export default function MidwifeAssignedMothersTable() {
 
   const getRiskLabel = (risk: string) => `${risk.charAt(0).toUpperCase()}${risk.slice(1)}`;
   const formatDosage = (value: string) => value.replace(/mg/gi, "").trim();
+
+  const handleOpenAssignModal = (mother: MotherRecord) => {
+    if (!mother.uid) return;
+    setEditingMotherId(mother.uid);
+    setSelectedDoctor(mother.assignedDoctorUid ?? "");
+    setAssignmentError("");
+  };
+
+  const handleSaveDoctor = async () => {
+    if (!editingMotherId || !selectedDoctor) return;
+
+    try {
+      setIsSavingAssignment(true);
+      setAssignmentError("");
+      await assignDoctor(editingMotherId, selectedDoctor);
+      setEditingMotherId(null);
+      setSelectedDoctor("");
+    } catch (caughtError) {
+      setAssignmentError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to assign doctor.",
+      );
+    } finally {
+      setIsSavingAssignment(false);
+    }
+  };
+
+  const editingMother =
+    mothersWithLiveDetails.find((mother) => mother.uid === editingMotherId) ?? null;
 
   void seedMothers;
 
@@ -1026,7 +1088,7 @@ export default function MidwifeAssignedMothersTable() {
                       )}
 
                       {visibleColumns.assignedDoctor && (
-                        <td>{mother.risk === "high" ? mother.assignedDoctor || "-" : "-"}</td>
+                        <td>{mother.assignedDoctor || "-"}</td>
                       )}
 
                       {visibleColumns.checkup && <td>{mother.upcomingCheckup}</td>}
@@ -1040,31 +1102,44 @@ export default function MidwifeAssignedMothersTable() {
                       {visibleColumns.epds && <td>{mother.lastEPDS}</td>}
                       {visibleColumns.epdsDate && <td>{mother.lastEPDSTestDate}</td>}
 
-                      <td className="actions">
-                        <Eye
-                          size={18}
+                      <td className="actions high-risk-actions">
+                        <button
+                          type="button"
+                          className={`assign-doctor-btn ${mother.assignedDoctor ? "reassign" : ""}`}
                           onClick={() => {
                             triggerRowHighlight(mother.uid || mother.userId);
-                            setSelectedMother(mother);
+                            handleOpenAssignModal(mother);
                           }}
-                        />
-                        <FileText
-                          size={18}
-                          className="observation-icon"
-                          onClick={() => {
-                            triggerRowHighlight(mother.uid || mother.userId);
-                            setSelectedObservationMother(mother);
-                            setObservationPage(1);
-                            setObservationFilter("all");
-                            setActiveMedicationPage(1);
-                            setMedicationHistoryPage(1);
-                          }}
-                        />
-                        <FileDown
-                          size={18}
-                          className={downloadingMotherUid === mother.uid ? "report-icon loading" : "report-icon"}
-                          onClick={() => void downloadPatientSummary(mother)}
-                        />
+                          disabled={!mother.uid}
+                        >
+                          {mother.assignedDoctor ? "Reassign Doctor" : "Assign Doctor"}
+                        </button>
+                        <div className="high-risk-action-icons">
+                          <Eye
+                            size={18}
+                            onClick={() => {
+                              triggerRowHighlight(mother.uid || mother.userId);
+                              setSelectedMother(mother);
+                            }}
+                          />
+                          <FileText
+                            size={18}
+                            className="observation-icon"
+                            onClick={() => {
+                              triggerRowHighlight(mother.uid || mother.userId);
+                              setSelectedObservationMother(mother);
+                              setObservationPage(1);
+                              setObservationFilter("all");
+                              setActiveMedicationPage(1);
+                              setMedicationHistoryPage(1);
+                            }}
+                          />
+                          <FileDown
+                            size={18}
+                            className={downloadingMotherUid === mother.uid ? "report-icon loading" : "report-icon"}
+                            onClick={() => void downloadPatientSummary(mother)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1091,6 +1166,66 @@ export default function MidwifeAssignedMothersTable() {
               setVisibleColumns={setVisibleColumns}
               onClose={() => setShowFilterModal(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {editingMother && (
+        <div className="modal-overlay">
+          <div className="modal-card assign-doctor-modal">
+            <h2 className="modal-title">
+              {editingMother.assignedDoctor ? "Reassign Doctor" : "Assign Doctor"}
+            </h2>
+
+            <p className="assign-mother-name">
+              <strong>Mother:</strong> {editingMother.name}
+            </p>
+            <p className="assign-mother-name">
+              <strong>Risk Level:</strong> {getRiskLabel(editingMother.risk)}
+            </p>
+
+            <label htmlFor="assigned-mother-doctor-select">Select Doctor</label>
+            <div className="assign-doctor-select-wrap">
+              <select
+                id="assigned-mother-doctor-select"
+                value={selectedDoctor}
+                onChange={(event) => setSelectedDoctor(event.target.value)}
+              >
+                <option value="">Select a doctor</option>
+                {doctorOptions.map((doctor) => (
+                  <option key={doctor.uid} value={doctor.uid}>
+                    {doctor.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="assign-doctor-select-icon" size={18} strokeWidth={2.5} />
+            </div>
+
+            {assignmentError ? (
+              <p style={{ color: "#dc2626", marginTop: "12px" }}>{assignmentError}</p>
+            ) : null}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => {
+                  setEditingMotherId(null);
+                  setSelectedDoctor("");
+                  setAssignmentError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSaveDoctor}
+                disabled={!selectedDoctor || isSavingAssignment}
+              >
+                {isSavingAssignment ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}

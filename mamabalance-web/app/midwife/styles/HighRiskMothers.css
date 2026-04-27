@@ -1,9 +1,11 @@
 .high-risk-actions {
-  min-width: 230px;
+  min-width: 260px;
+  width: 260px;
   display: flex;
   align-items: center;
   gap: 10px;
   justify-content: flex-start;
+  white-space: nowrap;
 }
 
 .assign-doctor-btn {
@@ -11,8 +13,8 @@
   color: white;
   border: none;
   border-radius: 9px;
-  width: 138px;
-  height: 32px;
+  width: 142px;
+  height: 40px;
   padding: 0 10px;
   font-size: 0.76rem;
   font-weight: 600;
@@ -50,16 +52,33 @@
 
 .assign-doctor-modal select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 42px 10px 12px;
   border-radius: 10px;
   border: 1px solid #9ca3af;
   background: white;
   font-size: 0.95rem;
+  color: #1f2937;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
 }
 
 .assign-doctor-modal select:focus {
   outline: none;
   border-color: #499d85;
+}
+
+.assign-doctor-select-wrap {
+  position: relative;
+}
+
+.assign-doctor-select-icon {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #499d85;
+  pointer-events: none;
 }
 
 .assign-doctor-modal .btn-primary:disabled {
@@ -77,10 +96,36 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 46px;
+  min-width: 76px;
   justify-content: space-between;
 }
 
 .high-risk-action-icons svg {
   flex-shrink: 0;
+  display: block;
+  cursor: pointer;
+}
+
+.assigned-page table th:last-child,
+.assigned-page table td.high-risk-actions {
+  min-width: 260px;
+}
+
+@media (max-width: 900px) {
+  .high-risk-actions {
+    min-width: 246px;
+    width: 246px;
+    gap: 8px;
+  }
+
+  .assign-doctor-btn {
+    width: 136px;
+    height: 38px;
+    padding: 0 9px;
+  }
+
+  .high-risk-action-icons {
+    gap: 8px;
+    min-width: 70px;
+  }
 }
