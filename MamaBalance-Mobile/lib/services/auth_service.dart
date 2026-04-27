@@ -42,8 +42,8 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
   static const Duration _otpRequestCooldown = Duration(seconds: 60);
   static const Duration _otpRateLimitCooldown = Duration(minutes: 5);
   static const Duration _backendTimeout = Duration(seconds: 20);

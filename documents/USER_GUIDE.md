@@ -292,10 +292,3 @@ Guardian features include:
 ## 11. Emergency Support
 
 The system includes emergency contact pages for urgent support. If a mother, baby, guardian, or family member is in immediate danger, users should contact emergency services first.
-
-## 12. Usage Notes
-
-- Use correct role credentials during demonstrations.
-- Do not share `.env.local` secrets in screenshots or reports.
-- The mobile app and web app should use the same Firebase project during testing.
-- The system supports care coordination and screening support, but it is not a replacement for professional medical diagnosis.
