@@ -24,18 +24,29 @@ The automated tests avoid using a live Firebase project. Firebase behavior is mo
 
 ## 3. Manual Testing Summary
 
-Manual testing was used to confirm the most important real user workflows through the browser and Android mobile app. The full set of individual test cases was not included in this document to keep the final project documentation readable; instead, the table below summarizes the main areas tested and passed.
+Manual testing was used to confirm the most important real user workflows through the browser and Android mobile app. The full set of individual test cases was not included in this document to keep the final project documentation readable; instead, the tables below summarize the main areas tested and passed.
+
+### 3.1 Web Application Manual Testing
 
 | Test Area | Important Manual Scenarios Covered | Result |
 |---|---|---|
-| Authentication and Session Security | Staff email login, mother email/OTP login, guardian OTP login, invalid login, inactive account blocking, logout, forgot password, and protected page access. | Pass |
-| Role-Based Access and Data Privacy | Superadmin, Regional Admin, Doctor, Midwife, Mother, and Guardian access boundaries were checked, including restricted URL access and assigned/linked user data visibility. | Pass |
+| Authentication and Session Security | Staff email login, invalid login, inactive account blocking, logout, forgot password, and protected page access were tested. | Pass |
+| Role-Based Access and Data Privacy | Superadmin, Regional Admin, Doctor, and Midwife access boundaries were checked, including restricted URL access, region scope, and assigned mother visibility. | Pass |
 | User, Region, Content, and Medicine Management | Admin workflows for creating, updating, viewing, deleting, searching, and filtering users, regions, educational resources, and medicine catalog records were tested. | Pass |
 | Care Coordination Workflows | Mother creation with personal email, doctor and midwife assignment, observations, visits, checkups, prescriptions, high-risk mother handling, and patient summary reports were tested. | Pass |
-| Mobile Mother and Guardian Workflows | Home dashboard, EPDS weekly check-in, score display, weekly lock, prescriptions, care schedule, educational resources, profile update, profile image success message, initials fallback, and guardian linked mother summary were tested. | Pass |
-| Messaging, Notifications, and Chatbot | Secure staff-mother messaging, unread counts, timestamp display, new mother chat access, role notifications, mobile alerts, and AI chatbot access were tested. | Pass |
-| Backend and API Access | Centralized web backend routes for mobile profile, context, care data, messaging, notifications, and resources were tested with valid and invalid access conditions. | Pass |
+| Messaging and Notifications | Doctor and Midwife secure messaging, unread counts, role notifications, and notification read-state updates were tested. | Pass |
 | Audit, Reports, Feedback, and UI Behavior | Audit log creation, analytics and PDF export, success toasts/modals, loading states, error states, empty states, browser compatibility, and responsive layouts were tested. | Pass |
+
+### 3.2 Mobile Application Manual Testing
+
+| Test Area | Important Manual Scenarios Covered | Result |
+|---|---|---|
+| Authentication and Account Access | Mother email login, mother phone OTP login, guardian OTP login, invalid login, forgot password email OTP, and biometric unlock were tested. | Pass |
+| Mother Home and EPDS Check-In | Home dashboard, latest EPDS score, last test date, weekly EPDS submission, score result display, and weekly lock behavior were tested. | Pass |
+| Care Information | Prescriptions, visits, checkups, assigned doctor/midwife details, notifications, and educational resources were tested through the mobile backend. | Pass |
+| Profile and Guardian Workflows | Mother profile update, profile image success message, initials fallback, and guardian linked mother summary were tested. | Pass |
+| Messaging and Chatbot | Mother secure messaging, timestamp display, new mother chat access, mobile alerts, and AI chatbot access were tested. | Pass |
+| Backend Connection and Access Control | Mobile API access for profile, context, care data, messaging, notifications, and resources was tested with valid and invalid access conditions. | Pass |
 
 ## 4. Automated Testing
 

@@ -98,12 +98,6 @@ cd ../MamaBalance-Mobile
 flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://<computer-ip>:3000
 ```
 
-Example:
-
-```bash
-flutter run -d A9SV6R4125001504 --dart-define=MAMABALANCE_API_BASE_URL=http://10.168.1.98:3000
-```
-
 For a real Android phone, `localhost` usually will not work. Use the computer's local network IP address.
 
 ## Firebase Notes

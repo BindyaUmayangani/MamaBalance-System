@@ -140,16 +140,10 @@ flutter run
 If the mobile app must call the local web API server, run with:
 
 ```powershell
-flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://YOUR_PC_IP:3000
+flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://<computer-ip>:3000
 ```
 
-Example:
-
-```powershell
-flutter run -d A9SV6R4125001504 --dart-define=MAMABALANCE_API_BASE_URL=http://10.168.1.98:3000
-```
-
-Replace `YOUR_PC_IP` with the IPv4 address of the active network adapter.
+Replace `<computer-ip>` with the IPv4 address of the active network adapter.
 
 ## 8. Finding The PC IP Address
 
@@ -291,4 +285,3 @@ For production or hosted demonstration:
 - Build the Flutter app using the production API URL.
 - Review Firebase Authentication, Firestore rules, Storage rules, and API authorization checks before release.
 - Do not expose service account keys in a public repository.
-
