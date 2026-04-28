@@ -8,10 +8,12 @@ import 'reset_password_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final OtpSession? session;
+  final EmailPasswordResetSession? emailResetSession;
 
   const OTPVerificationScreen({
     super.key,
     this.session,
+    this.emailResetSession,
   });
 
   @override
@@ -26,7 +28,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   String? _errorMessage;
   String _otpCode = '';
 
-  bool get _isForgotPasswordFlow => widget.session?.purpose == 'forgot-password';
+  bool get _isForgotPasswordFlow =>
+      widget.session?.purpose == 'forgot-password' ||
+      widget.emailResetSession != null;
 
   @override
   void initState() {
@@ -54,7 +58,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     super.dispose();
   }
 
-  Future<void> _verifyOtp(OtpSession session) async {
+  Future<void> _verifyOtp() async {
     final code = _otpCode.trim();
 
     if (code.isEmpty) {
@@ -70,8 +74,35 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     });
 
     try {
+      final emailResetSession = widget.emailResetSession;
+      final phoneSession = widget.session;
+
+      if (emailResetSession != null) {
+        final verifiedSession =
+            await AuthService.instance.verifyMotherPasswordResetEmailOtp(
+          requestId: emailResetSession.requestId,
+          otp: code,
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(
+              emailResetSession: verifiedSession,
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (phoneSession == null) {
+        throw const AppAuthException(
+          'Your reset session has expired. Please request a new OTP.',
+        );
+      }
+
       await AuthService.instance.verifyMotherOtp(
-        verificationId: session.verificationId,
+        verificationId: phoneSession.verificationId,
         smsCode: code,
       );
 
@@ -138,9 +169,41 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     }
   }
 
+  Future<void> _resendEmailOtp(EmailPasswordResetSession session) async {
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final refreshed =
+          await AuthService.instance.sendMotherPasswordResetEmailOtp(
+        session.email,
+      );
+
+      if (!mounted) return;
+      _startTimer();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OTPVerificationScreen(emailResetSession: refreshed),
+        ),
+      );
+    } on AppAuthException catch (error) {
+      setState(() => _errorMessage = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
+    final emailResetSession = widget.emailResetSession;
+    final hasSession = session != null || emailResetSession != null;
+    final destination = emailResetSession?.email ?? session?.phoneNumber ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFF8F4),
@@ -175,11 +238,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               Padding(
                 padding: const EdgeInsets.only(left: 48),
                 child: Text(
-                  session == null
+                  !hasSession
                       ? 'Your reset session has expired. Please go back and request a new OTP.'
                       : _isForgotPasswordFlow
-                          ? 'Enter the verification code sent to ${session.phoneNumber} so we can let you reset your password.'
-                          : 'Enter the verification code sent to ${session.phoneNumber} so we can safely sign you in.',
+                          ? 'Enter the verification code sent to $destination so we can let you reset your password.'
+                          : 'Enter the verification code sent to $destination so we can safely sign you in.',
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,
@@ -276,9 +339,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: session == null || _isSubmitting || _isResending
+                        onPressed: !hasSession || _isSubmitting || _isResending
                             ? null
-                            : () => _verifyOtp(session),
+                            : () => _verifyOtp(),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4FA38A),
                           foregroundColor: Colors.white,
@@ -296,9 +359,18 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     const SizedBox(height: 14),
                     Center(
                       child: TextButton(
-                        onPressed: session == null || _isSubmitting || _isResending || _secondsRemaining > 0
+                        onPressed: !hasSession ||
+                                _isSubmitting ||
+                                _isResending ||
+                                _secondsRemaining > 0
                             ? null
-                            : () => _resendOtp(session),
+                            : () {
+                                if (emailResetSession != null) {
+                                  _resendEmailOtp(emailResetSession);
+                                } else if (session != null) {
+                                  _resendOtp(session);
+                                }
+                              },
                         child: Text(
                           _isResending 
                               ? 'Sending code...' 

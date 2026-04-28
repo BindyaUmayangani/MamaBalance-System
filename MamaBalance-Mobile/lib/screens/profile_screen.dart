@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/mother_profile_service.dart';
 import 'educational_resources_screen.dart';
+import 'forgot_password_screen.dart';
 import 'update_profile_page.dart';
 import '../utils/image_utils.dart';
 
@@ -109,7 +110,19 @@ class ProfileScreen extends StatelessWidget {
                             CircleAvatar(
                               radius: 34,
                               backgroundColor: Colors.white,
-                              backgroundImage: ImageUtils.resolveProfileImage(profile.profileImageUrl),
+                              backgroundImage: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                                  ? ImageUtils.resolveProfileImage(profile.profileImageUrl)
+                                  : null,
+                              child: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                                  ? null
+                                  : Text(
+                                      ImageUtils.profileInitials(profile.fullName),
+                                      style: const TextStyle(
+                                        color: _mint,
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -168,7 +181,20 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       _buildListTile(context, icon: Icons.person_outline_rounded, text: 'My Account', subtitle: 'View profile details', onTap: () => Navigator.pushNamed(context, '/profile-details')),
                       _buildDivider(),
-                      _buildListTile(context, icon: Icons.lock_outline_rounded, text: 'Reset Password', subtitle: 'Update your sign-in password', onTap: () => Navigator.pushNamed(context, '/forgot')),
+                      _buildListTile(
+                        context,
+                        icon: Icons.lock_outline_rounded,
+                        text: 'Reset Password',
+                        subtitle: 'Update your sign-in password',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(
+                              method: ForgotPasswordMethod.phone,
+                            ),
+                          ),
+                        ),
+                      ),
                       _buildDivider(),
                       _buildListTile(context, icon: Icons.fingerprint_rounded, text: 'Biometric Login', subtitle: 'Manage fingerprint or face unlock', onTap: () => _manageBiometricLogin(context)),
                       _buildDivider(),

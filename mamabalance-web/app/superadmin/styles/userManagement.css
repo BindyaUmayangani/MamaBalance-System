@@ -1162,6 +1162,43 @@ tbody tr.dashboard-highlight-row {
   max-height: none;
 }
 
+.modal-card.mother-modal .mother-created-modal {
+  min-height: 0;
+}
+
+.modal-card.mother-modal .mother-created-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  padding-right: 10px;
+}
+
+.mother-created-modal .modal-title {
+  margin-bottom: 16px;
+}
+
+.mother-created-details.view-details.view-user-modal {
+  gap: 12px;
+  margin: 8px 0 22px;
+}
+
+.mother-created-details.view-details.view-user-modal .detail-row {
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  column-gap: 20px;
+}
+
+.mother-created-modal .modal-actions {
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #e5eee9;
+}
+
+.mother-created-modal .guardian-created-title {
+  margin: 10px 0 14px;
+  font-size: 1rem;
+}
+
 .modal-card.view-modal {
   width: 760px;
   max-width: 92vw;

@@ -4,7 +4,6 @@ import { FieldValue } from "firebase-admin/firestore";
 
 import { STAFF_ROLES } from "@/lib/auth/types";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
-import { maskPhoneNumber, normalizePhoneNumber, sendNotifySms } from "@/lib/notify/sms";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const VERIFIED_TTL_MS = 15 * 60 * 1000;
@@ -27,52 +26,47 @@ function sanitizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
-function buildPhoneLookupVariants(phoneNumber: string) {
-  const normalized = normalizePhoneNumber(phoneNumber);
-  const variants = new Set<string>();
-
-  if (normalized) {
-    variants.add(normalized);
-  }
-
-  if (normalized.startsWith("+")) {
-    variants.add(normalized.slice(1));
-  }
-
-  if (normalized.startsWith("+94")) {
-    variants.add(`0${normalized.slice(3)}`);
-  }
-
-  return Array.from(variants).slice(0, 10);
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function findStaffByPhone(phoneNumber: string) {
-  const variants = buildPhoneLookupVariants(phoneNumber);
+function maskEmail(value: string) {
+  const email = sanitizeEmail(value);
+  const [local, domain] = email.split("@");
 
-  if (variants.length === 0) {
-    return null;
+  if (!local || !domain) {
+    return "";
   }
 
-  const snapshot = await adminDb
-    .collection("users")
-    .where("phoneNumber", "in", variants)
-    .limit(10)
-    .get();
+  const visibleStart = local.slice(0, Math.min(2, local.length));
+  const visibleEnd = local.length > 3 ? local.slice(-1) : "";
+  return `${visibleStart}${"*".repeat(Math.max(local.length - visibleStart.length - visibleEnd.length, 3))}${visibleEnd}@${domain}`;
+}
 
-  if (snapshot.empty) {
-    return null;
+async function findStaffByEmail(email: string) {
+  const queries = [
+    adminDb.collection("users").where("personalEmail", "==", email).limit(10).get(),
+    adminDb.collection("users").where("email", "==", email).limit(10).get(),
+  ];
+
+  for (const query of queries) {
+    const snapshot = await query;
+
+    if (snapshot.empty) {
+      continue;
+    }
+
+    const matchingDocs = snapshot.docs.filter((doc) => {
+      const data = doc.data();
+      return STAFF_ROLES.includes(data.role) && data.status === "active";
+    });
+
+    if (matchingDocs.length === 1) {
+      return matchingDocs[0];
+    }
   }
 
-  const matchingDocs = snapshot.docs.filter((doc) => {
-    const data = doc.data();
-    return STAFF_ROLES.includes(data.role) && data.status === "active";
-  });
-
-  if (matchingDocs.length !== 1) {
-    return null;
-  }
-
-  return matchingDocs[0];
+  return null;
 }
 
 async function readAuthEmail(uid: string, fallbackEmail: string) {
@@ -112,33 +106,33 @@ async function assertCooldown(uid: string) {
 }
 
 async function handleSendOtp(request: NextRequest) {
-  const payload = (await request.json()) as { phoneNumber?: string };
-  const submittedPhoneNumber = normalizePhoneNumber(payload.phoneNumber);
+  const payload = (await request.json()) as { email?: string };
+  const submittedEmail = sanitizeEmail(payload.email);
 
-  if (!submittedPhoneNumber) {
-    return NextResponse.json({ error: "Enter a valid phone number." }, { status: 400 });
+  if (!submittedEmail || !isValidEmail(submittedEmail)) {
+    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
 
-  const userDoc = await findStaffByPhone(submittedPhoneNumber);
+  const userDoc = await findStaffByEmail(submittedEmail);
 
   if (!userDoc) {
     return NextResponse.json({
       ok: true,
       requestId: null,
-      maskedPhone: maskPhoneNumber(submittedPhoneNumber),
+      maskedEmail: maskEmail(submittedEmail),
     });
   }
 
   const user = userDoc.data();
   const loginEmail = await readAuthEmail(userDoc.id, sanitizeEmail(user.email));
-  const deliveryPhone = normalizePhoneNumber(user.phoneNumber);
+  const deliveryEmail = sanitizeEmail(user.personalEmail) || loginEmail;
   const displayName = String(user.displayName || "MamaBalance user").trim();
 
-  if (!deliveryPhone || !loginEmail) {
+  if (!deliveryEmail || !loginEmail) {
     return NextResponse.json({
       ok: true,
       requestId: null,
-      maskedPhone: maskPhoneNumber(submittedPhoneNumber),
+      maskedEmail: maskEmail(submittedEmail),
     });
   }
 
@@ -149,18 +143,27 @@ async function handleSendOtp(request: NextRequest) {
     const requestId = randomUUID();
     const now = Date.now();
 
-    await sendNotifySms({
-      phoneNumber: deliveryPhone,
-      message:
-        `MamaBalance: Your staff password reset code is ${code}. ` +
-        "Use it within 10 minutes.",
-      contactFirstName: displayName.split(" ").filter(Boolean)[0] || "Staff",
+    await adminDb.collection("mail").add({
+      to: [deliveryEmail],
+      message: {
+        subject: "MamaBalance staff password reset code",
+        text:
+          `Hello ${displayName},\n\n` +
+          `Your MamaBalance staff password reset code is ${code}.\n` +
+          "Use it within 10 minutes to reset your password.\n\n" +
+          "If you did not request this, you can ignore this email.",
+      },
+      meta: {
+        feature: "staff-password-reset-otp",
+        uid: userDoc.id,
+      },
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     await adminDb.collection("passwordResetRequests").doc(requestId).set({
       uid: userDoc.id,
-      submittedPhoneNumber,
-      deliveryPhone,
+      submittedEmail,
+      deliveryEmail,
       loginEmail,
       displayName,
       otpHash: hashValue(code),
@@ -178,7 +181,7 @@ async function handleSendOtp(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       requestId,
-      maskedPhone: maskPhoneNumber(deliveryPhone),
+      maskedEmail: maskEmail(deliveryEmail),
     });
   } catch (error) {
     const message =

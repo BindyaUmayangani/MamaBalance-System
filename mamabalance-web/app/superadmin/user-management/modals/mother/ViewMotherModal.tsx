@@ -24,7 +24,7 @@ export default function ViewMotherModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="detail-row">
-            <span className="detail-label">Email</span>
+            <span className="detail-label">Personal Email</span>
             <span className="detail-value">bindya@gmail.com</span>
           </div>
 

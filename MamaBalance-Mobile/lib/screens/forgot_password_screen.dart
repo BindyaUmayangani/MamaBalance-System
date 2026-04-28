@@ -4,22 +4,70 @@ import '../services/auth_service.dart';
 import 'otp_verification_screen.dart';
 import 'reset_password_screen.dart';
 
+enum ForgotPasswordMethod { email, phone }
+
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final ForgotPasswordMethod method;
+
+  const ForgotPasswordScreen({
+    super.key,
+    this.method = ForgotPasswordMethod.email,
+  });
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMessage;
 
   @override
   void dispose() {
+    _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  bool get _usesEmail => widget.method == ForgotPasswordMethod.email;
+
+  Future<void> _continueWithEmail() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _errorMessage = 'Please enter your registered personal email.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final emailResetSession =
+          await AuthService.instance.sendMotherPasswordResetEmailOtp(email);
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OTPVerificationScreen(
+            emailResetSession: emailResetSession,
+          ),
+        ),
+      );
+    } on AppAuthException catch (error) {
+      setState(() => _errorMessage = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   Future<void> _continueWithPhone() async {
@@ -104,11 +152,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.only(left: 48),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
                 child: Text(
-                  'Enter your mobile number and we will guide you through verifying your account and resetting your password.',
-                  style: TextStyle(
+                  _usesEmail
+                      ? 'Enter your personal email and we will send a verification code to reset your password.'
+                      : 'Enter your mobile number and we will guide you through verifying your account and resetting your password.',
+                  style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,
                     color: Color(0xFF5F736B),
@@ -156,32 +206,43 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Verify with your phone number',
-                      style: TextStyle(
+                    Text(
+                      _usesEmail
+                          ? 'Verify with your personal email'
+                          : 'Verify with your phone number',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF203C35),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Use the phone number saved on your MamaBalance account.',
-                      style: TextStyle(
+                    Text(
+                      _usesEmail
+                          ? 'Use the personal email saved on your MamaBalance mother account.'
+                          : 'Use the phone number saved on your MamaBalance account.',
+                      style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF60756D),
                       ),
                     ),
                     const SizedBox(height: 18),
                     TextField(
-                      controller: _phoneController,
+                      controller: _usesEmail ? _emailController : _phoneController,
                       cursorColor: const Color(0xFF4FA38A),
-                      keyboardType: TextInputType.phone,
+                      keyboardType:
+                          _usesEmail ? TextInputType.emailAddress : TextInputType.phone,
                       decoration: InputDecoration(
-                        labelText: 'Mobile number',
-                        floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
-                        hintText: '+94 7X XXX XXXX',
-                        prefixIcon: const Icon(Icons.phone_iphone_outlined),
+                        labelText: _usesEmail ? 'Personal email' : 'Mobile number',
+                        floatingLabelStyle:
+                            const TextStyle(color: Color(0xFF4FA38A)),
+                        hintText:
+                            _usesEmail ? 'your@email.com' : '+94 7X XXX XXXX',
+                        prefixIcon: Icon(
+                          _usesEmail
+                              ? Icons.alternate_email_rounded
+                              : Icons.phone_iphone_outlined,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -191,7 +252,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(14)),
-                          borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+                          borderSide:
+                              BorderSide(color: Color(0xFF4FA38A), width: 1.5),
                         ),
                       ),
                     ),
@@ -219,7 +281,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _continueWithPhone,
+                        onPressed: _isSubmitting
+                            ? null
+                            : _usesEmail
+                                ? _continueWithEmail
+                                : _continueWithPhone,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4FA38A),
                           foregroundColor: Colors.white,

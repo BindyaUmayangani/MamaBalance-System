@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { CheckCircle2, ChevronDown } from "lucide-react";
 import { ManagedUserRow } from "@/lib/admin/types";
 
 type RegionOption = {
@@ -33,6 +33,7 @@ export default function EditUserModal({
     user.status === "inactive" ? "inactive" : "active"
   );
   const [saving, setSaving] = useState(false);
+  const [saveOutcome, setSaveOutcome] = useState<ManagedUserRow | null>(null);
 
   const initialRegionId = useMemo(() => {
     const matched = regionOptions.find(
@@ -42,6 +43,56 @@ export default function EditUserModal({
   }, [regionOptions, user.region]);
 
   const [regionId, setRegionId] = useState(initialRegionId);
+
+  if (saveOutcome) {
+    return (
+      <div className="modal-container success-popup">
+        <div className="success-popup-hero">
+          <div className="success-popup-icon">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <h2 className="modal-title success-popup-title">
+              Changes saved successfully
+            </h2>
+            <p className="success-popup-subtitle">
+              The user record has been updated and synced with the latest account details.
+            </p>
+          </div>
+        </div>
+
+        <div className="success-summary-card">
+          <div className="success-summary-row">
+            <span className="success-summary-label">User</span>
+            <span className="success-summary-value">{saveOutcome.name}</span>
+          </div>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Email</span>
+            <span className="success-summary-value">{saveOutcome.personalEmail}</span>
+          </div>
+          {config.showRegion ? (
+            <div className="success-summary-row">
+              <span className="success-summary-label">Region</span>
+              <span className="success-summary-value">{saveOutcome.region}</span>
+            </div>
+          ) : null}
+          <div className="success-summary-row">
+            <span className="success-summary-label">Status</span>
+            <span className="success-summary-value">{saveOutcome.status}</span>
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button
+            className="btn-primary"
+            onClick={() => onSave(saveOutcome)}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -150,7 +201,7 @@ export default function EditUserModal({
                 regionOptions.find((item) => item.id === regionId)?.name ||
                 user.region;
 
-              onSave({
+              setSaveOutcome({
                 ...user,
                 personalEmail: email,
                 contact,

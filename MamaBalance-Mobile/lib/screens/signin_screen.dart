@@ -216,7 +216,7 @@ class _SignInScreenState extends State<SignInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Sign in with the Firebase login email shared for your MamaBalance mobile account, or use your phone number below.',
+          'Sign in with the personal email registered for your MamaBalance account, or use your phone number below.',
           style: TextStyle(
             fontSize: 14,
             color: Color(0xFF5E6F69),
@@ -231,7 +231,7 @@ class _SignInScreenState extends State<SignInScreen> {
           decoration: InputDecoration(
             labelText: 'Email address',
             floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
-            hintText: 'your MamaBalance login email',
+            hintText: 'your personal email',
             prefixIcon: const Icon(Icons.alternate_email),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),

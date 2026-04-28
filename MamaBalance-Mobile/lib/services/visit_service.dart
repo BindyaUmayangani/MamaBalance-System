@@ -1,173 +1,134 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
 import 'auth_service.dart';
 
 class VisitService {
   VisitService._();
+
   static final VisitService instance = VisitService._();
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const Duration _backendTimeout = Duration(seconds: 20);
 
-  Future<Map<String, dynamic>?> fetchSoonestMidwifeVisit(String _unusedMotherUid, String visitType) async {
+  Future<Map<String, dynamic>?> fetchSoonestMidwifeVisit(
+    String _unusedMotherUid,
+    String visitType,
+  ) async {
+    final visits = await _fetchVisits();
+    final normalizedType = visitType.trim().toLowerCase();
+
+    if (normalizedType == 'home') {
+      return visits['homeVisit'];
+    }
+    if (normalizedType == 'clinic') {
+      return visits['clinicVisit'];
+    }
+
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> fetchSoonestDoctorCheckup(
+    String _unusedMotherUid,
+  ) async {
+    final visits = await _fetchVisits();
+    return visits['doctorCheckup'];
+  }
+
+  Future<Map<String, Map<String, dynamic>?>> _fetchVisits() async {
     try {
-      final motherDoc = await _resolveMotherDoc();
-      final snapshot = await _db
-          .collection('midwifeVisits')
-          .where('motherUid', isEqualTo: motherDoc.id)
-          .get();
+      final payload = await _sendCareRequest(type: 'visits');
+      final rawVisits = payload['visits'];
+      final visits = rawVisits is Map<String, dynamic>
+          ? rawVisits
+          : <String, dynamic>{};
 
-      return _pickNextUpcoming(
-        snapshot.docs
-            .map((doc) => doc.data())
-            .where((item) => '${item['visitType'] ?? ''}'.trim().toLowerCase() == visitType.toLowerCase())
-            .toList(),
-      );
-    } catch (e) {
-      print('Error fetching midwife visit: $e');
-      return null;
+      return {
+        'homeVisit': _readMap(visits['homeVisit']),
+        'clinicVisit': _readMap(visits['clinicVisit']),
+        'doctorCheckup': _readMap(visits['doctorCheckup']),
+      };
+    } catch (error) {
+      // Keep the home screen resilient if care scheduling is temporarily unavailable.
+      return {
+        'homeVisit': null,
+        'clinicVisit': null,
+        'doctorCheckup': null,
+      };
     }
   }
 
-  Future<Map<String, dynamic>?> fetchSoonestDoctorCheckup(String _unusedMotherUid) async {
-    try {
-      final motherDoc = await _resolveMotherDoc();
-      final snapshot = await _db
-          .collection('doctorCheckups')
-          .where('motherUid', isEqualTo: motherDoc.id)
-          .get();
-
-      return _pickNextUpcoming(snapshot.docs.map((doc) => doc.data()).toList());
-    } catch (e) {
-      print('Error fetching doctor checkup: $e');
-      return null;
-    }
-  }
-
-  Map<String, dynamic>? _pickNextUpcoming(List<Map<String, dynamic>> items) {
-    final now = DateTime.now();
-    Map<String, dynamic>? bestItem;
-    DateTime? bestDate;
-
-    for (final item in items) {
-      final status = '${item['status'] ?? ''}'.trim().toLowerCase();
-      if (status == 'completed' || status == 'cancelled') {
-        continue;
-      }
-
-      final scheduledAt = _readDate(item['scheduledAt']);
-      if (scheduledAt == null || scheduledAt.isBefore(now)) {
-        continue;
-      }
-
-      if (bestDate == null || scheduledAt.isBefore(bestDate)) {
-        bestDate = scheduledAt;
-        bestItem = item;
-      }
-    }
-
-    return bestItem;
-  }
-
-  DateTime? _readDate(dynamic value) {
-    if (value == null) return null;
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return DateTime.tryParse('$value');
-  }
-
-  Future<DocumentSnapshot<Map<String, dynamic>>> _resolveMotherDoc() async {
+  Future<Map<String, dynamic>> _sendCareRequest({required String type}) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception('User not signed in');
+      throw const AppAuthException('Please sign in to continue.');
     }
 
-    final directMotherDoc = await _db.collection('mothers').doc(user.uid).get();
-    if (directMotherDoc.exists) {
-      return directMotherDoc;
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
     }
 
-    final canonicalUid = await _resolveCanonicalUserUid(user);
+    final uri = _careEndpoint({'type': type});
+    final headers = <String, String>{
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
 
-    final byUserUid = await _db
-        .collection('mothers')
-        .where('userUid', isEqualTo: canonicalUid)
-        .limit(1)
-        .get();
-    if (byUserUid.docs.isNotEmpty) {
-      return byUserUid.docs.first;
-    }
+    try {
+      final response = await http.get(uri, headers: headers).timeout(_backendTimeout);
+      final payload = _decodeJson(response.body);
 
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('mothers')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to load visits.',
+        );
       }
-    }
 
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byPersonalEmail = await _db
-          .collection('mothers')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first;
-      }
+      return payload;
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The visits request timed out. Check the backend connection and try again.',
+      );
+    } on SocketException {
+      throw const AppAuthException(
+        'Unable to reach the care backend. Check your connection and try again.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The care backend returned an invalid visits response.',
+      );
     }
-
-    throw Exception('Unable to find mother profile');
   }
 
-  Future<String> _resolveCanonicalUserUid(User user) async {
-    final directUserDoc = await _db.collection('users').doc(user.uid).get();
-    if (directUserDoc.exists) {
-      return user.uid;
+  Uri _careEndpoint(Map<String, String> queryParameters) {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
     }
 
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('users')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first.id;
-      }
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/care',
+    ).replace(queryParameters: queryParameters);
+  }
+
+  Map<String, dynamic>? _readMap(dynamic value) {
+    return value is Map<String, dynamic> ? value : null;
+  }
+
+  Map<String, dynamic> _decodeJson(String raw) {
+    if (raw.trim().isEmpty) {
+      return <String, dynamic>{};
     }
 
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byLoginEmail = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byLoginEmail.docs.isNotEmpty) {
-        return byLoginEmail.docs.first.id;
-      }
-
-      final byPersonalEmail = await _db
-          .collection('users')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first.id;
-      }
-    }
-
-    return user.uid;
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
 }

@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final VerifiedEmailPasswordResetSession? emailResetSession;
+
+  const ResetPasswordScreen({
+    super.key,
+    this.emailResetSession,
+  });
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -77,7 +82,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
     });
 
     try {
-      await AuthService.instance.resetMotherPassword(newPassword: newPassword);
+      final emailResetSession = widget.emailResetSession;
+      if (emailResetSession != null) {
+        await AuthService.instance.resetMotherPasswordWithEmailOtp(
+          requestId: emailResetSession.requestId,
+          resetToken: emailResetSession.resetToken,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword,
+        );
+      } else {
+        await AuthService.instance.resetMotherPassword(newPassword: newPassword);
+      }
 
       setState(() {
         _showSuccess = true;

@@ -297,7 +297,9 @@ class _ChatPageState extends State<ChatPage> {
     if (_lastMarkedConversationId != conversation.id) {
       _lastMarkedConversationId = conversation.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        MessagingService.instance.markConversationRead(conversation.id);
+        MessagingService.instance.markConversationRead(conversation).catchError(
+          (_) {},
+        );
       });
     }
 
@@ -377,7 +379,8 @@ class _ChatPageState extends State<ChatPage> {
               border: Border.all(color: const Color(0xFFD6ECE6)),
             ),
             child: StreamBuilder<List<SecureChatMessage>>(
-              stream: MessagingService.instance.watchMessages(conversation.id),
+              stream:
+                  MessagingService.instance.watchConversationMessages(conversation),
               builder: (context, messageSnapshot) {
                 if (messageSnapshot.connectionState ==
                     ConnectionState.waiting) {

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +30,28 @@ class OtpSession {
   });
 }
 
+class EmailPasswordResetSession {
+  final String requestId;
+  final String email;
+
+  const EmailPasswordResetSession({
+    required this.requestId,
+    required this.email,
+  });
+}
+
+class VerifiedEmailPasswordResetSession {
+  final String requestId;
+  final String email;
+  final String resetToken;
+
+  const VerifiedEmailPasswordResetSession({
+    required this.requestId,
+    required this.email,
+    required this.resetToken,
+  });
+}
+
 enum SessionRestoreStatus {
   restored,
   noSession,
@@ -43,7 +64,6 @@ class AuthService {
   static final AuthService instance = AuthService._();
 
   FirebaseAuth get _auth => FirebaseAuth.instance;
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
   static const Duration _otpRequestCooldown = Duration(seconds: 60);
   static const Duration _otpRateLimitCooldown = Duration(minutes: 5);
   static const Duration _backendTimeout = Duration(seconds: 20);
@@ -79,12 +99,49 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+      final response = await http.post(
+        _emailLoginEndpoint(),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'password': password,
+        }),
+      ).timeout(_backendTimeout);
+
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ??
+              'Incorrect email or password. Use your registered personal email, or sign in with your phone number.',
+        );
+      }
+
+      final customToken = '${payload['customToken'] ?? ''}'.trim();
+      if (customToken.isEmpty) {
+        throw const AppAuthException('Unable to complete sign-in right now.');
+      }
+
+      final credential = await _auth.signInWithCustomToken(customToken);
       await _ensureMobileAccess(credential.user);
       await _recordFreshFullLogin();
+    } on AppAuthException {
+      rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on HttpException {
+      throw const AppAuthException(
+        'The email login service returned an invalid response. Please try again shortly.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The email login service returned an unreadable response. Please try again shortly.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The email login request timed out. Check the backend connection and try again.',
+      );
     } on FirebaseAuthException catch (error) {
       throw AppAuthException(_mapFirebaseError(error));
     }
@@ -219,6 +276,134 @@ class AuthService {
     }
   }
 
+  Future<EmailPasswordResetSession> sendMotherPasswordResetEmailOtp(
+    String email,
+  ) async {
+    final normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail.isEmpty) {
+      throw const AppAuthException('Please enter your personal email.');
+    }
+
+    try {
+      final response = await http
+          .post(
+            _emailPasswordResetEndpoint(),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': normalizedEmail}),
+          )
+          .timeout(_backendTimeout);
+
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to send OTP right now.',
+        );
+      }
+
+      return EmailPasswordResetSession(
+        requestId: '${payload['requestId'] ?? ''}',
+        email: '${payload['email'] ?? normalizedEmail}',
+      );
+    } on AppAuthException {
+      rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The OTP request timed out. Check the backend connection and try again.',
+      );
+    } catch (_) {
+      throw const AppAuthException('Unable to send OTP right now.');
+    }
+  }
+
+  Future<VerifiedEmailPasswordResetSession> verifyMotherPasswordResetEmailOtp({
+    required String requestId,
+    required String otp,
+  }) async {
+    try {
+      final response = await http
+          .patch(
+            _emailPasswordResetEndpoint(),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'requestId': requestId,
+              'otp': otp.trim(),
+            }),
+          )
+          .timeout(_backendTimeout);
+
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to verify OTP right now.',
+        );
+      }
+
+      return VerifiedEmailPasswordResetSession(
+        requestId: '${payload['requestId'] ?? requestId}',
+        email: '${payload['email'] ?? ''}',
+        resetToken: '${payload['resetToken'] ?? ''}',
+      );
+    } on AppAuthException {
+      rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The OTP verification request timed out. Check the backend connection and try again.',
+      );
+    } catch (_) {
+      throw const AppAuthException('Unable to verify OTP right now.');
+    }
+  }
+
+  Future<void> resetMotherPasswordWithEmailOtp({
+    required String requestId,
+    required String resetToken,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await http
+          .put(
+            _emailPasswordResetEndpoint(),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'requestId': requestId,
+              'resetToken': resetToken,
+              'password': newPassword.trim(),
+              'confirmPassword': confirmPassword.trim(),
+            }),
+          )
+          .timeout(_backendTimeout);
+
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to reset password right now.',
+        );
+      }
+    } on AppAuthException {
+      rethrow;
+    } on SocketException {
+      throw const AppAuthException(
+        'Cannot reach the MamaBalance mobile backend. Make sure the web API is running and the phone can access that IP address.',
+      );
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The password reset request timed out. Check the backend connection and try again.',
+      );
+    } catch (_) {
+      throw const AppAuthException('Unable to reset password right now.');
+    }
+  }
+
   Future<void> resetMotherPassword({
     required String newPassword,
   }) async {
@@ -319,12 +504,7 @@ class AuthService {
       return null;
     }
 
-    final snapshot = await _resolveMobileUserDoc(user);
-    final data = snapshot?.data() ?? <String, dynamic>{};
-    return AppSession(
-      uid: snapshot?.id ?? user.uid,
-      role: AppUserRoleX.fromString(data['role']),
-    );
+    return _fetchMobileSession(user);
   }
 
   Future<String> homeRouteForCurrentUser() async {
@@ -337,79 +517,57 @@ class AuthService {
       throw const AppAuthException('Authentication failed. Please try again.');
     }
 
-    final snapshot = await _resolveMobileUserDoc(user);
-
-    if (snapshot == null || !snapshot.exists) {
+    try {
+      await _fetchMobileSession(user);
+    } on AppAuthException {
       await signOut();
-      throw const AppAuthException(
-        'This account has not been registered in MamaBalance yet.',
-      );
-    }
-
-    final data = snapshot.data();
-    final role = AppUserRoleX.fromString(data?['role']);
-    final status = data?['status'] as String?;
-
-    if (!role.isMobileUser) {
-      await signOut();
-      throw const AppAuthException(
-        'This sign-in page is only for mothers and guardians. Staff must use the web portal.',
-      );
-    }
-
-    if (status != 'active') {
-      await signOut();
-      throw const AppAuthException(
-        'Your account is not active yet. Please contact your care team.',
-      );
+      rethrow;
     }
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>?> _resolveMobileUserDoc(
-    User user,
-  ) async {
-    final direct = await _db.collection('users').doc(user.uid).get();
-    if (direct.exists) {
-      return direct;
+  Future<AppSession> _fetchMobileSession(User user) async {
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
     }
 
-    final normalizedPhone = normalizePhoneNumber(user.phoneNumber ?? '');
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('users')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first;
+    try {
+      final response = await http.get(
+        _sessionEndpoint(),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      ).timeout(_backendTimeout);
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ??
+              'This account has not been registered in MamaBalance yet.',
+        );
       }
+      final session = payload['session'] is Map<String, dynamic>
+          ? payload['session'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final role = AppUserRoleX.fromString(session['role']);
+      if (!role.isMobileUser) {
+        throw const AppAuthException(
+          'This sign-in page is only for mothers and guardians. Staff must use the web portal.',
+        );
+      }
+      return AppSession(
+        uid: '${session['uid'] ?? user.uid}',
+        role: role,
+      );
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException('The session check timed out.');
+    } on SocketException {
+      throw const AppAuthException('Unable to reach the mobile backend.');
+    } on FormatException {
+      throw const AppAuthException('The mobile backend returned an invalid session response.');
     }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byLoginEmail = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (byLoginEmail.docs.isNotEmpty) {
-        return byLoginEmail.docs.first;
-      }
-
-      final byPersonalEmail = await _db
-          .collection('users')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first;
-      }
-    }
-
-    return null;
   }
 
   String _mapFirebaseError(FirebaseAuthException error) {
@@ -419,7 +577,7 @@ class AuthService {
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        return 'Incorrect email or password. Use your MamaBalance Firebase login email, or sign in with your phone number.';
+        return 'Incorrect email or password. Use your registered personal email, or sign in with your phone number.';
       case 'invalid-phone-number':
         return 'Please enter a valid phone number.';
       case 'user-disabled':
@@ -477,6 +635,39 @@ class AuthService {
     }
 
     return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/auth/otp');
+  }
+
+  Uri _emailLoginEndpoint() {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
+    }
+
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/auth/email-login',
+    );
+  }
+
+  Uri _sessionEndpoint() {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
+    }
+
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/session',
+    );
+  }
+
+  Uri _emailPasswordResetEndpoint() {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
+    }
+
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/auth/email-password-reset',
+    );
   }
 
   Map<String, dynamic> _decodeJson(String raw) {

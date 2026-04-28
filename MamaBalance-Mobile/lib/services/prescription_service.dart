@@ -1,6 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
 import 'auth_service.dart';
 
 class PrescriptionMedication {
@@ -50,200 +55,116 @@ class PrescriptionService {
 
   static final PrescriptionService instance = PrescriptionService._();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const Duration _backendTimeout = Duration(seconds: 20);
 
   Future<PrescriptionSummary> fetchCurrentMotherPrescriptions() async {
+    final payload = await _sendCareRequest(type: 'prescriptions');
+    final rawPrescriptions = payload['prescriptions'];
+    final prescriptions = rawPrescriptions is Map<String, dynamic>
+        ? rawPrescriptions
+        : <String, dynamic>{};
+
+    return PrescriptionSummary(
+      activeMedications: _readMedicationList(prescriptions['activeMedications']),
+      medicationHistory: _readMedicationList(prescriptions['medicationHistory']),
+    );
+  }
+
+  Future<Map<String, dynamic>> _sendCareRequest({required String type}) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const AppAuthException('Please sign in to continue.');
     }
 
-    final motherDoc = await _resolveMotherDoc(user);
-    final snapshots = await Future.wait([
-      _db
-          .collection('careMedications')
-          .where('motherUid', isEqualTo: motherDoc.id)
-          .get(),
-      _db
-          .collection('medications')
-          .where('motherUid', isEqualTo: motherDoc.id)
-          .get(),
-    ]);
-    final docs = snapshots.expand((snapshot) => snapshot.docs).toList();
-    final medications = docs.map((doc) {
-      final data = doc.data();
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
+    }
 
-      return PrescriptionMedication(
-        id: doc.id,
-        name: _readString(data['medicationName']) ??
-            _readString(data['name']) ??
-            'Medication',
-        dosage: _formatDosage(data['dosage']),
-        frequency: _readString(data['frequency']) ?? '-',
-        startDate: _formatDate(data['startDate'] ?? data['createdAt']),
-        endDate: _formatDate(data['endDate']),
-        prescribedBy: _readString(data['prescribedBy']) ?? 'Doctor',
-        status: _normalizeStatus(data['status']),
-        notes: _readString(data['notes']) ?? '',
-        instructions: _readString(data['instructions']) ?? '',
-        reasonStopped: _readString(data['reasonStopped']) ?? '',
-        updatedAt: _readDate(data['updatedAt'] ?? data['createdAt'] ?? data['startDate']) ??
-            DateTime.fromMillisecondsSinceEpoch(0),
+    final uri = _careEndpoint({'type': type});
+    final headers = <String, String>{
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    };
+
+    try {
+      final response = await http.get(uri, headers: headers).timeout(_backendTimeout);
+      final payload = _decodeJson(response.body);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to load prescriptions.',
+        );
+      }
+
+      return payload;
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The prescriptions request timed out. Check the backend connection and try again.',
       );
-    }).toList()
-      ..sort((first, second) => second.updatedAt.compareTo(first.updatedAt));
+    } on SocketException {
+      throw const AppAuthException(
+        'Unable to reach the care backend. Check your connection and try again.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The care backend returned an invalid prescriptions response.',
+      );
+    }
+  }
 
-    return PrescriptionSummary(
-      activeMedications: medications.where((medication) => medication.isActive).toList(),
-      medicationHistory: medications.where((medication) => !medication.isActive).toList(),
+  Uri _careEndpoint(Map<String, String> queryParameters) {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
+    }
+
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/care',
+    ).replace(queryParameters: queryParameters);
+  }
+
+  List<PrescriptionMedication> _readMedicationList(dynamic value) {
+    final items = value is List ? value : const [];
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(_medicationFromJson)
+        .toList();
+  }
+
+  PrescriptionMedication _medicationFromJson(Map<String, dynamic> data) {
+    return PrescriptionMedication(
+      id: _readString(data['id']),
+      name: _readString(data['name'], fallback: 'Medication'),
+      dosage: _readString(data['dosage'], fallback: '-'),
+      frequency: _readString(data['frequency'], fallback: '-'),
+      startDate: _readString(data['startDate'], fallback: '-'),
+      endDate: _readString(data['endDate'], fallback: '-'),
+      prescribedBy: _readString(data['prescribedBy'], fallback: 'Doctor'),
+      status: _readString(data['status'], fallback: 'Active'),
+      notes: _readString(data['notes']),
+      instructions: _readString(data['instructions']),
+      reasonStopped: _readString(data['reasonStopped']),
+      updatedAt: DateTime.tryParse(_readString(data['updatedAt'])) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>> _resolveMotherDoc(User user) async {
-    final directMotherDoc = await _db.collection('mothers').doc(user.uid).get();
-    if (directMotherDoc.exists) {
-      return directMotherDoc;
+  Map<String, dynamic> _decodeJson(String raw) {
+    if (raw.trim().isEmpty) {
+      return <String, dynamic>{};
     }
 
-    final canonicalUid = await _resolveCanonicalUserUid(user);
-    final byUserUid = await _db
-        .collection('mothers')
-        .where('userUid', isEqualTo: canonicalUid)
-        .limit(1)
-        .get();
-    if (byUserUid.docs.isNotEmpty) {
-      return byUserUid.docs.first;
-    }
-
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('mothers')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first;
-      }
-    }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byPersonalEmail = await _db
-          .collection('mothers')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first;
-      }
-    }
-
-    throw const AppAuthException('Unable to find your mother profile.');
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
 
-  Future<String> _resolveCanonicalUserUid(User user) async {
-    final directUserDoc = await _db.collection('users').doc(user.uid).get();
-    if (directUserDoc.exists) {
-      return user.uid;
-    }
-
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('users')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first.id;
-      }
-    }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byLoginEmail = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byLoginEmail.docs.isNotEmpty) {
-        return byLoginEmail.docs.first.id;
-      }
-
-      final byPersonalEmail = await _db
-          .collection('users')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first.id;
-      }
-    }
-
-    throw const AppAuthException('Unable to find your account details.');
-  }
-
-  String? _readString(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
+  String _readString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
     final raw = '$value'.trim();
-    return raw.isEmpty ? null : raw;
-  }
-
-  DateTime? _readDate(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    if (value is Timestamp) {
-      return value.toDate();
-    }
-
-    if (value is DateTime) {
-      return value;
-    }
-
-    return DateTime.tryParse('$value');
-  }
-
-  String _formatDate(dynamic value) {
-    final date = _readDate(value);
-    if (date == null) {
-      return '-';
-    }
-
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-
-    return '${date.year}-$month-$day';
-  }
-
-  String _formatDosage(dynamic value) {
-    final raw = _readString(value);
-    if (raw == null) {
-      return '-';
-    }
-
-    return raw.replaceAll(RegExp('mg', caseSensitive: false), '').trim();
-  }
-
-  String _normalizeStatus(dynamic value) {
-    final normalized = '${value ?? 'Active'}'.trim().toLowerCase();
-
-    if (normalized == 'completed') {
-      return 'Completed';
-    }
-    if (normalized == 'stopped') {
-      return 'Stopped';
-    }
-    return 'Active';
+    return raw.isEmpty ? fallback : raw;
   }
 }

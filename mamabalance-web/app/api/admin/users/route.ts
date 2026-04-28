@@ -3,7 +3,6 @@ import { FieldValue, type DocumentData } from "firebase-admin/firestore";
 
 import {
   buildRoleUserId,
-  buildSystemEmail,
   buildSystemUsername,
   buildTemporaryPassword,
   buildUserCode,
@@ -155,13 +154,18 @@ function resolveLatestEpdsAttemptDate(mother: DocumentData | undefined, user: Do
 }
 
 function buildStaffRow(user: DocumentData, regionMap: Map<string, string>, uid: string): ManagedUserRow {
+  const displayEmail =
+    (user.personalEmail as string | undefined) ||
+    (user.email as string | undefined) ||
+    "-";
+
   return {
     uid,
     userId: (user.userId as string | undefined) || buildUserCode("US", uid),
     name: (user.displayName as string | undefined) || "-",
     username: (user.username as string | undefined) || "-",
-    email: (user.email as string | undefined) || "-",
-    personalEmail: (user.personalEmail as string | undefined) || "-",
+    email: displayEmail,
+    personalEmail: displayEmail,
     nic: (user.nic as string | undefined) || "-",
     region: normalizeRegionName(regionMap.get(user.regionId as string) || (user.regionName as string | undefined)),
     contact: (user.phoneNumber as string | undefined) || "-",
@@ -178,15 +182,33 @@ function buildMotherRow(
   staffMap: Map<string, string>,
   uid: string,
 ): ManagedMotherRow {
+  const displayEmail =
+    (user.personalEmail as string | undefined) ||
+    (mother?.personalEmail as string | undefined) ||
+    (user.email as string | undefined) ||
+    (mother?.email as string | undefined) ||
+    "-";
+
   return {
     uid,
     userId: (user.userId as string | undefined) || buildUserCode("MO", uid),
     name: (user.displayName as string | undefined) || "-",
     username: (user.username as string | undefined) || "-",
-    email: (user.email as string | undefined) || "-",
-    personalEmail: (user.personalEmail as string | undefined) || (mother?.personalEmail as string | undefined) || "-",
+    email: displayEmail,
+    personalEmail: displayEmail,
     nic: (mother?.nic as string | undefined) || (user.nic as string | undefined) || "-",
-    region: normalizeRegionName(regionMap.get((user.regionId as string | undefined) || (mother?.regionId as string | undefined)) || user.regionName || mother?.regionName),
+    region: normalizeRegionName(
+      String(
+        regionMap.get(
+          (user.regionId as string | undefined) ||
+            (mother?.regionId as string | undefined) ||
+            "",
+        ) ||
+          user.regionName ||
+          mother?.regionName ||
+          "",
+      ),
+    ),
     contact: (user.phoneNumber as string | undefined) || "-",
     createdOn: formatDate(user.createdAt?.toDate?.() ?? user.createdAt),
     status: user.status === "active" ? "active" : "inactive",
@@ -257,14 +279,51 @@ async function queueCredentialsEmail(
   }
 }
 
+async function sendMotherCredentialsSms({
+  fullName,
+  phoneNumber,
+  credentials,
+}: {
+  fullName: string;
+  phoneNumber: string;
+  credentials: Pick<
+    CreatedCredentials,
+    "username" | "loginEmail" | "temporaryPassword"
+  >;
+}): Promise<"sent" | "failed"> {
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
+
+  if (!normalizedPhone) {
+    return "failed";
+  }
+
+  try {
+    await sendNotifySms({
+      phoneNumber: normalizedPhone,
+      contactFirstName: fullName.split(" ").filter(Boolean)[0] || "Mother",
+      message:
+        `MamaBalance: Your mother account is ready. ` +
+        `Username: ${credentials.username}. ` +
+        `Login email: ${credentials.loginEmail}. ` +
+        `Temporary password: ${credentials.temporaryPassword}. ` +
+        `Please sign in and change your password after first login.`,
+    });
+
+    return "sent";
+  } catch (error) {
+    console.error("Failed to send mother credentials SMS", error);
+    return "failed";
+  }
+}
+
 async function createStaffAccount(
   payload: StaffCreatePayload,
   actor: Awaited<ReturnType<typeof getCurrentSessionUser>>,
 ) {
-  const loginEmail = buildSystemEmail(payload.fullName, payload.role);
+  const personalEmail = normalizeEmail(payload.personalEmail);
+  const loginEmail = personalEmail;
   const temporaryPassword = buildTemporaryPassword(payload.fullName, payload.role);
   const username = buildSystemUsername(payload.fullName, payload.role);
-  const personalEmail = payload.personalEmail.trim().toLowerCase();
   const normalizedPhone = normalizePhoneNumber(payload.contactNumber);
   const userRecord = await adminAuth.createUser({
     email: loginEmail,
@@ -316,10 +375,10 @@ async function createMotherAccount(
   payload: MotherCreatePayload,
   actor: Awaited<ReturnType<typeof getCurrentSessionUser>>,
 ) {
-  const loginEmail = buildSystemEmail(payload.fullName, "mother");
+  const personalEmail = normalizeEmail(payload.personalEmail);
+  const loginEmail = personalEmail;
   const temporaryPassword = buildTemporaryPassword(payload.fullName, "mother");
   const username = buildSystemUsername(payload.fullName, "mother");
-  const personalEmail = normalizeEmail(payload.personalEmail);
   const normalizedPhone = normalizePhoneNumber(payload.phoneNumber);
   const userRecord = await adminAuth.createUser({
     email: loginEmail,
@@ -384,21 +443,25 @@ async function createMotherAccount(
     motherUserId: userId,
   });
 
-  const credentials = {
+  const baseCredentials = {
     userId,
     username,
     loginEmail,
     temporaryPassword,
     deliveryEmail: personalEmail,
-    deliveryQueued: await queueCredentialsEmail(payload.fullName.trim(), personalEmail, {
-      userId,
-      username,
-      loginEmail,
-      temporaryPassword,
-      deliveryEmail: personalEmail,
-      deliveryQueued: false,
-    }),
+    deliveryQueued: false,
+    smsDeliveryPhone: normalizedPhone,
     guardianProvisioning: guardianProvisioning || undefined,
+  } satisfies CreatedCredentials;
+
+  const credentials = {
+    ...baseCredentials,
+    deliveryQueued: await queueCredentialsEmail(payload.fullName.trim(), personalEmail, baseCredentials),
+    smsDeliveryStatus: await sendMotherCredentialsSms({
+      fullName: payload.fullName.trim(),
+      phoneNumber: normalizedPhone,
+      credentials: baseCredentials,
+    }),
   } satisfies CreatedCredentials;
 
   return credentials;
@@ -1053,9 +1116,19 @@ async function handleUpdate(request: NextRequest) {
     const normalizedEmail = email ? normalizeEmail(email) : null;
     const normalizedPhone = contact ? normalizePhoneNumber(contact) : null;
 
+    if (normalizedEmail || (user?.role === "mother" && normalizedPhone)) {
+      await adminAuth.updateUser(uid, {
+        ...(normalizedEmail && { email: normalizedEmail }),
+        ...(user?.role === "mother" && normalizedPhone && { phoneNumber: normalizedPhone }),
+      });
+    }
+
     await userRef.update({
       ...(normalizedEmail && {
         personalEmail: normalizedEmail,
+      }),
+      ...(normalizedEmail && {
+        email: normalizedEmail,
       }),
       ...(regionId && { regionId }),
       ...(normalizedPhone && { phoneNumber: normalizedPhone }),
@@ -1064,16 +1137,11 @@ async function handleUpdate(request: NextRequest) {
     });
 
     if (user?.role === "mother") {
-      if (normalizedPhone) {
-        await adminAuth.updateUser(uid, {
-          ...(normalizedPhone && { phoneNumber: normalizedPhone }),
-        });
-      }
-
       const motherRef = adminDb.collection("mothers").doc(uid);
 
       await motherRef.update({
         ...(normalizedEmail && { personalEmail: normalizedEmail }),
+        ...(normalizedEmail && { email: normalizedEmail }),
         ...(regionId && { regionId }),
         ...(normalizedPhone && { phoneNumber: normalizedPhone }),
         ...(assignedMidwifeUid && { assignedMidwifeUid }),
@@ -1123,10 +1191,6 @@ async function handleUpdate(request: NextRequest) {
       });
 
       return NextResponse.json({ ok: true, guardianProvisioning });
-    } else if (email) {
-      await adminAuth.updateUser(uid, {
-        email: normalizeEmail(email),
-      });
     }
 
     await logAuditEvent({

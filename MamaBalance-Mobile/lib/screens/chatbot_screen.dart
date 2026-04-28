@@ -132,7 +132,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       final response = await ChatbotService.instance.getChatResponse(
         _chatHistory,
         text,
-        _profile!,
       );
 
       await ChatbotService.instance.saveMessage(role: 'bot', text: response);
@@ -371,12 +370,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              message.text,
-              style: TextStyle(
-                color: isUser ? Colors.white : _text,
-                fontSize: 15,
-                height: 1.45,
+            Text.rich(
+              _formatMessageText(
+                message.text,
+                TextStyle(
+                  color: isUser ? Colors.white : _text,
+                  fontSize: 15,
+                  height: 1.45,
+                ),
               ),
             ),
             if (message.createdAt != null) ...[
@@ -400,6 +401,34 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   String _formatTimestamp(DateTime dateTime) {
     return DateFormat('h:mm a').format(dateTime.toLocal());
+  }
+
+  TextSpan _formatMessageText(String text, TextStyle baseStyle) {
+    final spans = <TextSpan>[];
+    final pattern = RegExp(r'\*\*(.+?)\*\*');
+    var currentIndex = 0;
+
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > currentIndex) {
+        spans.add(
+          TextSpan(text: text.substring(currentIndex, match.start)),
+        );
+      }
+
+      spans.add(
+        TextSpan(
+          text: match.group(1) ?? '',
+          style: baseStyle.copyWith(fontWeight: FontWeight.w800),
+        ),
+      );
+      currentIndex = match.end;
+    }
+
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(currentIndex)));
+    }
+
+    return TextSpan(style: baseStyle, children: spans);
   }
 
   @override

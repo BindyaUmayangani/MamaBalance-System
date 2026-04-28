@@ -89,7 +89,19 @@ class ProfileDetailsPage extends StatelessWidget {
                         CircleAvatar(
                           radius: 42,
                           backgroundColor: Colors.white,
-                          backgroundImage: ImageUtils.resolveProfileImage(profile.profileImageUrl),
+                          backgroundImage: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                              ? ImageUtils.resolveProfileImage(profile.profileImageUrl)
+                              : null,
+                          child: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                              ? null
+                              : Text(
+                                  ImageUtils.profileInitials(profile.fullName),
+                                  style: const TextStyle(
+                                    color: _mint,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 12),
                         Text(profile.fullName, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
@@ -114,7 +126,6 @@ class ProfileDetailsPage extends StatelessWidget {
                       _buildDetailTile(Icons.badge_outlined, 'Full Name', profile.fullName),
                       _buildDetailTile(Icons.phone_outlined, 'Contact Number', profile.phoneNumber),
                       _buildDetailTile(Icons.alternate_email_rounded, 'Personal Email', profile.personalEmail),
-                      _buildDetailTile(Icons.mail_outline_rounded, 'Login Email', profile.loginEmail),
                       _buildDetailTile(Icons.cake_outlined, 'Birth Date', profile.birthdate),
                       _buildDetailTile(Icons.home_outlined, 'Address', profile.address),
                     ],

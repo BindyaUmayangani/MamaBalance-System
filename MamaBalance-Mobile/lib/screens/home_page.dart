@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -117,7 +116,7 @@ class _HomePageState extends State<HomePage> {
 
   String _formatLastTestDate(DateTime? date) {
     if (date == null) return 'No test submitted';
-    return DateFormat('dd MMM yyyy  h:mm a').format(date.toLocal());
+    return DateFormat('dd MMM yyyy').format(date.toLocal());
   }
 
   String _checkInStatus(DateTime? date) {
@@ -133,11 +132,7 @@ class _HomePageState extends State<HomePage> {
   String _formatVisitDate(dynamic value) {
     if (value == null) return 'No upcoming visits';
     try {
-      final date = (value is DateTime
-          ? value
-          : value is Timestamp
-              ? value.toDate()
-              : DateTime.parse('$value'))
+      final date = (value is DateTime ? value : DateTime.parse('$value'))
           .toLocal();
       return DateFormat('dd MMM yyyy').format(date);
     } catch (_) {
@@ -148,11 +143,7 @@ class _HomePageState extends State<HomePage> {
   String _formatVisitDay(dynamic value) {
     if (value == null) return 'Date to be confirmed';
     try {
-      final date = (value is DateTime
-          ? value
-          : value is Timestamp
-              ? value.toDate()
-              : DateTime.parse('$value'))
+      final date = (value is DateTime ? value : DateTime.parse('$value'))
           .toLocal();
       return DateFormat('EEEE').format(date);
     } catch (_) {
@@ -163,11 +154,7 @@ class _HomePageState extends State<HomePage> {
   String _formatVisitTime(dynamic value) {
     if (value == null) return 'Time to be confirmed';
     try {
-      final date = (value is DateTime
-          ? value
-          : value is Timestamp
-              ? value.toDate()
-              : DateTime.parse('$value'))
+      final date = (value is DateTime ? value : DateTime.parse('$value'))
           .toLocal();
       return DateFormat('h:mm a').format(date);
     } catch (_) {
@@ -178,7 +165,6 @@ class _HomePageState extends State<HomePage> {
   DateTime? _readScheduledAt(dynamic value) {
     try {
       if (value == null) return null;
-      if (value is Timestamp) return value.toDate().toLocal();
       if (value is DateTime) return value.toLocal();
       return DateTime.parse('$value').toLocal();
     } catch (_) {
@@ -770,7 +756,19 @@ class _HomePageState extends State<HomePage> {
                   child: CircleAvatar(
                     radius: 24,
                     backgroundColor: Colors.white,
-                    backgroundImage: ImageUtils.resolveProfileImage(profile.profileImageUrl),
+                    backgroundImage: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                        ? ImageUtils.resolveProfileImage(profile.profileImageUrl)
+                        : null,
+                    child: ImageUtils.hasProfileImage(profile.profileImageUrl)
+                        ? null
+                        : Text(
+                            ImageUtils.profileInitials(profile.fullName),
+                            style: const TextStyle(
+                              color: _accent,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                   ),
                 ),
               ],

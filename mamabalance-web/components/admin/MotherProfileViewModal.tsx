@@ -176,12 +176,8 @@ export default function MotherProfileViewModal({ mother, onClose }: Props) {
               <strong className="profile-info-value">{displayMother.region || "-"}</strong>
             </div>
             <div className="profile-info-item">
-              <span className="profile-info-label">MamaBalance Email</span>
-              <strong className="profile-info-value">{displayMother.email || "-"}</strong>
-            </div>
-            <div className="profile-info-item">
               <span className="profile-info-label">Personal Email</span>
-              <strong className="profile-info-value">{displayMother.personalEmail || "-"}</strong>
+              <strong className="profile-info-value">{displayMother.email || "-"}</strong>
             </div>
             <div className="profile-info-item">
               <span className="profile-info-label">Assigned Midwife</span>

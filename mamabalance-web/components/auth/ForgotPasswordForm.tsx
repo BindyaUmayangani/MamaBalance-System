@@ -15,11 +15,11 @@ function buildOtpArray() {
 export default function ForgotPasswordForm() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(buildOtpArray());
   const [requestId, setRequestId] = useState("");
   const [resetToken, setResetToken] = useState("");
-  const [maskedPhone, setMaskedPhone] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -66,13 +66,13 @@ export default function ForgotPasswordForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phoneNumber: phoneNumber.trim() }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       const payload = (await response.json()) as {
         error?: string;
         requestId?: string | null;
-        maskedPhone?: string;
+        maskedEmail?: string;
       };
 
       if (!response.ok) {
@@ -81,17 +81,17 @@ export default function ForgotPasswordForm() {
 
       if (!payload.requestId) {
         setSuccess(
-          "We could not start SMS recovery for that number. Please confirm the saved staff phone number or contact an administrator.",
+          "We could not start email recovery for that address. Please confirm the saved staff email or contact an administrator.",
         );
         return;
       }
 
       setRequestId(payload.requestId || "");
-      setMaskedPhone(payload.maskedPhone || "");
+      setMaskedEmail(payload.maskedEmail || "");
       setOtpDigits(buildOtpArray());
       setStep(2);
       setSuccess(
-        `If the staff account exists, a 6-digit OTP has been sent to ${payload.maskedPhone || "the saved phone number"}.`,
+        `If the staff account exists, a 6-digit OTP has been sent to ${payload.maskedEmail || "the saved email address"}.`,
       );
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to send OTP.");
@@ -196,18 +196,18 @@ export default function ForgotPasswordForm() {
 
       {step === 1 && (
         <form className="form" onSubmit={handleSendOtp}>
-          <p className="subtitle">Enter the phone number saved on the staff account to receive a reset OTP by SMS.</p>
+          <p className="subtitle">Enter the personal email saved on the staff account to receive a reset OTP by email.</p>
 
           <div className="form-group">
-            <label htmlFor="reset-phone">Phone Number</label>
+            <label htmlFor="reset-email">Email Address</label>
             <input
-              id="reset-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="0771234567"
-              value={phoneNumber}
-              onChange={(event) => setPhoneNumber(event.target.value)}
+              id="reset-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               required
             />
           </div>
@@ -224,7 +224,7 @@ export default function ForgotPasswordForm() {
       {step === 2 && (
         <form className="form" onSubmit={handleVerifyOtp}>
           <p className="subtitle">
-            Enter the 6-digit OTP sent to {maskedPhone || "your saved phone number"}.
+            Enter the 6-digit OTP sent to {maskedEmail || "your saved email address"}.
           </p>
 
           <div className="form-group">

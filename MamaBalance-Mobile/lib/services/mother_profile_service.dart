@@ -1,11 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import '../models/mother_profile.dart';
 import 'auth_service.dart';
 
@@ -14,400 +14,135 @@ class MotherProfileService {
 
   static final MotherProfileService instance = MotherProfileService._();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  static const Duration _backendTimeout = Duration(seconds: 20);
 
   Future<MotherProfile> fetchCurrentProfile() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const AppAuthException('Please sign in to continue.');
-    }
-    try {
-      final resolved = await _resolveCurrentProfileDocs();
-      final userDoc = resolved.userDoc;
-      final motherDoc = resolved.motherDoc;
-
-      final userData = userDoc.data() ?? <String, dynamic>{};
-      final motherData = motherDoc.data() ?? <String, dynamic>{};
-      final doctorUid = _readString(motherData['assignedDoctorUid']);
-      final midwifeUid = _readString(motherData['assignedMidwifeUid']);
-      final staffAssignments = await _resolveAssignedStaff(
-        doctorUid: doctorUid,
-        midwifeUid: midwifeUid,
-      );
-
-      final noOfChildrenValue = motherData['noOfChildren'];
-      final noOfChildren = noOfChildrenValue is num
-          ? noOfChildrenValue.toInt()
-          : int.tryParse('${noOfChildrenValue ?? 0}') ?? 0;
-
-      return MotherProfile(
-        uid: resolved.uid,
-        fullName: _readString(motherData['fullName']) ??
-            _readString(userData['displayName']) ??
-            user.displayName ??
-            'Mother',
-        loginEmail: _readString(userData['email']) ?? user.email ?? '-',
-        personalEmail: _readString(motherData['personalEmail']) ??
-            _readString(userData['personalEmail']) ??
-            user.email ??
-            '-',
-        phoneNumber: _readString(motherData['phoneNumber']) ??
-            _readString(userData['phoneNumber']) ??
-            _readString(user.phoneNumber) ??
-            '-',
-        birthdate: _readDateLike(motherData['birthdate']),
-        address: _readString(motherData['address']) ?? '-',
-        guardianName: _readString(motherData['guardianName']) ?? '-',
-        guardianContact: _readString(motherData['guardianContact']) ?? '-',
-        deliveryDate: _readDateLike(motherData['deliveryDate']),
-        noOfChildren: noOfChildren,
-        profileImageUrl: _readString(motherData['profileImage']) ??
-            _readString(userData['profileImage']) ??
-            '',
-        profileImagePath: _readString(motherData['profileImagePath']) ??
-            _readString(userData['profileImagePath']) ??
-            '',
-        assignedDoctorUid: doctorUid,
-        assignedMidwifeUid: midwifeUid,
-        assignedDoctorName: staffAssignments.doctorName,
-        assignedDoctorPhoneNumber: staffAssignments.doctorPhoneNumber,
-        assignedMidwifeName: staffAssignments.midwifeName,
-        assignedMidwifePhoneNumber: staffAssignments.midwifePhoneNumber,
-        latestEpdsScore: int.tryParse('${motherData['latestEpdsScore'] ?? 0}') ?? 0,
-        latestEpdsDate: _parseLatestEpdsDate(motherData),
-      );
-    } catch (_) {
-      return _buildFallbackProfile(user);
-    }
+    return _profileFromJson(await _sendProfileRequest(method: 'GET'));
   }
 
   Future<void> updateCurrentProfile(MotherProfile profile) async {
-    final resolved = await _resolveCurrentProfileDocs();
-    final user = _auth.currentUser!;
-    final canonicalUid = resolved.uid;
-
-    final trimmedName = profile.fullName.trim();
-    final normalizedPersonalEmail = profile.personalEmail.trim().toLowerCase();
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      profile.phoneNumber,
+    await _sendProfileRequest(
+      method: 'PATCH',
+      body: {
+        'fullName': profile.fullName.trim(),
+        'personalEmail': profile.personalEmail.trim().toLowerCase(),
+        'phoneNumber': AuthService.instance.normalizePhoneNumber(profile.phoneNumber),
+        'birthdate': profile.birthdate.trim(),
+        'address': profile.address.trim(),
+        'guardianName': profile.guardianName.trim(),
+        'guardianContact': profile.guardianContact.trim(),
+        'deliveryDate': profile.deliveryDate.trim(),
+        'noOfChildren': profile.noOfChildren,
+      },
     );
-
-    final updatesForUser = <String, dynamic>{
-      'displayName': trimmedName,
-      'personalEmail': normalizedPersonalEmail,
-      'phoneNumber': normalizedPhone,
-      'profileImage': profile.profileImageUrl.trim(),
-      'profileImagePath': profile.profileImagePath.trim(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    final updatesForMother = <String, dynamic>{
-      'fullName': trimmedName,
-      'personalEmail': normalizedPersonalEmail,
-      'phoneNumber': normalizedPhone,
-      'birthdate': profile.birthdate.trim(),
-      'address': profile.address.trim(),
-      'guardianName': profile.guardianName.trim(),
-      'guardianContact': profile.guardianContact.trim(),
-      'deliveryDate': profile.deliveryDate.trim(),
-      'noOfChildren': profile.noOfChildren,
-      'profileImage': profile.profileImageUrl.trim(),
-      'profileImagePath': profile.profileImagePath.trim(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    await Future.wait([
-      _db.collection('users').doc(canonicalUid).set(updatesForUser, SetOptions(merge: true)),
-      resolved.motherDoc.reference.set(updatesForMother, SetOptions(merge: true)),
-    ]);
-
-    if (trimmedName.isNotEmpty && user.displayName != trimmedName) {
-      await user.updateDisplayName(trimmedName);
-      await user.reload();
-    }
   }
 
   Future<MotherProfile> uploadProfileImage(File imageFile) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const AppAuthException('Please sign in to continue.');
-    }
-
-    final resolved = await _resolveCurrentProfileDocs();
-    final canonicalUid = resolved.uid;
-
-    // 1. Convert image to Base64 for database-direct sync (Web Parity)
     final bytes = await imageFile.readAsBytes();
     final extension = imageFile.path.split('.').last.toLowerCase();
-    final mimeType = (extension == 'png') ? 'image/png' : 'image/jpeg';
-    
-    final base64String = base64Encode(bytes);
-    final dataUrl = 'data:$mimeType;base64,$base64String';
-
-    // 2. Update databases (Firestore is the source of truth for synchronization)
-    final updates = <String, dynamic>{
-      'profileImage': dataUrl,
-      'profileImagePath': '', // Clear path as we are using Base64 now
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    await Future.wait([
-      _db.collection('users').doc(canonicalUid).set(updates, SetOptions(merge: true)),
-      resolved.motherDoc.reference.set(updates, SetOptions(merge: true)),
-    ]);
-
-    await user.reload();
-    return fetchCurrentProfile();
-  }
-
-  /// Safely attempts to delete a file from Firebase Storage.
-  /// Ignores "object-not-found" errors to prevent crashing the flow.
-  Future<void> _safeDeleteStorageFile(String path) async {
-    try {
-      await _storage.ref(path).delete();
-    } on FirebaseException catch (e) {
-      if (e.code != 'object-not-found') {
-        // Log other exceptions but don't rethrow to avoid breaking the user flow
-        debugPrint('Non-critical error deleting old profile image: $e');
-      }
-    } catch (e) {
-      debugPrint('Unexpected error deleting old profile image: $e');
-    }
-  }
-
-  String _readDateLike(dynamic value) {
-    if (value == null) return '-';
-    if (value is Timestamp) {
-      final date = value.toDate();
-      return date.toIso8601String().split('T').first;
-    }
-    final raw = '$value'.trim();
-    return raw.isEmpty ? '-' : raw;
-  }
-
-  String? _readString(dynamic value) {
-    if (value == null) return null;
-    final raw = '$value'.trim();
-    return raw.isEmpty ? null : raw;
-  }
-
-  DateTime? _parseLatestEpdsDate(Map<String, dynamic> motherData) {
-    final raw = motherData['latestEpdsSubmittedAt'];
-
-    if (raw == null) return null;
-    if (raw is Timestamp) return raw.toDate();
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
-  }
-
-  MotherProfile _buildFallbackProfile(User user) {
-    return MotherProfile(
-      uid: user.uid,
-      fullName: (user.displayName != null && user.displayName!.trim().isNotEmpty)
-          ? user.displayName!.trim()
-          : 'Mother',
-      loginEmail: user.email?.trim().isNotEmpty == true ? user.email!.trim() : '-',
-      personalEmail: user.email?.trim().isNotEmpty == true ? user.email!.trim() : '-',
-      phoneNumber: _readString(user.phoneNumber) ?? '-',
-      birthdate: '-',
-      address: '-',
-      guardianName: '-',
-      guardianContact: '-',
-      deliveryDate: '-',
-      noOfChildren: 0,
-      profileImageUrl: '',
-      profileImagePath: '',
-      assignedDoctorUid: null,
-      assignedDoctorName: '',
-      assignedDoctorPhoneNumber: '',
-      assignedMidwifeName: '',
-      assignedMidwifePhoneNumber: '',
+    final mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
+    final response = await _sendProfileRequest(
+      method: 'PATCH',
+      body: {
+        'profileImageUrl': 'data:$mimeType;base64,${base64Encode(bytes)}',
+        'profileImagePath': '',
+      },
     );
+    return _profileFromJson(response);
   }
 
-  Future<_AssignedStaffDetails> _resolveAssignedStaff({
-    required String? doctorUid,
-    required String? midwifeUid,
+  Future<Map<String, dynamic>> _sendProfileRequest({
+    required String method,
+    Map<String, dynamic>? body,
   }) async {
-    final staffDocs = await Future.wait([
-      _fetchStaffDoc(doctorUid),
-      _fetchStaffDoc(midwifeUid),
-    ]);
-
-    final doctorData = staffDocs[0];
-    final midwifeData = staffDocs[1];
-
-    return _AssignedStaffDetails(
-      doctorName: _readString(doctorData?['displayName']) ??
-          _readString(doctorData?['fullName']) ??
-          '',
-      doctorPhoneNumber: _readString(doctorData?['phoneNumber']) ?? '',
-      midwifeName: _readString(midwifeData?['displayName']) ??
-          _readString(midwifeData?['fullName']) ??
-          '',
-      midwifePhoneNumber: _readString(midwifeData?['phoneNumber']) ?? '',
-    );
-  }
-
-  Future<Map<String, dynamic>?> _fetchStaffDoc(String? uid) async {
-    final trimmedUid = uid?.trim() ?? '';
-    if (trimmedUid.isEmpty) {
-      return null;
+    final user = _auth.currentUser;
+    if (user == null) throw const AppAuthException('Please sign in to continue.');
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
     }
 
     try {
-      final snapshot = await _db.collection('users').doc(trimmedUid).get();
-      return snapshot.data();
-    } catch (_) {
-      return null;
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        if (body != null) 'Content-Type': 'application/json',
+      };
+      final response = method == 'PATCH'
+          ? await http
+              .patch(_profileEndpoint(), headers: headers, body: jsonEncode(body))
+              .timeout(_backendTimeout)
+          : await http.get(_profileEndpoint(), headers: headers).timeout(_backendTimeout);
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(payload['error'] as String? ?? 'Unable to load profile.');
+      }
+      return payload;
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException('The profile request timed out.');
+    } on SocketException {
+      throw const AppAuthException('Unable to reach the profile backend.');
+    } on FormatException {
+      throw const AppAuthException('The profile backend returned an invalid response.');
     }
   }
 
-  Future<_ResolvedProfileDocs> _resolveCurrentProfileDocs() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const AppAuthException('Please sign in to continue.');
-    }
+  Uri _profileEndpoint() {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) throw const AppAuthException('Backend URL is not configured.');
+    return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/profile');
+  }
 
-    final directUserDoc = await _db.collection('users').doc(user.uid).get();
-    if (directUserDoc.exists) {
-      final directMotherDoc = await _resolveMotherDocForUid(user.uid, user);
-      return _ResolvedProfileDocs(
-        uid: user.uid,
-        userDoc: directUserDoc,
-        motherDoc: directMotherDoc,
-      );
-    }
-
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-
-    DocumentSnapshot<Map<String, dynamic>>? matchedUserDoc;
-
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('users')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-
-      if (byPhone.docs.isNotEmpty) {
-        matchedUserDoc = byPhone.docs.first;
-      }
-    }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (matchedUserDoc == null && email.isNotEmpty) {
-      final byLoginEmail = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (byLoginEmail.docs.isNotEmpty) {
-        matchedUserDoc = byLoginEmail.docs.first;
-      }
-    }
-
-    if (matchedUserDoc == null && email.isNotEmpty) {
-      final byPersonalEmail = await _db
-          .collection('users')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (byPersonalEmail.docs.isNotEmpty) {
-        matchedUserDoc = byPersonalEmail.docs.first;
-      }
-    }
-
-    if (matchedUserDoc == null) {
-      throw const AppAuthException('Unable to find your account details.');
-    }
-
-    final canonicalUid = matchedUserDoc.id;
-    final motherDoc = await _resolveMotherDocForUid(canonicalUid, user);
-
-    return _ResolvedProfileDocs(
-      uid: canonicalUid,
-      userDoc: matchedUserDoc,
-      motherDoc: motherDoc,
+  MotherProfile _profileFromJson(Map<String, dynamic> response) {
+    final raw = response['profile'];
+    final data = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+    return MotherProfile(
+      uid: _readString(data['uid']),
+      fullName: _readString(data['fullName'], fallback: 'Mother'),
+      loginEmail: _readString(data['loginEmail'], fallback: '-'),
+      personalEmail: _readString(data['personalEmail'], fallback: '-'),
+      phoneNumber: _readString(data['phoneNumber'], fallback: '-'),
+      birthdate: _readString(data['birthdate'], fallback: '-'),
+      address: _readString(data['address'], fallback: '-'),
+      guardianName: _readString(data['guardianName'], fallback: '-'),
+      guardianContact: _readString(data['guardianContact'], fallback: '-'),
+      deliveryDate: _readString(data['deliveryDate'], fallback: '-'),
+      noOfChildren: _readInt(data['noOfChildren']),
+      profileImageUrl: _readString(data['profileImageUrl']),
+      profileImagePath: _readString(data['profileImagePath']),
+      assignedDoctorUid: _nullableString(data['assignedDoctorUid']),
+      assignedMidwifeUid: _nullableString(data['assignedMidwifeUid']),
+      assignedDoctorName: _readString(data['assignedDoctorName']),
+      assignedDoctorPhoneNumber: _readString(data['assignedDoctorPhoneNumber']),
+      assignedMidwifeName: _readString(data['assignedMidwifeName']),
+      assignedMidwifePhoneNumber: _readString(data['assignedMidwifePhoneNumber']),
+      latestEpdsScore: _readInt(data['latestEpdsScore']),
+      latestEpdsDate: DateTime.tryParse(_readString(data['latestEpdsDate'])),
     );
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>> _resolveMotherDocForUid(
-    String uid,
-    User user,
-  ) async {
-    final directMotherDoc = await _db.collection('mothers').doc(uid).get();
-    if (directMotherDoc.exists) {
-      return directMotherDoc;
-    }
-
-    final byUserUid = await _db
-        .collection('mothers')
-        .where('userUid', isEqualTo: uid)
-        .limit(1)
-        .get();
-    if (byUserUid.docs.isNotEmpty) {
-      return byUserUid.docs.first;
-    }
-
-    final normalizedPhone = AuthService.instance.normalizePhoneNumber(
-      user.phoneNumber ?? '',
-    );
-    if (normalizedPhone.isNotEmpty) {
-      final byPhone = await _db
-          .collection('mothers')
-          .where('phoneNumber', isEqualTo: normalizedPhone)
-          .limit(1)
-          .get();
-      if (byPhone.docs.isNotEmpty) {
-        return byPhone.docs.first;
-      }
-    }
-
-    final email = user.email?.trim().toLowerCase() ?? '';
-    if (email.isNotEmpty) {
-      final byPersonalEmail = await _db
-          .collection('mothers')
-          .where('personalEmail', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (byPersonalEmail.docs.isNotEmpty) {
-        return byPersonalEmail.docs.first;
-      }
-    }
-
-    return directMotherDoc;
+  Map<String, dynamic> _decodeJson(String raw) {
+    if (raw.trim().isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
-}
 
-class _AssignedStaffDetails {
-  final String doctorName;
-  final String doctorPhoneNumber;
-  final String midwifeName;
-  final String midwifePhoneNumber;
+  String _readString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    final raw = '$value'.trim();
+    return raw.isEmpty ? fallback : raw;
+  }
 
-  const _AssignedStaffDetails({
-    required this.doctorName,
-    required this.doctorPhoneNumber,
-    required this.midwifeName,
-    required this.midwifePhoneNumber,
-  });
-}
+  String? _nullableString(dynamic value) {
+    final raw = _readString(value);
+    return raw.isEmpty || raw == '-' ? null : raw;
+  }
 
-class _ResolvedProfileDocs {
-  final String uid;
-  final DocumentSnapshot<Map<String, dynamic>> userDoc;
-  final DocumentSnapshot<Map<String, dynamic>> motherDoc;
-
-  const _ResolvedProfileDocs({
-    required this.uid,
-    required this.userDoc,
-    required this.motherDoc,
-  });
+  int _readInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse('${value ?? 0}') ?? 0;
+  }
 }

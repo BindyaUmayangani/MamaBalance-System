@@ -1,12 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cryptography/cryptography.dart';
+import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import 'auth_service.dart';
-import '../models/app_session.dart';
-import 'mobile_user_context_service.dart';
 
 class SecureChatMessage {
   final String id;
@@ -61,74 +61,15 @@ class MessagingService {
 
   static final MessagingService instance = MessagingService._();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final AesGcm _cipher = AesGcm.with256bits();
-  final MobileUserContextService _contextService =
-      MobileUserContextService.instance;
-  static const String _algorithm = 'AES-256-GCM';
-  static const String _keyVersion = 'v1';
-  static const String _defaultDevelopmentKey = 'MamaBalance demo message key v1!';
-  static const String _configuredKey = String.fromEnvironment(
-    'MESSAGE_ENCRYPTION_KEY',
-  );
+  static const Duration _backendTimeout = Duration(seconds: 20);
+  static const Duration _messagePollInterval = Duration(seconds: 3);
 
   User? get currentUser => _auth.currentUser;
 
   Future<CareChatOptions> resolveChatOptions() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw const AppAuthException('Please sign in to continue.');
-    }
-
-    final context = await _contextService.resolveCurrent();
-    final role = context.role;
-    final participantUid =
-        role == AppUserRole.guardian ? context.userDoc.id : context.motherDoc.id;
-    final participantRole =
-        role == AppUserRole.guardian ? 'guardian' : 'mother';
-    final motherDoc = context.motherDoc;
-    final mother = motherDoc.data() ?? {};
-    final doctorUid = '${mother['assignedDoctorUid'] ?? ''}'.trim();
-    final midwifeUid = '${mother['assignedMidwifeUid'] ?? ''}'.trim();
-
-    if (midwifeUid.isEmpty) {
-      throw const AppAuthException('No midwife has been assigned yet.');
-    }
-
-    final doctor = doctorUid.isEmpty
-        ? null
-        : SecureConversation(
-            id: _conversationId(motherDoc.id, doctorUid, 'doctor'),
-            motherUid: motherDoc.id,
-            participantUid: participantUid,
-            participantRole: participantRole,
-            careTeamUid: doctorUid,
-            careTeamRole: 'doctor',
-            careTeamName: await _resolveStaffName(
-              staffUid: doctorUid,
-              role: 'doctor',
-              fallback:
-                  '${mother['assignedDoctorName'] ?? mother['doctorName'] ?? ''}',
-            ),
-          );
-
-    final midwife = SecureConversation(
-      id: _conversationId(motherDoc.id, midwifeUid, 'midwife'),
-      motherUid: motherDoc.id,
-      participantUid: participantUid,
-      participantRole: participantRole,
-      careTeamUid: midwifeUid,
-      careTeamRole: 'midwife',
-      careTeamName: await _resolveStaffName(
-        staffUid: midwifeUid,
-        role: 'midwife',
-        fallback:
-            '${mother['assignedMidwifeName'] ?? mother['midwifeName'] ?? ''}',
-      ),
-    );
-
-    return CareChatOptions(doctor: doctor, midwife: midwife);
+    final payload = await _sendMessagingRequest(method: 'GET');
+    return _optionsFromJson(payload['options']);
   }
 
   Future<CareChatOptions> resolveMotherChatOptions() async {
@@ -140,189 +81,191 @@ class MessagingService {
     return options.doctor ?? options.midwife;
   }
 
-  Future<String> _resolveStaffName({
-    required String staffUid,
-    required String role,
-    required String fallback,
-  }) async {
-    var staffName = _staffName(fallback, role);
-    try {
-      final staffDoc = await _db.collection('users').doc(staffUid).get();
-      staffName = _staffName(
-        '${staffDoc.data()?['displayName'] ?? staffDoc.data()?['fullName'] ?? fallback}',
-        role,
-      );
-    } catch (_) {
-      staffName = _staffName(fallback, role);
+  Stream<List<SecureChatMessage>> watchConversationMessages(
+    SecureConversation conversation,
+  ) async* {
+    while (true) {
+      final messages = await fetchMessages(conversation);
+      yield messages;
+      await Future<void>.delayed(_messagePollInterval);
     }
-
-    return staffName;
   }
 
-  Stream<List<SecureChatMessage>> watchMessages(String conversationId) {
-    return _db
-        .collection('conversations')
-        .doc(conversationId)
-        .snapshots()
-        .asyncExpand((conversationDoc) {
-          if (!conversationDoc.exists) {
-            return Stream<List<SecureChatMessage>>.value([]);
-          }
+  Future<List<SecureChatMessage>> fetchMessages(
+    SecureConversation conversation,
+  ) async {
+    final payload = await _sendMessagingRequest(
+      method: 'GET',
+      queryParameters: {'conversationId': conversation.id},
+    );
+    final rawMessages = payload['messages'];
+    final messages = rawMessages is List ? rawMessages : const [];
 
-          return conversationDoc.reference
-              .collection('messages')
-              .orderBy('createdAt', descending: false)
-              .limit(100)
-              .snapshots()
-              .asyncMap(
-                (snapshot) async => Future.wait(snapshot.docs.map((doc) async {
-                  final data = doc.data();
-                  return SecureChatMessage(
-                    id: doc.id,
-                    senderUid: '${data['senderUid'] ?? ''}',
-                    senderRole: '${data['senderRole'] ?? ''}',
-                    text: await _decryptMessageText(data),
-                    createdAt: _readDate(data['createdAt']),
-                  );
-                })),
-              );
-        });
+    return messages
+        .whereType<Map<String, dynamic>>()
+        .map(_messageFromJson)
+        .toList();
   }
 
   Future<void> sendMessage({
     required SecureConversation conversation,
     required String text,
   }) async {
-    final user = _auth.currentUser;
     final trimmed = text.trim();
-
-    if (user == null) {
-      throw const AppAuthException('Please sign in to continue.');
-    }
     if (trimmed.isEmpty) {
       return;
     }
 
-    final conversationRef =
-        _db.collection('conversations').doc(conversation.id);
-    final messageRef = conversationRef.collection('messages').doc();
-    final encrypted = await _encryptMessageText(trimmed);
-
-    await _db.runTransaction((transaction) async {
-      transaction.set(
-        conversationRef,
-        {
-          'motherUid': conversation.motherUid,
-          if (conversation.careTeamRole == 'doctor')
-            'doctorUid': conversation.careTeamUid,
-          if (conversation.careTeamRole == 'midwife')
-            'midwifeUid': conversation.careTeamUid,
-          'careTeamRole': conversation.careTeamRole,
-          'participantUids': [
-            conversation.motherUid,
-            conversation.participantUid,
-            conversation.careTeamUid,
-          ].toSet().toList(),
-          'isOpen': true,
-          'lastMessageText': 'Secure message',
-          'lastMessageAt': FieldValue.serverTimestamp(),
-          'lastMessageSenderUid': user.uid,
-          if (conversation.participantRole == 'mother')
-            'lastReadByMotherAt': FieldValue.serverTimestamp(),
-          if (conversation.participantRole == 'guardian')
-            'lastReadByGuardianAt': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
-
-      transaction.set(messageRef, {
-        'senderUid': user.uid,
-        'senderRole': conversation.participantRole,
-        ...encrypted,
-        'attachments': [],
-        'readBy': [user.uid],
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    });
-  }
-
-  Future<void> markConversationRead(String conversationId) async {
-    final context = await _contextService.resolveCurrent();
-    final payload = <String, dynamic>{
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-    if (context.role == AppUserRole.guardian) {
-      payload['lastReadByGuardianAt'] = FieldValue.serverTimestamp();
-    } else {
-      payload['lastReadByMotherAt'] = FieldValue.serverTimestamp();
-    }
-
-    await _db
-        .collection('conversations')
-        .doc(conversationId)
-        .set(payload, SetOptions(merge: true));
-  }
-
-  DateTime? _readDate(dynamic value) {
-    if (value == null) return null;
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return DateTime.tryParse('$value');
-  }
-
-  String _conversationId(String motherUid, String staffUid, String role) {
-    return '${motherUid}_${role}_$staffUid';
-  }
-
-  Future<Map<String, String>> _encryptMessageText(String text) async {
-    final secretBox = await _cipher.encrypt(
-      utf8.encode(text),
-      secretKey: await _secretKey(),
+    await _sendMessagingRequest(
+      method: 'POST',
+      body: {
+        'conversationId': conversation.id,
+        'text': trimmed,
+      },
     );
+  }
 
-    return {
-      'algorithm': _algorithm,
-      'keyVersion': _keyVersion,
-      'ciphertext': base64Encode(secretBox.cipherText),
-      'iv': base64Encode(secretBox.nonce),
-      'authTag': base64Encode(secretBox.mac.bytes),
+  Future<void> markConversationRead(SecureConversation conversation) async {
+    await _sendMessagingRequest(
+      method: 'PATCH',
+      body: {
+        'conversationId': conversation.id,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _sendMessagingRequest({
+    required String method,
+    Map<String, String>? queryParameters,
+    Map<String, dynamic>? body,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AppAuthException('Please sign in to continue.');
+    }
+
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
+    }
+
+    final uri = _messagingEndpoint(queryParameters);
+    final headers = <String, String>{
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+      if (body != null) 'Content-Type': 'application/json',
     };
-  }
-
-  Future<SecretKey> _secretKey() async {
-    final configured = _configuredKey.trim();
-    if (configured.isNotEmpty) {
-      return SecretKey(base64Decode(configured));
-    }
-
-    return SecretKey(utf8.encode(_defaultDevelopmentKey));
-  }
-
-  Future<String> _decryptMessageText(Map<String, dynamic> data) async {
-    final legacyText = '${data['text'] ?? ''}';
-    final ciphertext = '${data['ciphertext'] ?? ''}';
-    final iv = '${data['iv'] ?? ''}';
-    final authTag = '${data['authTag'] ?? ''}';
-
-    if (ciphertext.isEmpty || iv.isEmpty || authTag.isEmpty) {
-      return legacyText;
-    }
 
     try {
-      final clearBytes = await _cipher.decrypt(
-        SecretBox(
-          base64Decode(ciphertext),
-          nonce: base64Decode(iv),
-          mac: Mac(base64Decode(authTag)),
-        ),
-        secretKey: await _secretKey(),
+      final response = switch (method) {
+        'POST' => await http
+            .post(uri, headers: headers, body: jsonEncode(body))
+            .timeout(_backendTimeout),
+        'PATCH' => await http
+            .patch(uri, headers: headers, body: jsonEncode(body))
+            .timeout(_backendTimeout),
+        _ => await http.get(uri, headers: headers).timeout(_backendTimeout),
+      };
+
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to load messages.',
+        );
+      }
+
+      return payload;
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException(
+        'The messaging request timed out. Check the backend connection and try again.',
       );
-      return utf8.decode(clearBytes);
-    } catch (_) {
-      return 'Unable to decrypt message';
+    } on SocketException {
+      throw const AppAuthException(
+        'Unable to reach the messaging backend. Check your connection and try again.',
+      );
+    } on FormatException {
+      throw const AppAuthException(
+        'The messaging backend returned an invalid response.',
+      );
     }
+  }
+
+  Uri _messagingEndpoint(Map<String, String>? queryParameters) {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
+    }
+
+    final uri = Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/messaging',
+    );
+
+    if (queryParameters == null || queryParameters.isEmpty) {
+      return uri;
+    }
+
+    return uri.replace(queryParameters: queryParameters);
+  }
+
+  CareChatOptions _optionsFromJson(dynamic rawOptions) {
+    final options = rawOptions is Map<String, dynamic>
+        ? rawOptions
+        : <String, dynamic>{};
+    final midwife = _conversationFromJson(options['midwife']);
+    if (midwife == null) {
+      throw const AppAuthException('No midwife has been assigned yet.');
+    }
+
+    return CareChatOptions(
+      doctor: _conversationFromJson(options['doctor']),
+      midwife: midwife,
+    );
+  }
+
+  SecureConversation? _conversationFromJson(dynamic rawConversation) {
+    if (rawConversation is! Map<String, dynamic>) {
+      return null;
+    }
+
+    return SecureConversation(
+      id: _readString(rawConversation['id']),
+      motherUid: _readString(rawConversation['motherUid']),
+      participantUid: _readString(rawConversation['participantUid']),
+      participantRole: _readString(rawConversation['participantRole']),
+      careTeamUid: _readString(rawConversation['careTeamUid']),
+      careTeamRole: _readString(rawConversation['careTeamRole']),
+      careTeamName: _staffName(
+        _readString(rawConversation['careTeamName']),
+        _readString(rawConversation['careTeamRole']),
+      ),
+    );
+  }
+
+  SecureChatMessage _messageFromJson(Map<String, dynamic> data) {
+    final createdAt = DateTime.tryParse(_readString(data['createdAt']));
+    return SecureChatMessage(
+      id: _readString(data['id']),
+      senderUid: _readString(data['senderUid']),
+      senderRole: _readString(data['senderRole']),
+      text: _readString(data['text']),
+      createdAt: createdAt?.toLocal(),
+    );
+  }
+
+  Map<String, dynamic> _decodeJson(String raw) {
+    if (raw.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+  }
+
+  String _readString(dynamic value) {
+    if (value == null) return '';
+    return '$value'.trim();
   }
 
   String _staffName(String value, String role) {

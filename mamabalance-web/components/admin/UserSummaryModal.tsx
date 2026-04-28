@@ -25,8 +25,7 @@ export default function UserSummaryModal({ title, user, onClose }: Props) {
   const rows = [
     ["Full Name", user.name],
     ["Username", user.username],
-    ["Email", user.email],
-    ["Current Email", user.personalEmail || "-"],
+    ["Personal Email", user.email],
     ["NIC", user.nic],
     ["Created On", user.createdOn],
   ];

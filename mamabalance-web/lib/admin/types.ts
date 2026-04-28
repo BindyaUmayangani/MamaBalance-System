@@ -72,6 +72,8 @@ export type CreatedCredentials = {
   temporaryPassword: string;
   deliveryEmail: string;
   deliveryQueued: boolean;
+  smsDeliveryPhone?: string;
+  smsDeliveryStatus?: "sent" | "failed";
   guardianProvisioning?: GuardianProvisioning;
 };
 

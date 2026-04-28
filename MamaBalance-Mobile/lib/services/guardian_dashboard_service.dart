@@ -1,7 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
-import 'mobile_user_context_service.dart';
-import 'weekly_checkin_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
+import 'auth_service.dart';
+import 'visit_service.dart';
 
 class GuardianVisitSummary {
   final String label;
@@ -80,235 +86,131 @@ class GuardianDashboardService {
 
   static final GuardianDashboardService instance = GuardianDashboardService._();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final MobileUserContextService _contextService =
-      MobileUserContextService.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const Duration _backendTimeout = Duration(seconds: 20);
 
   Future<GuardianDashboardData> fetchDashboard() async {
-    final context = await _contextService.resolveCurrent();
-    final guardianUserDoc = context.userDoc;
-    final guardianData = guardianUserDoc.data() ?? <String, dynamic>{};
-    final motherDoc = context.motherDoc;
-    final motherData = motherDoc.data() ?? <String, dynamic>{};
-
-    final doctorUid = '${motherData['assignedDoctorUid'] ?? ''}'.trim();
-    final midwifeUid = '${motherData['assignedMidwifeUid'] ?? ''}'.trim();
-    final staffAssignments = await _resolveStaffAssignments(
-      doctorUid: doctorUid,
-      midwifeUid: midwifeUid,
-    );
-
+    final payload = await _sendDashboardRequest();
+    final data = payload['dashboard'] is Map<String, dynamic>
+        ? payload['dashboard'] as Map<String, dynamic>
+        : <String, dynamic>{};
     final visits = await Future.wait([
-      _fetchSoonestMidwifeVisit(motherDoc.id, 'home'),
-      _fetchSoonestMidwifeVisit(motherDoc.id, 'clinic'),
-      _fetchSoonestDoctorCheckup(motherDoc.id),
+      _fetchSoonestMidwifeVisit('home'),
+      _fetchSoonestMidwifeVisit('clinic'),
+      _fetchSoonestDoctorCheckup(),
     ]);
 
-    final emergencyContacts = _readEmergencyContacts(motherData['emergencyContacts']);
-
     return GuardianDashboardData(
-      guardianName: _readString(guardianData['displayName']) ??
-          _readString(guardianData['fullName']) ??
-          context.authUser.displayName ??
-          'Guardian',
-      guardianPhoneNumber: _readString(guardianData['phoneNumber']) ??
-          _readString(context.authUser.phoneNumber) ??
-          '-',
-      motherName: _readString(motherData['fullName']) ?? 'Mother',
-      motherPhoneNumber: _readString(motherData['phoneNumber']) ?? '-',
-      motherAddress: _readString(motherData['address']) ?? '-',
-      motherBirthdate: _readString(motherData['birthdate']) ?? '-',
-      motherDeliveryDate: _readString(motherData['deliveryDate']) ?? '-',
-      motherNoOfChildren: _readInt(motherData['noOfChildren']),
-      motherProfileImageUrl: _readString(motherData['profileImage']) ?? '',
-      relationship:
-          _readString(context.guardianLink?['relationship']) ?? 'Guardian',
-      nextEpdsAssessmentDate: _nextEpdsAssessmentDate(motherData),
-      doctor: staffAssignments.doctor,
-      midwife: staffAssignments.midwife,
+      guardianName: _readString(data['guardianName'], fallback: 'Guardian'),
+      guardianPhoneNumber: _readString(data['guardianPhoneNumber'], fallback: '-'),
+      motherName: _readString(data['motherName'], fallback: 'Mother'),
+      motherPhoneNumber: _readString(data['motherPhoneNumber'], fallback: '-'),
+      motherAddress: _readString(data['motherAddress'], fallback: '-'),
+      motherBirthdate: _readString(data['motherBirthdate'], fallback: '-'),
+      motherDeliveryDate: _readString(data['motherDeliveryDate'], fallback: '-'),
+      motherNoOfChildren: int.tryParse('${data['motherNoOfChildren'] ?? 0}') ?? 0,
+      motherProfileImageUrl: _readString(data['motherProfileImageUrl']),
+      relationship: _readString(data['relationship'], fallback: 'Guardian'),
+      nextEpdsAssessmentDate: DateTime.tryParse(_readString(data['nextEpdsAssessmentDate'])),
+      doctor: _staffContact(data['doctor']),
+      midwife: _staffContact(data['midwife']) ??
+          const GuardianStaffContact(name: 'Assigned midwife', phoneNumber: '-'),
       visits: visits.whereType<GuardianVisitSummary>().toList(),
-      emergencyContacts: emergencyContacts,
+      emergencyContacts: _emergencyContacts(data['emergencyContacts']),
     );
   }
 
-  Future<GuardianVisitSummary?> _fetchSoonestMidwifeVisit(
-    String motherUid,
-    String visitType,
-  ) async {
-    final snapshot = await _db
-        .collection('midwifeVisits')
-        .where('motherUid', isEqualTo: motherUid)
-        .get();
-
-    final data = _pickNextUpcoming(
-      snapshot.docs
-          .map((doc) => doc.data())
-          .where((item) =>
-              '${item['visitType'] ?? ''}'.trim().toLowerCase() ==
-              visitType.toLowerCase())
-          .toList(),
-    );
-
-    if (data == null) {
-      return null;
-    }
-
+  Future<GuardianVisitSummary?> _fetchSoonestMidwifeVisit(String visitType) async {
+    final data = await VisitService.instance.fetchSoonestMidwifeVisit('', visitType);
+    if (data == null) return null;
     return GuardianVisitSummary(
       label: visitType == 'clinic' ? 'Clinic visit' : 'Home visit',
       subtitle: visitType == 'clinic'
           ? 'Planned follow-up at the clinic.'
           : 'Midwife support visit at home.',
-      scheduledAt: _readDate(data['scheduledAt']),
+      scheduledAt: DateTime.tryParse(_readString(data['scheduledAt'])),
       staffRole: 'Midwife',
     );
   }
 
-  Future<GuardianVisitSummary?> _fetchSoonestDoctorCheckup(String motherUid) async {
-    final snapshot = await _db
-        .collection('doctorCheckups')
-        .where('motherUid', isEqualTo: motherUid)
-        .get();
-
-    final data = _pickNextUpcoming(snapshot.docs.map((doc) => doc.data()).toList());
-    if (data == null) {
-      return null;
-    }
-
+  Future<GuardianVisitSummary?> _fetchSoonestDoctorCheckup() async {
+    final data = await VisitService.instance.fetchSoonestDoctorCheckup('');
+    if (data == null) return null;
     return GuardianVisitSummary(
       label: 'Doctor checkup',
       subtitle: 'Next scheduled clinical review.',
-      scheduledAt: _readDate(data['scheduledAt']),
+      scheduledAt: DateTime.tryParse(_readString(data['scheduledAt'])),
       staffRole: 'Doctor',
     );
   }
 
-  Map<String, dynamic>? _pickNextUpcoming(List<Map<String, dynamic>> items) {
-    final now = DateTime.now();
-    Map<String, dynamic>? bestItem;
-    DateTime? bestDate;
-
-    for (final item in items) {
-      final status = '${item['status'] ?? ''}'.trim().toLowerCase();
-      if (status == 'completed' || status == 'cancelled') {
-        continue;
-      }
-
-      final scheduledAt = _readDate(item['scheduledAt']);
-      if (scheduledAt == null || scheduledAt.isBefore(now)) {
-        continue;
-      }
-
-      if (bestDate == null || scheduledAt.isBefore(bestDate)) {
-        bestDate = scheduledAt;
-        bestItem = item;
-      }
+  Future<Map<String, dynamic>> _sendDashboardRequest() async {
+    final user = _auth.currentUser;
+    if (user == null) throw const AppAuthException('Please sign in to continue.');
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const AppAuthException('Please sign in again to continue.');
     }
-
-    return bestItem;
-  }
-
-  Future<_GuardianStaffAssignments> _resolveStaffAssignments({
-    required String doctorUid,
-    required String midwifeUid,
-  }) async {
-    final staffDocs = await Future.wait([
-      _fetchStaffDoc(doctorUid),
-      _fetchStaffDoc(midwifeUid),
-    ]);
-
-    return _GuardianStaffAssignments(
-      doctor: _buildStaffContact(
-        data: staffDocs[0],
-        fallbackName: 'Assigned doctor',
-      ),
-      midwife: _buildStaffContact(
-        data: staffDocs[1],
-        fallbackName: 'Assigned midwife',
-      ) ??
-          const GuardianStaffContact(
-            name: 'Assigned midwife',
-            phoneNumber: '-',
-          ),
-    );
-  }
-
-  Future<Map<String, dynamic>?> _fetchStaffDoc(String staffUid) async {
-    if (staffUid.isEmpty) {
-      return null;
-    }
-
     try {
-      final staffDoc = await _db.collection('users').doc(staffUid).get();
-      return staffDoc.data();
-    } catch (_) {
-      return null;
+      final response = await http.get(
+        _dashboardEndpoint(),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      ).timeout(_backendTimeout);
+      final payload = _decodeJson(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppAuthException(payload['error'] as String? ?? 'Unable to load guardian dashboard.');
+      }
+      return payload;
+    } on AppAuthException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppAuthException('The guardian dashboard request timed out.');
+    } on SocketException {
+      throw const AppAuthException('Unable to reach the guardian dashboard backend.');
+    } on FormatException {
+      throw const AppAuthException('The guardian dashboard backend returned an invalid response.');
     }
   }
 
-  GuardianStaffContact? _buildStaffContact({
-    required Map<String, dynamic>? data,
-    required String fallbackName,
-  }) {
-    if (data == null) {
-      return null;
+  Uri _dashboardEndpoint() {
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw const AppAuthException('The mobile backend URL has not been configured.');
     }
+    return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/guardian-dashboard');
+  }
 
+  GuardianStaffContact? _staffContact(dynamic value) {
+    if (value is! Map<String, dynamic>) return null;
     return GuardianStaffContact(
-      name: _readString(data['displayName']) ??
-          _readString(data['fullName']) ??
-          fallbackName,
-      phoneNumber: _readString(data['phoneNumber']) ?? '-',
+      name: _readString(value['name'], fallback: 'Assigned staff'),
+      phoneNumber: _readString(value['phoneNumber'], fallback: '-'),
     );
   }
 
-  List<GuardianEmergencyContact> _readEmergencyContacts(dynamic value) {
-    if (value is! Iterable) {
-      return const [];
-    }
-
-    return value
-        .whereType<Map>()
-        .map(
-          (item) => GuardianEmergencyContact(
-            name: _readString(item['name']) ?? 'Emergency contact',
-            relationship: _readString(item['relationship']) ?? 'Support contact',
-            phoneNumber: _readString(item['phoneNumber']) ?? '-',
-          ),
-        )
-        .toList();
+  List<GuardianEmergencyContact> _emergencyContacts(dynamic value) {
+    final items = value is List ? value : const [];
+    return items.whereType<Map<String, dynamic>>().map((item) {
+      return GuardianEmergencyContact(
+        name: _readString(item['name'], fallback: 'Emergency contact'),
+        relationship: _readString(item['relationship'], fallback: 'Support contact'),
+        phoneNumber: _readString(item['phoneNumber'], fallback: '-'),
+      );
+    }).toList();
   }
 
-  DateTime? _readDate(dynamic value) {
-    if (value == null) return null;
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return DateTime.tryParse('$value');
+  Map<String, dynamic> _decodeJson(String raw) {
+    if (raw.trim().isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
 
-  DateTime? _nextEpdsAssessmentDate(Map<String, dynamic> motherData) {
-    final latestSubmittedAt = _readDate(motherData['latestEpdsSubmittedAt']);
-    return WeeklyCheckInService.nextAvailableAtFrom(latestSubmittedAt);
-  }
-
-  String? _readString(dynamic value) {
-    if (value == null) return null;
+  String _readString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
     final raw = '$value'.trim();
-    return raw.isEmpty ? null : raw;
+    return raw.isEmpty ? fallback : raw;
   }
-
-  int _readInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse('$value') ?? 0;
-  }
-}
-
-class _GuardianStaffAssignments {
-  final GuardianStaffContact? doctor;
-  final GuardianStaffContact midwife;
-
-  const _GuardianStaffAssignments({
-    required this.doctor,
-    required this.midwife,
-  });
 }

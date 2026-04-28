@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronDown } from "lucide-react";
 
 import {
   CreatedCredentials,
@@ -148,43 +148,61 @@ export default function AddMotherModal({
 
   if (createdCredentials) {
     return (
-      <div className="modal-container">
-        <h2 className="modal-title">MOTHER CREATED</h2>
-
-        <div className="view-details view-user-modal">
-          <div className="detail-row">
-            <span className="detail-label">User ID</span>
-            <span className="detail-value">{createdCredentials.userId}</span>
+      <div className="modal-container success-popup mother-created-modal">
+        <div className="success-popup-hero">
+          <div className="success-popup-icon">
+            <CheckCircle2 size={28} />
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Username</span>
-            <span className="detail-value">{createdCredentials.username}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Login Email</span>
-            <span className="detail-value">{createdCredentials.loginEmail}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Temporary Password</span>
-            <span className="detail-value">{createdCredentials.temporaryPassword}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Credentials Email</span>
-            <span className="detail-value">{createdCredentials.deliveryEmail}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Delivery Status</span>
-            <span className="detail-value">
-              {createdCredentials.deliveryQueued ? "Queued for email delivery" : "Created"}
-            </span>
+          <div>
+            <h2 className="modal-title success-popup-title">
+              Mother created successfully
+            </h2>
+            <p className="success-popup-subtitle">
+              The mother account is active and mobile login credentials are ready.
+            </p>
           </div>
         </div>
 
-        {createdCredentials.guardianProvisioning ? (
-          <GuardianProvisioningCard
-            guardian={createdCredentials.guardianProvisioning}
-          />
-        ) : null}
+        <div className="modal-body-scroll mother-created-scroll">
+          <div className="success-summary-card mother-created-details">
+            <div className="success-summary-row">
+              <span className="success-summary-label">User ID</span>
+              <span className="success-summary-value">{createdCredentials.userId}</span>
+            </div>
+            <div className="success-summary-row">
+              <span className="success-summary-label">Username</span>
+              <span className="success-summary-value">{createdCredentials.username}</span>
+            </div>
+            <div className="success-summary-row">
+              <span className="success-summary-label">Personal Login Email</span>
+              <span className="success-summary-value">{createdCredentials.loginEmail}</span>
+            </div>
+            <div className="success-summary-row">
+              <span className="success-summary-label">Temporary Password</span>
+              <span className="success-summary-value">{createdCredentials.temporaryPassword}</span>
+            </div>
+            <div className="success-summary-row">
+              <span className="success-summary-label">Email Delivery</span>
+              <span className="success-summary-value">
+                {createdCredentials.deliveryQueued ? "Queued" : "Not queued"}
+              </span>
+            </div>
+            <div className="success-summary-row">
+              <span className="success-summary-label">Credentials SMS</span>
+              <span className="success-summary-value">
+                {createdCredentials.smsDeliveryStatus === "sent"
+                  ? `Sent to ${createdCredentials.smsDeliveryPhone || form.phoneNumber}`
+                  : "Failed"}
+              </span>
+            </div>
+          </div>
+
+          {createdCredentials.guardianProvisioning ? (
+            <GuardianProvisioningCard
+              guardian={createdCredentials.guardianProvisioning}
+            />
+          ) : null}
+        </div>
 
         <div className="modal-actions">
           <button className="btn-primary" onClick={onClose}>
@@ -428,7 +446,7 @@ export default function AddMotherModal({
 
           <div className="form-span-2">
             <div className="field-note">
-              Mother credentials are generated automatically after saving and shared through the mother&apos;s current email.
+              The mother&apos;s current email will be used for login. Username, login email, and temporary password are sent by SMS after saving.
             </div>
           </div>
         </div>
@@ -455,7 +473,7 @@ function GuardianProvisioningCard({
 }) {
   return (
     <>
-      <h3 className="modal-title" style={{ fontSize: "1rem", marginTop: "1rem" }}>
+      <h3 className="modal-title guardian-created-title">
         GUARDIAN MOBILE ACCESS
       </h3>
       <div className="view-details view-user-modal">

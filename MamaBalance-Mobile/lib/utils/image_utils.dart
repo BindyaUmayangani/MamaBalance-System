@@ -2,6 +2,30 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class ImageUtils {
+  static bool hasProfileImage(String? imageUrl) {
+    return imageUrl != null && imageUrl.trim().isNotEmpty;
+  }
+
+  static String profileInitials(String? fullName) {
+    final parts = (fullName ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) {
+      return 'MB';
+    }
+
+    if (parts.length == 1) {
+      final compact = parts.first.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+      if (compact.isEmpty) return 'MB';
+      return compact.substring(0, compact.length >= 2 ? 2 : 1).toUpperCase();
+    }
+
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
   /// Resolves an [ImageProvider] from a string that could be a URL, 
   /// a Base64 encoded string, or empty (falling back to default asset).
   static ImageProvider resolveProfileImage(String? imageUrl) {

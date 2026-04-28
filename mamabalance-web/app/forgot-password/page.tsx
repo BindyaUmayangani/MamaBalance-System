@@ -28,13 +28,13 @@ export default async function ForgotPasswordPage() {
           <p>
             Staff password recovery now uses a secure OTP
             <br />
-            sent by SMS before the password is changed.
+            sent by email before the password is changed.
           </p>
 
           <p>
-            Enter the phone number saved on the staff account,
+            Enter the personal email saved on the staff account,
             <br />
-            and the OTP will be delivered to that mobile number.
+            and the OTP will be delivered to that inbox.
           </p>
 
           <Image

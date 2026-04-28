@@ -102,7 +102,7 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
       final picked = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 82,
-        maxWidth: 480, // Reduced for efficient Base64 storage in Firestore
+        maxWidth: 480,
         maxHeight: 480,
       );
 
@@ -121,9 +121,15 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
         _profile = updatedProfile;
         _selectedProfileImage = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile image updated successfully')),
-      );
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully'),
+            backgroundColor: _mint,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +154,20 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
     }
 
     return ImageUtils.resolveProfileImage(_profile?.profileImageUrl);
+  }
+
+  bool get _hasProfileImage {
+    return _selectedProfileImage != null ||
+        ImageUtils.hasProfileImage(_profile?.profileImageUrl);
+  }
+
+  String get _profileInitials {
+    final typedName = _fullNameController.text.trim();
+    if (typedName.isNotEmpty) {
+      return ImageUtils.profileInitials(typedName);
+    }
+
+    return ImageUtils.profileInitials(_profile?.fullName);
   }
 
   InputDecoration _inputDecoration({required String label, IconData? icon}) {
@@ -294,7 +314,18 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
                                       CircleAvatar(
                                         radius: 38,
                                         backgroundColor: Colors.white,
-                                        backgroundImage: _profileImageProvider(),
+                                        backgroundImage:
+                                            _hasProfileImage ? _profileImageProvider() : null,
+                                        child: _hasProfileImage
+                                            ? null
+                                            : Text(
+                                                _profileInitials,
+                                                style: const TextStyle(
+                                                  color: _mint,
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                       ),
                                       Positioned(
                                         bottom: 0,

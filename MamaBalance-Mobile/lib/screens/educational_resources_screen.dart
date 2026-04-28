@@ -1,6 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+
+import '../config/app_config.dart';
 
 class EducationalResource {
   const EducationalResource({
@@ -21,20 +28,15 @@ class EducationalResource {
   final String? posterUrl;
   final DateTime? createdAt;
 
-  factory EducationalResource.fromDoc(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    final createdAtValue = data['createdAt'];
-
+  factory EducationalResource.fromJson(Map<String, dynamic> data) {
     return EducationalResource(
-      id: doc.id,
+      id: _readString(data['id']),
       title: _readString(data['title'], fallback: 'Untitled resource'),
       description: _readString(data['description']),
       type: _readString(data['type'], fallback: 'link'),
       resourceUrl: _readString(data['resourceUrl']),
       posterUrl: _nullableString(data['posterUrl']),
-      createdAt: createdAtValue is Timestamp ? createdAtValue.toDate() : null,
+      createdAt: DateTime.tryParse(_readString(data['createdAt'])),
     );
   }
 
@@ -67,7 +69,7 @@ class EducationalResource {
   }
 }
 
-class EducationalResourcesScreen extends StatelessWidget {
+class EducationalResourcesScreen extends StatefulWidget {
   const EducationalResourcesScreen({
     super.key,
     this.showBackButton = false,
@@ -84,33 +86,83 @@ class EducationalResourcesScreen extends StatelessWidget {
   static const Color _muted = Color(0xFF60756D);
   static const Color _line = Color(0xFFD7EAE3);
 
-  Stream<List<EducationalResource>> _resourcesStream() {
-    return FirebaseFirestore.instance
-        .collection('educationalContents')
-        .where('visibility', isEqualTo: 'visible')
-        .snapshots()
-        .map(
-          (snapshot) {
-            final resources =
-                snapshot.docs
-                    .where((doc) => _matchesAudience(doc.data()))
-                    .map(EducationalResource.fromDoc)
-                    .where((resource) => resource.hasResource)
-                    .toList();
+  @override
+  State<EducationalResourcesScreen> createState() =>
+      _EducationalResourcesScreenState();
+}
 
-            resources.sort((left, right) {
-              final leftDate = left.createdAt;
-              final rightDate = right.createdAt;
+class _EducationalResourcesScreenState extends State<EducationalResourcesScreen> {
+  late Future<List<EducationalResource>> _resourcesFuture;
 
-              if (leftDate == null && rightDate == null) return 0;
-              if (leftDate == null) return 1;
-              if (rightDate == null) return -1;
-              return rightDate.compareTo(leftDate);
-            });
+  static const Color _mint = EducationalResourcesScreen._mint;
+  static const Color _bg = EducationalResourcesScreen._bg;
+  static const Color _text = EducationalResourcesScreen._text;
+  static const Color _muted = EducationalResourcesScreen._muted;
 
-            return resources;
-          },
-        );
+  @override
+  void initState() {
+    super.initState();
+    _resourcesFuture = _fetchResources();
+  }
+
+  Future<void> _refreshResources() async {
+    setState(() {
+      _resourcesFuture = _fetchResources();
+    });
+    await _resourcesFuture;
+  }
+
+  Future<List<EducationalResource>> _fetchResources() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('Please sign in to continue.');
+    }
+
+    final token = await user.getIdToken();
+    if (token == null || token.trim().isEmpty) {
+      throw Exception('Please sign in again to continue.');
+    }
+
+    final baseUrl = AppConfig.backendBaseUrl.trim();
+    if (baseUrl.isEmpty) {
+      throw Exception('The mobile backend URL has not been configured.');
+    }
+
+    final uri = Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/resources',
+    ).replace(queryParameters: {'audience': widget.audience});
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20));
+      final decoded = jsonDecode(response.body);
+      final payload = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(payload['error'] ?? 'Unable to load resources.');
+      }
+
+      final rawResources = payload['resources'];
+      final resources = (rawResources is List ? rawResources : const [])
+          .whereType<Map<String, dynamic>>()
+          .map(EducationalResource.fromJson)
+          .where((resource) => resource.hasResource)
+          .toList();
+
+      return resources;
+    } on TimeoutException {
+      throw Exception('The resources request timed out.');
+    } on SocketException {
+      throw Exception('Unable to reach the resources backend.');
+    } on FormatException {
+      throw Exception('The resources backend returned an invalid response.');
+    }
   }
 
   @override
@@ -118,22 +170,20 @@ class EducationalResourcesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: StreamBuilder<List<EducationalResource>>(
-          stream: _resourcesStream(),
+        child: FutureBuilder<List<EducationalResource>>(
+          future: _resourcesFuture,
           builder: (context, snapshot) {
             final resources = snapshot.data ?? [];
 
             return RefreshIndicator(
               color: _mint,
-              onRefresh: () async {
-                await Future<void>.delayed(const Duration(milliseconds: 350));
-              },
+              onRefresh: _refreshResources,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
                 children: [
                   Row(
                     children: [
-                      if (showBackButton) ...[
+                      if (widget.showBackButton) ...[
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
                           onPressed: () => Navigator.pop(context),
@@ -156,7 +206,7 @@ class EducationalResourcesScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Padding(
-                    padding: EdgeInsets.only(left: showBackButton ? 48 : 0),
+                    padding: EdgeInsets.only(left: widget.showBackButton ? 48 : 0),
                     child: const Text(
                       'Read trusted guides and resources shared by MamaBalance care administrators.',
                       style: TextStyle(fontSize: 15, height: 1.5, color: _muted),
@@ -203,44 +253,6 @@ class EducationalResourcesScreen extends StatelessWidget {
     );
   }
 
-  bool _matchesAudience(Map<String, dynamic> data) {
-    final normalized = <String>{};
-
-    final directAudience = data['audience'];
-    if (directAudience is String && directAudience.trim().isNotEmpty) {
-      normalized.add(directAudience.trim().toLowerCase());
-    }
-
-    final audienceTags = data['audienceTags'];
-    if (audienceTags is Iterable) {
-      normalized.addAll(
-        audienceTags
-            .map((value) => '$value'.trim().toLowerCase())
-            .where((value) => value.isNotEmpty),
-      );
-    }
-
-    final legacyAudience = data['audience'];
-    if (legacyAudience is Iterable) {
-      normalized.addAll(
-        legacyAudience
-            .map((value) => '$value'.trim().toLowerCase())
-            .where((value) => value.isNotEmpty),
-      );
-    }
-
-    final requested = audience.trim().toLowerCase();
-    if (requested == 'guardian') {
-      return normalized.contains('guardian') ||
-          normalized.contains('father');
-    }
-
-    if (normalized.isEmpty) {
-      return requested == 'mother';
-    }
-
-    return normalized.contains(requested) || normalized.contains('all');
-  }
 }
 
 class EducationalResourceDetailPage extends StatelessWidget {

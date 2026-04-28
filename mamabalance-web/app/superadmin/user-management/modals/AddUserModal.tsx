@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { CheckCircle2, ChevronDown } from "lucide-react";
 
 import {
   CreatedCredentials,
@@ -85,33 +85,41 @@ export default function AddUserModal({
 
   if (createdCredentials) {
     return (
-      <>
-        <h2 className="modal-title">{config.role.toUpperCase()} CREATED</h2>
+      <div className="modal-container success-popup">
+        <div className="success-popup-hero">
+          <div className="success-popup-icon">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <h2 className="modal-title success-popup-title">
+              {config.role} created successfully
+            </h2>
+            <p className="success-popup-subtitle">
+              The account is active and login credentials are ready for delivery.
+            </p>
+          </div>
+        </div>
 
-        <div className="view-details view-user-modal">
-          <div className="detail-row">
-            <span className="detail-label">User ID</span>
-            <span className="detail-value">{createdCredentials.userId}</span>
+        <div className="success-summary-card">
+          <div className="success-summary-row">
+            <span className="success-summary-label">User ID</span>
+            <span className="success-summary-value">{createdCredentials.userId}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Username</span>
-            <span className="detail-value">{createdCredentials.username}</span>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Username</span>
+            <span className="success-summary-value">{createdCredentials.username}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Login Email</span>
-            <span className="detail-value">{createdCredentials.loginEmail}</span>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Personal Login Email</span>
+            <span className="success-summary-value">{createdCredentials.loginEmail}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Temporary Password</span>
-            <span className="detail-value">{createdCredentials.temporaryPassword}</span>
+          <div className="success-summary-row">
+            <span className="success-summary-label">Temporary Password</span>
+            <span className="success-summary-value">{createdCredentials.temporaryPassword}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Credentials Email</span>
-            <span className="detail-value">{createdCredentials.deliveryEmail}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Delivery Status</span>
-            <span className="detail-value">
+          <div className="success-summary-row">
+            <span className="success-summary-label">Delivery Status</span>
+            <span className="success-summary-value">
               {createdCredentials.deliveryQueued ? "Queued for email delivery" : "Created"}
             </span>
           </div>
@@ -122,7 +130,7 @@ export default function AddUserModal({
             Close
           </button>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -189,7 +197,7 @@ export default function AddUserModal({
         ) : null}
 
         <div className="field-note">
-          Login credentials are generated automatically and queued to the current email after the account is created.
+          The current email will be used for staff login. Login credentials are generated automatically and queued to that email after the account is created.
         </div>
       </div>
 
