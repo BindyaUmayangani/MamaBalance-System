@@ -1,132 +1,151 @@
-# MamaBalance 💜
+# MamaBalance Mobile
 
-MamaBalance is a Flutter-based mobile application designed to support mothers by tracking postpartum depression risk and providing empathetic self-care suggestions.
-It integrates **EPDS score assessments**, care reminders, emergency contacts, and supportive resources.
+MamaBalance Mobile is the Flutter application for mothers and guardians. It provides access to maternal care updates, weekly EPDS check-ins, prescriptions, visits, notifications, educational resources, profile management, and secure communication with assigned care team members.
 
----
+## Purpose
 
-## 📱 Features
+This app is designed to help mothers stay connected with their care team and track important wellbeing and care information from a mobile device.
 
-- 📝 Weekly **EPDS (Edinburgh Postnatal Depression Scale)** check-in
-- 💡 Personalized **recommendations & self-care tips**
-- 📊 Progress visualization with circular indicators
-- 📞 **Emergency contacts** for quick help
-- 🔔 Notifications and reminders
-- 👩‍👧 Simple, user-friendly interface
+## Main Features
 
----
+- Personal email and phone-based sign in.
+- Mother and guardian account support.
+- Mother profile view and update.
+- Profile picture upload with initials fallback.
+- Weekly EPDS check-in workflow.
+- Home dashboard with latest EPDS score, next check-in, and care updates.
+- Assigned doctor and midwife details.
+- Visit, checkup, and prescription information.
+- Secure messaging with assigned doctor or midwife.
+- Notifications and educational resources.
+- Biometric session unlock support.
 
-## 🚀 Getting Started
+## Architecture
 
-### 1. Prerequisites
-Make sure you have installed:
-- [Flutter](https://flutter.dev/docs/get-started/install) (>= 3.0)
-- Android Studio / Xcode (for emulator or real device testing)
-- Git
+The mobile app uses Firebase Authentication for login and session tokens. After login, app data is loaded through the centralized `mamabalance-web` backend API.
 
-### 2. Clone the Repository
-```bash
-git clone https://github.com/your-username/mamabalance.git
-cd mamabalance
-````
+```text
+Flutter App
+   |
+   | Firebase Auth login/session token
+   v
+mamabalance-web API
+   |
+   | Firebase Admin SDK
+   v
+Firestore / Firebase Storage
+```
 
-### 3. Install Dependencies
+This keeps mobile business logic and Firestore access controlled through the backend.
+
+## Tech Stack
+
+- Flutter
+- Dart
+- Firebase Authentication
+- HTTP API integration
+- Shared Preferences
+- Image Picker
+- Local Auth
+- Video Player
+- Intl
+
+## Project Structure
+
+```text
+MamaBalance-Mobile/
++-- android/              # Android project files
++-- ios/                  # iOS project files
++-- lib/
+|   +-- config/           # App configuration
+|   +-- models/           # Data models
+|   +-- screens/          # UI screens
+|   +-- services/         # Auth and backend API services
+|   +-- utils/            # Utility helpers
+|   +-- widgets/          # Shared widgets
+|   +-- main.dart         # App entry point
++-- assets/               # Images, videos, and app assets
++-- pubspec.yaml
++-- README.md
+```
+
+## Prerequisites
+
+- Flutter SDK
+- Android Studio or a configured Android device
+- Firebase project configuration
+- Running `mamabalance-web` backend
+
+## Installation
 
 ```bash
 flutter pub get
 ```
 
-### 4. Run the App
+## Running The App
+
+Run the web backend first:
 
 ```bash
-flutter run
+cd ../mamabalance-web
+npm run dev
 ```
 
----
+Then run the mobile app with the backend URL:
 
-## 📂 Project Structure
-
-```
-mamabalance/
-│
-├── android/              # Android native files
-├── ios/                  # iOS native files
-├── lib/                  # Main Flutter code
-│   ├── main.dart         # Entry point
-│   ├── screens/          # App screens
-│   ├── widgets/          # Reusable UI components
-│   ├── models/           # Data models (if any)
-│   └── services/         # API/ML integration
-│
-├── assets/               # Images, icons, fonts
-├── pubspec.yaml          # Dependencies
-└── README.md             # Project documentation
+```bash
+cd ../MamaBalance-Mobile
+flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://<computer-ip>:3000
 ```
 
----
+Example:
 
-## 🔧 Configuration
+```bash
+flutter run -d A9SV6R4125001504 --dart-define=MAMABALANCE_API_BASE_URL=http://10.168.1.98:3000
+```
 
-### App Icon
+For a real Android phone, `localhost` usually will not work. Use the computer's local network IP address.
 
-App icons are generated using [flutter_launcher_icons](https://pub.dev/packages/flutter_launcher_icons).
-To regenerate icons:
+## Firebase Notes
+
+The app keeps Firebase Auth client-side for login/session only. Data access such as profile, care, messaging, notifications, resources, check-ins, and prescriptions should go through the web backend.
+
+## Assets
+
+Assets are configured in `pubspec.yaml`.
+
+```yaml
+assets:
+  - assets/images/MamaBalance_logo.png
+  - assets/images/
+  - assets/videos/family.mp4
+```
+
+## App Icon
+
+Launcher icons are configured with `flutter_launcher_icons`.
 
 ```bash
 flutter pub run flutter_launcher_icons
 ```
 
-### Fonts & Assets
+## Troubleshooting
 
-All assets are listed in `pubspec.yaml` under:
+If API requests fail:
 
-```yaml
-flutter:
-  assets:
-    - assets/icon/
-    - assets/images/
-  fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-```
+- Confirm `mamabalance-web` is running.
+- Confirm the phone can access the backend IP address.
+- Confirm `MAMABALANCE_API_BASE_URL` is set correctly.
+- Confirm Firebase Auth is configured.
+- Confirm the signed-in user exists and is active in the web system.
 
----
+If profile image upload fails:
 
-## 🛠️ Built With
+- Confirm Firebase Storage is enabled.
+- Confirm the web backend has the correct storage bucket in `.env.local`.
 
-* [Flutter](https://flutter.dev/) - Cross-platform UI toolkit
-* [Provider](https://pub.dev/packages/provider) - State management
-* [flutter_launcher_icons](https://pub.dev/packages/flutter_launcher_icons) - App icons
-* [image_picker](https://pub.dev/packages/image_picker) - Capture images
+## Related Folders
 
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-See the [LICENSE](LICENSE) file for details.
-
----
-
-## 👩‍👧 Acknowledgments
-
-* Edinburgh Postnatal Depression Scale (EPDS)
-* Open-source Flutter community
-
-```
-
----
-
-Would you like me to also create a **minimal version** (short and clean) or do you prefer keeping this **detailed structured one**?
-```
+- `../mamabalance-web/` - web portal and centralized backend.
+- `../documents/` - final year project documentation.
+- `../firebase/` - Firebase rules and schema notes.

@@ -1,36 +1,134 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MamaBalance Web
 
-## Getting Started
+MamaBalance Web is the administration portal and centralized backend API for the MamaBalance maternal care system. It is used by administrators, doctors, and midwives, and it also exposes protected mobile API routes used by the Flutter app.
 
-First, run the development server:
+## Purpose
+
+This project handles:
+
+- Web portal access for super admins, regional admins, doctors, and midwives.
+- Mother, guardian, staff, and region management.
+- Educational content and notification management.
+- Doctor and midwife care workflows.
+- Mobile backend APIs for profile, session, context, messaging, care, check-ins, notifications, and resources.
+- Firebase Admin access to Firestore, Authentication, and Storage.
+
+## Tech Stack
+
+- Next.js
+- React
+- TypeScript
+- Firebase Admin SDK
+- Firebase Authentication
+- Firestore
+- Firebase Storage
+- Recharts
+- Vitest
+- ESLint
+
+## Project Structure
+
+```text
+mamabalance-web/
++-- app/                 # Next.js app routes and pages
+|   +-- api/             # Backend API routes
++-- components/          # Shared UI components
++-- lib/                 # Auth, Firebase, admin, and mobile helpers
++-- scripts/             # Utility scripts
++-- public/              # Static assets
++-- package.json
++-- README.md
+```
+
+## Important API Areas
+
+```text
+app/api/mobile/
++-- auth/
++-- care/
++-- check-in/
++-- context/
++-- guardian-dashboard/
++-- messaging/
++-- notifications/
++-- profile/
++-- resources/
++-- session/
+```
+
+The mobile app uses Firebase Auth only to obtain a session token. All protected mobile data requests are sent to these web backend routes.
+
+## Environment Variables
+
+Create `.env.local` in this folder.
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=""
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=""
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=""
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=""
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
+NEXT_PUBLIC_FIREBASE_APP_ID=""
+
+FIREBASE_ADMIN_PROJECT_ID=""
+FIREBASE_ADMIN_CLIENT_EMAIL=""
+FIREBASE_ADMIN_PRIVATE_KEY=""
+
+NOTIFY_LK_USER_ID=""
+NOTIFY_LK_API_KEY=""
+NOTIFY_LK_SENDER_ID=""
+```
+
+Do not commit `.env.local`.
+
+## Installation
+
+```bash
+npm install
+```
+
+## Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Default local URL:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+When testing with a real mobile device, use the computer's local network IP address as the mobile backend URL.
 
-## Learn More
+## Production Build
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm run start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Linting
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run lint
+```
 
-## Deploy on Vercel
+## Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Mobile Backend Notes
+
+- Every protected mobile route expects `Authorization: Bearer <firebase-id-token>`.
+- The backend validates the token using Firebase Admin.
+- The backend resolves the user role and linked mother profile before returning data.
+- Chatbot behavior is intentionally separate from the central mobile backend migration.
+
+## Related Folders
+
+- `../MamaBalance-Mobile/` - Flutter mobile app.
+- `../documents/` - final year project documentation.
+- `../firebase/` - Firebase rules and schema notes.
