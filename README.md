@@ -106,6 +106,7 @@ MamaBalance-System/
 +-- firebase/               # Firebase rules and schema notes
 +-- documents/              # Final year project documentation
 +-- README.md               # Main repository overview
++-- LICENSE                 # Academic-use license
 ```
 
 ## Documentation
@@ -199,4 +200,4 @@ EPDS scores are screening support only and should not be treated as a final diag
 
 ## License
 
-This project is prepared for academic use as a final year project. Add a formal license before public production release.
+This project is prepared for academic use as a final year project. See [LICENSE](LICENSE) for usage terms.
