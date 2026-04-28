@@ -159,29 +159,11 @@ flutter pub get
 flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://YOUR_PC_IP:3000
 ```
 
-Example:
-
-```powershell
-flutter run -d A9SV6R4125001504 --dart-define=MAMABALANCE_API_BASE_URL=http://10.168.1.98:3000
-```
-
 See `documents/INSTALLATION_GUIDE.md` for the full setup guide.
 
 ## Environment Configuration
 
-The web backend requires Firebase client and Firebase Admin credentials in:
-
-```text
-mamabalance-web/.env.local
-```
-
-Important:
-
-- Do not commit `.env.local`.
-- Do not expose Firebase Admin private keys.
-- Configure Firebase Authentication, Firestore, and Storage before testing the full system.
-- Configure Notify.lk SMS gateway settings if OTP or SMS delivery is required.
-- Configure OpenAI API credentials if AI chatbot support is enabled.
+The project requires Firebase, Notify.lk, and OpenAI API configuration for the complete feature set. Environment setup details are documented in `documents/INSTALLATION_GUIDE.md`.
 
 ## Mobile Backend Notes
 
@@ -214,17 +196,6 @@ MamaBalance handles sensitive maternal wellbeing and care data. The system is de
 - audit logs for important administrative actions
 
 EPDS scores are screening support only and should not be treated as a final diagnosis. The chatbot provides supportive guidance only and should not replace professional medical advice.
-
-## Final Year Project Context
-
-This repository is organized for final year project demonstration and review. It includes:
-
-- working web and mobile applications
-- centralized backend API design
-- Firebase integration
-- project documentation
-- role-based workflows
-- database, API, user, installation, and testing documentation
 
 ## License
 
