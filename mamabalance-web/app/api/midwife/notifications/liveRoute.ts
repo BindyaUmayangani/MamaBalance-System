@@ -68,9 +68,20 @@ function resolveRiskLevel(mother: DocumentData) {
   if (explicit === "high" || explicit === "moderate" || explicit === "low") return explicit;
 
   const latestEpdsScore = Number(mother.latestEpdsScore ?? 0);
-  if (mother.isHighRisk || latestEpdsScore >= 20) return "high";
+  if (latestEpdsScore >= 20) return "high";
   if (latestEpdsScore >= 10) return "moderate";
   return "low";
+}
+
+function hasSelfHarmThoughts(mother: DocumentData) {
+  if (mother.latestEpdsHasSelfHarmThoughts === true) return true;
+
+  const selfHarmScore = Number(mother.latestEpdsSelfHarmScore ?? 0);
+  return Number.isFinite(selfHarmScore) && selfHarmScore > 0;
+}
+
+function requiresUrgentReview(mother: DocumentData) {
+  return mother.latestEpdsRequiresUrgentReview === true || mother.isHighRisk === true || hasSelfHarmThoughts(mother);
 }
 
 function resolveVisitStatus(rawStatus: unknown, scheduledAt: unknown) {
@@ -172,6 +183,8 @@ async function buildNotifications(actorUid: string, linkedMidwifeUids: string[])
     const assignmentKey = `assignment:${motherUid}:${assignedAt || "unknown"}`;
     const riskLevel = resolveRiskLevel(mother);
     const latestEpdsScore = Number(mother.latestEpdsScore ?? 0);
+    const selfHarmThoughts = hasSelfHarmThoughts(mother);
+    const urgentReview = requiresUrgentReview(mother);
 
     notifications.push({
       id: assignmentKey,
@@ -187,7 +200,7 @@ async function buildNotifications(actorUid: string, linkedMidwifeUids: string[])
       createdAt: assignedAt,
     });
 
-    if (riskLevel === "high" || latestEpdsScore >= 20 || mother.isHighRisk) {
+    if (riskLevel === "high" || latestEpdsScore >= 20 || urgentReview) {
       const riskCreatedAt = toIsoString(
         mother.latestEpdsSubmittedAt ??
           mother.latestEpdsAttemptedAt ??
@@ -195,16 +208,21 @@ async function buildNotifications(actorUid: string, linkedMidwifeUids: string[])
           mother.updatedAt,
       );
       const riskKey = `high_risk:${motherUid}:${riskCreatedAt || latestEpdsScore || "current"}`;
+      const selfHarmOnlyAlert = selfHarmThoughts && riskLevel !== "high";
 
       notifications.push({
         id: riskKey,
         type: "high_risk",
-        title: "Mother is high risk",
-        message: `${motherName} is currently marked high risk${latestEpdsScore > 0 ? ` with EPDS score ${latestEpdsScore}` : ""}.`,
+        title: selfHarmOnlyAlert
+          ? "Self-harm response needs follow-up"
+          : "Mother is high risk",
+        message: selfHarmOnlyAlert
+          ? `${motherName} reported thoughts of self-harm on EPDS question 10${latestEpdsScore > 0 ? ` with overall EPDS score ${latestEpdsScore} (${riskLevel} risk)` : ""}.`
+          : `${motherName} is currently marked high risk${latestEpdsScore > 0 ? ` with EPDS score ${latestEpdsScore}` : ""}.`,
         motherUid,
         motherName,
         score: Number.isFinite(latestEpdsScore) && latestEpdsScore > 0 ? latestEpdsScore : null,
-        riskLevel: "high",
+        riskLevel,
         priority: "high",
         read: readStateMap.get(riskKey) ?? false,
         createdAt: riskCreatedAt,

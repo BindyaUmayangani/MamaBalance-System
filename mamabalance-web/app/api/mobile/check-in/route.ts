@@ -19,6 +19,12 @@ function riskLevel(score: number) {
   return "low";
 }
 
+function selfHarmAnswerScore(answers: number[]) {
+  const rawScore = Number(answers[9] ?? 0);
+  if (!Number.isFinite(rawScore)) return 0;
+  return Math.min(Math.max(rawScore, 0), 3);
+}
+
 function assertUnlocked(lastSubmittedAt: Date | null) {
   const next = nextAvailableAtFrom(lastSubmittedAt);
   if (next && next > new Date()) {
@@ -63,6 +69,9 @@ export async function POST(request: NextRequest) {
     const attemptRef = motherRef.collection("epdsAttempts").doc();
     const attemptedAt = new Date();
     const level = riskLevel(score);
+    const selfHarmScore = selfHarmAnswerScore(answers);
+    const hasSelfHarmThoughts = selfHarmScore > 0 || payload.hasSelfHarmThoughts === true;
+    const requiresUrgentReview = level === "high" || hasSelfHarmThoughts;
 
     await adminDb.runTransaction(async (transaction) => {
       const fresh = await transaction.get(motherRef);
@@ -74,6 +83,9 @@ export async function POST(request: NextRequest) {
         language,
         score,
         riskLevel: level,
+        selfHarmAnswerScore: selfHarmScore,
+        hasSelfHarmThoughts,
+        requiresUrgentReview,
         attemptedAt: Timestamp.fromDate(attemptedAt),
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -84,8 +96,11 @@ export async function POST(request: NextRequest) {
           latestEpdsAttemptId: attemptRef.id,
           latestEpdsLanguage: language,
           latestEpdsSubmittedAt: Timestamp.fromDate(attemptedAt),
+          latestEpdsSelfHarmScore: selfHarmScore,
+          latestEpdsHasSelfHarmThoughts: hasSelfHarmThoughts,
+          latestEpdsRequiresUrgentReview: requiresUrgentReview,
           riskLevel: level,
-          isHighRisk: level === "high",
+          isHighRisk: requiresUrgentReview,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -93,18 +108,27 @@ export async function POST(request: NextRequest) {
     });
 
     const assignedMidwifeUid = readString(context.mother.assignedMidwifeUid);
-    if (level === "high" && assignedMidwifeUid) {
+    if (requiresUrgentReview && assignedMidwifeUid) {
       const motherName = readString(context.mother.fullName || context.mother.username, "A mother");
+      const isSelfHarmOnlyAlert = hasSelfHarmThoughts && level !== "high";
       await adminDb.collection("notifications").add({
         recipientUid: assignedMidwifeUid,
         recipientRole: "midwife",
         type: "high-risk-epds",
-        title: "High-risk mother identified",
-        message: `${motherName} submitted an EPDS score of ${score} and needs early follow-up.`,
+        title: isSelfHarmOnlyAlert
+          ? "Self-harm response needs follow-up"
+          : "High-risk mother identified",
+        message: isSelfHarmOnlyAlert
+          ? `${motherName} reported thoughts of self-harm on EPDS question 10. Overall EPDS score is ${score} (${level} risk), but urgent follow-up is needed.`
+          : `${motherName} submitted an EPDS score of ${score} and needs early follow-up.`,
         motherUid: context.motherDocId,
         motherName,
         score,
-        riskLevel: "high",
+        riskLevel: level,
+        selfHarmAnswerScore: selfHarmScore,
+        hasSelfHarmThoughts,
+        requiresUrgentReview,
+        alertReason: hasSelfHarmThoughts ? "self-harm-thoughts" : "high-risk-epds",
         attemptId: attemptRef.id,
         attemptedAt: Timestamp.fromDate(attemptedAt),
         read: false,
@@ -121,6 +145,8 @@ export async function POST(request: NextRequest) {
         motherUid: context.motherDocId,
         score,
         riskLevel: level,
+        hasSelfHarmThoughts,
+        requiresUrgentReview,
         attemptedAt: attemptedAt.toISOString(),
       },
     });

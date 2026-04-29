@@ -67,6 +67,7 @@ class WeeklyCheckInService {
     required String language,
     required List<int> answers,
     required int score,
+    required bool hasSelfHarmThoughts,
   }) async {
     final payload = await _sendCheckInRequest(
       method: 'POST',
@@ -74,6 +75,7 @@ class WeeklyCheckInService {
         'language': language,
         'answers': answers,
         'score': score,
+        'hasSelfHarmThoughts': hasSelfHarmThoughts,
       },
     );
     final data = payload['result'] is Map<String, dynamic>

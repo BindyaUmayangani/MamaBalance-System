@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/weekly_checkin_service.dart';
 import 'score_screen.dart';
@@ -12,10 +15,20 @@ class CheckInScreen extends StatefulWidget {
 }
 
 class _CheckInScreenState extends State<CheckInScreen> {
+  static const String _draftKeyPrefix = 'weekly_checkin_draft';
+
   int _pageIndex = 0;
   Map<int, String> answers = {};
 
   final int questionsPerPage = 2;
+
+  String get _draftKey => '${_draftKeyPrefix}_${widget.language.toLowerCase()}';
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreDraft();
+  }
 
   // ================= QUESTIONS =================
 
@@ -242,6 +255,84 @@ class _CheckInScreenState extends State<CheckInScreen> {
     });
   }
 
+  bool hasSelfHarmThoughts(List<int> scoredAnswers) {
+    if (scoredAnswers.isEmpty) return false;
+    return scoredAnswers.last > 0;
+  }
+
+  Future<void> _restoreDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawDraft = prefs.getString(_draftKey);
+    if (rawDraft == null || rawDraft.trim().isEmpty) return;
+
+    try {
+      final decoded = jsonDecode(rawDraft);
+      if (decoded is! Map<String, dynamic>) return;
+
+      final questions =
+          widget.language == 'Sinhala' ? sinhalaQuestions : englishQuestions;
+      final totalPages = (questions.length / questionsPerPage).ceil();
+      final restoredAnswers = <int, String>{};
+      final rawAnswers = decoded['answers'];
+
+      if (rawAnswers is Map<String, dynamic>) {
+        rawAnswers.forEach((key, value) {
+          final index = int.tryParse(key);
+          if (index == null || index < 0 || index >= questions.length) return;
+
+          final option = '$value';
+          final options = (questions[index]['options'] as List).cast<String>();
+          if (options.contains(option)) {
+            restoredAnswers[index] = option;
+          }
+        });
+      }
+
+      final rawPage = int.tryParse('${decoded['pageIndex'] ?? 0}') ?? 0;
+      final restoredPage = rawPage.clamp(0, totalPages - 1);
+
+      if (!mounted) return;
+      setState(() {
+        answers = restoredAnswers;
+        _pageIndex = restoredPage;
+      });
+    } on FormatException {
+      await prefs.remove(_draftKey);
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _draftKey,
+      jsonEncode({
+        'pageIndex': _pageIndex,
+        'answers': answers.map((key, value) => MapEntry('$key', value)),
+      }),
+    );
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_draftKey);
+  }
+
+  void _selectAnswer(int qIndex, String value) {
+    setState(() => answers[qIndex] = value);
+    _saveDraft();
+  }
+
+  void _goToPreviousPage() {
+    if (_pageIndex == 0) return;
+    setState(() => _pageIndex--);
+    _saveDraft();
+  }
+
+  void _goToNextPage() {
+    setState(() => _pageIndex++);
+    _saveDraft();
+  }
+
   Future<void> handleSubmit() async {
     int totalScore = 0;
     final questions =
@@ -252,21 +343,26 @@ class _CheckInScreenState extends State<CheckInScreen> {
     }
 
     try {
+      final scoredAnswers = buildAnswersList();
       final result = await WeeklyCheckInService.instance.submitCheckIn(
         language: widget.language,
-        answers: buildAnswersList(),
+        answers: scoredAnswers,
         score: totalScore,
+        hasSelfHarmThoughts: hasSelfHarmThoughts(scoredAnswers),
       );
 
+      if (!mounted) return;
+      await _clearDraft();
       if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ScoreScreen(
-            score: result.score,
-            attemptedAt: result.attemptedAt,
-          ),
+          builder:
+              (_) => ScoreScreen(
+                score: result.score,
+                attemptedAt: result.attemptedAt,
+              ),
         ),
       );
     } on Exception catch (error) {
@@ -402,14 +498,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFFECF8F4)
-                                  : const Color(0xFFF9FCFB),
+                              color:
+                                  isSelected
+                                      ? const Color(0xFFECF8F4)
+                                      : const Color(0xFFF9FCFB),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFF4FA58D)
-                                    : const Color(0xFFD6ECE6),
+                                color:
+                                    isSelected
+                                        ? const Color(0xFF4FA58D)
+                                        : const Color(0xFFD6ECE6),
                               ),
                             ),
                             child: RadioListTile<String>(
@@ -417,7 +515,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
                               groupValue: answers[qIndex],
                               activeColor: const Color(0xFF4FA58D),
                               onChanged: (v) {
-                                setState(() => answers[qIndex] = v!);
+                                if (v == null) return;
+                                _selectAnswer(qIndex, v);
                               },
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -446,29 +545,48 @@ class _CheckInScreenState extends State<CheckInScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: ElevatedButton(
-            onPressed: () {
-              bool valid = true;
-              for (int i = start; i < end; i++) {
-                if (answers[i] == null) valid = false;
-              }
-              if (!valid) {
-                showValidationMessage();
-                return;
-              }
-              end == questions.length
-                  ? handleSubmit()
-                  : setState(() => _pageIndex++);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4FA58D),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _pageIndex == 0 ? null : _goToPreviousPage,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF173C3A),
+                    side: const BorderSide(color: Color(0xFFD6ECE6)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: const Text('Back'),
+                ),
               ),
-            ),
-            child: Text(end == questions.length ? 'Submit' : 'Next'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    bool valid = true;
+                    for (int i = start; i < end; i++) {
+                      if (answers[i] == null) valid = false;
+                    }
+                    if (!valid) {
+                      showValidationMessage();
+                      return;
+                    }
+                    end == questions.length ? handleSubmit() : _goToNextPage();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4FA58D),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: Text(end == questions.length ? 'Submit' : 'Next'),
+                ),
+              ),
+            ],
           ),
         ),
       ),

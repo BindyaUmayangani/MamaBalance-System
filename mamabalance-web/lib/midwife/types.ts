@@ -27,6 +27,8 @@ export type MidwifeMotherRecord = {
   username: string;
   name: string;
   risk: "low" | "moderate" | "high";
+  hasSelfHarmThoughts?: boolean;
+  requiresUrgentReview?: boolean;
   upcomingCheckup: string;
   lastStatus: "overdue" | "completed" | "upcoming";
   lastEPDS: string;

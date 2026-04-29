@@ -19,7 +19,9 @@ type HighRiskMother = {
   userId: string;
   username: string;
   name: string;
-  risk: "high";
+  risk: "low" | "moderate" | "high";
+  hasSelfHarmThoughts?: boolean;
+  requiresUrgentReview?: boolean;
   upcomingCheckup: string;
   lastStatus: "overdue" | "completed" | "upcoming";
   lastEPDS: string;

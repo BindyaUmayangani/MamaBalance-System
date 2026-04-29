@@ -43,6 +43,17 @@ function getRiskLevel(mother: DocumentData) {
   return "low";
 }
 
+function hasSelfHarmThoughts(mother: DocumentData) {
+  if (mother.latestEpdsHasSelfHarmThoughts === true) return true;
+
+  const selfHarmScore = Number(mother.latestEpdsSelfHarmScore ?? 0);
+  return Number.isFinite(selfHarmScore) && selfHarmScore > 0;
+}
+
+function requiresUrgentReview(mother: DocumentData) {
+  return mother.latestEpdsRequiresUrgentReview === true || mother.isHighRisk === true || hasSelfHarmThoughts(mother);
+}
+
 function formatDateTime(value: unknown) {
   if (!value) return "-";
 
@@ -211,6 +222,8 @@ function buildMotherRecord(
 ): MidwifeMotherRecord {
   const latestEpdsScore = Number(mother.latestEpdsScore ?? 0);
   const risk = getRiskLevel(mother);
+  const selfHarmThoughts = hasSelfHarmThoughts(mother);
+  const urgentReview = requiresUrgentReview(mother);
   const assignedDoctorUid =
     (mother.assignedDoctorUid as string | undefined) || null;
   const assignedDoctor = assignedDoctorUid
@@ -233,6 +246,8 @@ function buildMotherRecord(
       (user?.displayName as string | undefined) ||
       "-",
     risk,
+    hasSelfHarmThoughts: selfHarmThoughts,
+    requiresUrgentReview: urgentReview,
     upcomingCheckup: visitSummary?.upcomingCheckup || "-",
     lastStatus: visitSummary?.lastStatus || "upcoming",
     lastEPDS: String(latestEpdsScore),
@@ -328,7 +343,11 @@ async function handleList(request: NextRequest) {
         visitLookup,
       ),
     )
-    .filter((mother) => (scope === "high-risk" ? mother.risk === "high" : true));
+    .filter((mother) =>
+      scope === "high-risk"
+        ? mother.risk === "high" || mother.requiresUrgentReview
+        : true,
+    );
 
   return NextResponse.json({ mothers, doctors: doctorOptions });
 }
