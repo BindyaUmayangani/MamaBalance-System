@@ -7,8 +7,18 @@
   min-height: 0;
 }
 
+.superadmin-dashboard-page .dashboard-card > h3 {
+  margin: 0 0 18px;
+  line-height: 1.2;
+}
+
 .superadmin-dashboard-page .care-modern-wrap {
   height: auto;
+  margin-top: 0;
+}
+
+.superadmin-dashboard-page .checkup-header {
+  margin-bottom: 18px;
 }
 
 .superadmin-dashboard-page .visit-panel-header {

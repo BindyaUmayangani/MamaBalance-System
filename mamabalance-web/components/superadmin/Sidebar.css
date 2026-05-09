@@ -235,7 +235,7 @@
 }
 
 .topbar-user {
-  min-width: 260px;
+  min-width: 330px;
   max-width: min(360px, calc(100vw - 32px));
   background: #ffffff;
   color: #173c3a;

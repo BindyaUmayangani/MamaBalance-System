@@ -18,7 +18,6 @@ export default function RoleAccountBar({ user }: Props) {
           <strong>Welcome back, {displayName}</strong>
           <span>{user.role} workspace for MamaBalance care operations</span>
         </div>
-        <span className="role-account-chip">Active session</span>
       </div>
       <UserDropdown user={user} variant="topbar" />
     </div>
