@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import { signOut } from "firebase/auth";
 
 import ProfileModal from "./modals/ProfileModal";
@@ -28,6 +28,7 @@ type UserType = {
 
 type Props = {
   user?: Partial<UserType>;
+  variant?: "sidebar" | "topbar";
 };
 
 type SessionUserResponse = {
@@ -58,7 +59,10 @@ function formatRoleLabel(role: string | undefined) {
   }
 }
 
-export default function UserDropdown({ user: fallbackUser }: Props) {
+export default function UserDropdown({
+  user: fallbackUser,
+  variant = "sidebar",
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -141,16 +145,30 @@ export default function UserDropdown({ user: fallbackUser }: Props) {
 
   async function handleLogout() {
     setIsLoggingOut(true);
+    clearCurrentUserClientCache();
 
     try {
-      clearCurrentUserClientCache();
-      await fetch("/api/auth/logout", { method: "POST" });
-      await signOut(firebaseAuth);
-      router.replace("/login");
-      router.refresh();
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+    } catch {
+      // Continue with local sign-out and navigation even if the request fails.
+    }
+
+    try {
+      if (firebaseAuth.currentUser) {
+        await signOut(firebaseAuth);
+      }
+    } catch {
+      // The server session is the source of truth for staff access.
     } finally {
       setIsLoggingOut(false);
       setActiveModal(null);
+      setOpen(false);
+      router.replace("/login");
+      router.refresh();
     }
   }
 
@@ -177,8 +195,16 @@ export default function UserDropdown({ user: fallbackUser }: Props) {
 
   return (
     <>
-      <div className="user-dropdown-wrapper" ref={ref}>
-        <div className="sidebar-user" onClick={() => setOpen(!open)}>
+      <div
+        className={`user-dropdown-wrapper ${
+          variant === "topbar" ? "topbar-user-dropdown" : ""
+        }`}
+        ref={ref}
+      >
+        <div
+          className={`sidebar-user ${variant === "topbar" ? "topbar-user" : ""}`}
+          onClick={() => setOpen(!open)}
+        >
           {user.image ? (
             <Image
               src={user.image}
@@ -197,6 +223,13 @@ export default function UserDropdown({ user: fallbackUser }: Props) {
             <strong>{user.name}</strong>
             <span>{user.role}</span>
           </div>
+
+          {variant === "topbar" ? (
+            <ChevronDown
+              className={`user-dropdown-chevron ${open ? "open" : ""}`}
+              size={18}
+            />
+          ) : null}
         </div>
 
         {open && (

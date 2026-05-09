@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
-  Bell,
   CalendarClock,
   CircleCheck,
   Clock3,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 
 import LoadingState from "@/components/admin/LoadingState";
-import { getCurrentUserClient } from "@/lib/auth/client";
 import type { MidwifeMotherRecord } from "@/lib/midwife/types";
 import "@/app/midwife/styles/MidwifeDashboard.css";
 
@@ -95,10 +93,8 @@ function formatCheckupDate(checkup: DoctorDashboardCheckup) {
 
 export default function DoctorDashboard() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState("Doctor");
   const [mothers, setMothers] = useState<MidwifeMotherRecord[]>([]);
   const [checkups, setCheckups] = useState<DoctorDashboardCheckup[]>([]);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [queueFilter, setQueueFilter] = useState<DoctorQueueFilter>("Today");
@@ -167,55 +163,6 @@ export default function DoctorDashboard() {
     };
   }, []);
 
-  useEffect(() => {
-    async function loadCurrentUser() {
-      try {
-        const payload = (await getCurrentUserClient()) as {
-          user?: {
-            displayName?: string | null;
-          } | null;
-        };
-
-        if (payload.user?.displayName) {
-          setDisplayName(payload.user.displayName);
-        }
-      } catch {
-        setDisplayName("Doctor");
-      }
-    }
-
-    void loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadNotifications() {
-      try {
-        const response = await fetch("/api/doctor/notifications", {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as {
-          unreadCount?: number;
-        };
-
-        if (response.ok && isMounted) {
-          setUnreadNotifications(payload.unreadCount || 0);
-        }
-      } catch {
-        if (isMounted) {
-          setUnreadNotifications(0);
-        }
-      }
-    }
-
-    void loadNotifications();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const dashboardData = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now);
@@ -278,12 +225,12 @@ export default function DoctorDashboard() {
           parseDateValue(second.assignedAt || second.lastEPDSTestDate)?.getTime() ?? 0;
         return secondDate - firstDate;
       })
-      .slice(0, 4);
+      .slice(0, 2);
 
     const priorityCases = [...mothers]
       .sort((first, second) => Number(second.lastEPDS || 0) - Number(first.lastEPDS || 0))
       .filter((mother) => mother.lastStatus === "overdue" || Number(mother.lastEPDS || 0) >= 16)
-      .slice(0, 4);
+      .slice(0, 2);
 
     const visitSummary: DoctorVisitSummaryItem[] = [
       {
@@ -345,28 +292,14 @@ export default function DoctorDashboard() {
   }, [checkups, mothers, queueFilter]);
 
   return (
-    <div className="midwife-dashboard doctor-dashboard-page">
+    <div className="midwife-dashboard doctor-dashboard-page doctor-dashboard-compact-page">
       <div className="doctor-page-header">
         <div className="role-header">
-          <h1>Welcome, {displayName}</h1>
+          <h1>Clinical Dashboard</h1>
           <p>
             Track priority follow-ups, risk distribution, and the latest high-risk mothers under your care.
           </p>
         </div>
-
-        <button
-          type="button"
-          className="midwife-notification"
-          aria-label="Open notification inbox"
-          onClick={() => router.push("/doctor/notifications")}
-        >
-          <Bell size={22} />
-          {unreadNotifications > 0 ? (
-            <span className="regional-notification-badge">
-              {unreadNotifications > 9 ? "9+" : unreadNotifications}
-            </span>
-          ) : null}
-        </button>
       </div>
 
       {isLoading ? (
@@ -378,9 +311,6 @@ export default function DoctorDashboard() {
           <div className="midwife-top-grid">
             <div className="dashboard-card mothers-card">
               <h3>Mothers Under Your Care</h3>
-              <p className="mothers-card-subtitle">
-                Current case mix and review pressure across the high-risk mothers assigned to you.
-              </p>
 
               <div className="care-modern-wrap">
                 <div className="care-total-card">
@@ -415,9 +345,6 @@ export default function DoctorDashboard() {
               <div className="checkup-header">
                 <div>
                   <h3 className="checkup-title">Visits Overview</h3>
-                  <p className="checkup-subtitle">
-                    Review today&apos;s clinical queue first, then move through the next seven days of follow-ups.
-                  </p>
                 </div>
 
                 <button
@@ -498,9 +425,6 @@ export default function DoctorDashboard() {
               <div>
                 <p className="section-eyebrow">Assigned Mothers Snapshot</p>
                 <h3>Recent Assigned Mothers</h3>
-                <p className="recent-mothers-subtitle">
-                  Quick access to the latest high-risk mothers added to your dashboard workload.
-                </p>
               </div>
 
               <button
@@ -574,9 +498,6 @@ export default function DoctorDashboard() {
               <div>
                 <p className="section-eyebrow">Urgent Follow-Up</p>
                 <h3>Priority Review Cases</h3>
-                <p className="recent-mothers-subtitle">
-                  High-risk mothers with overdue follow-ups or elevated EPDS scores that may need immediate attention.
-                </p>
               </div>
             </div>
 

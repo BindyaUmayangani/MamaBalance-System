@@ -16,7 +16,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 
-import UserDropdown from "../common/UserDropdown";
+import SidebarNotificationLink from "../common/SidebarNotificationLink";
 import "../doctor/DoctorSidebar.css";
 import "../superadmin/Sidebar.css";
 import "./MidwifeSidebar.css";
@@ -53,11 +53,6 @@ export default function MidwifeSidebar() {
       window.clearInterval(interval);
     };
   }, []);
-
-  const user = {
-    name: "Nadeesha Silva",
-    role: "Midwife",
-  };
 
   return (
     <aside className="sidebar">
@@ -132,6 +127,12 @@ export default function MidwifeSidebar() {
           ) : null}
         </Link>
 
+        <SidebarNotificationLink
+          href="/midwife/notifications"
+          apiPath="/api/midwife/notifications"
+          active={pathname.startsWith("/midwife/notifications")}
+        />
+
         <Link
           href="/midwife/settings"
           className={pathname.startsWith("/midwife/settings") ? "active" : ""}
@@ -148,8 +149,6 @@ export default function MidwifeSidebar() {
           Help & Support
         </Link>
       </nav>
-
-      <UserDropdown user={user} />
     </aside>
   );
 }

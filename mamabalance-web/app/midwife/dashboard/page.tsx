@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
-  Bell,
   CalendarClock,
   CircleCheck,
   Clock3,
@@ -14,7 +13,6 @@ import {
 
 import LoadingState from "@/components/admin/LoadingState";
 import { useMidwifeMothers } from "@/app/components/midwife/useMidwifeMothers";
-import { getCurrentUserClient } from "@/lib/auth/client";
 import "@/app/midwife/styles/MidwifeDashboard.css";
 
 type VisitSummaryItem = {
@@ -106,10 +104,8 @@ export default function MidwifeDashboard() {
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("Today");
   const [visitItems, setVisitItems] = useState<QueueVisit[]>([]);
   const [visitError, setVisitError] = useState("");
-  const [displayName, setDisplayName] = useState("Midwife");
   const [notifications, setNotifications] = useState<MidwifeNotificationItem[]>([]);
   const [notificationError, setNotificationError] = useState("");
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   useEffect(() => {
     async function loadVisits() {
@@ -142,26 +138,6 @@ export default function MidwifeDashboard() {
   }, []);
 
   useEffect(() => {
-    async function loadCurrentUser() {
-      try {
-        const payload = (await getCurrentUserClient()) as {
-          user?: {
-            displayName?: string | null;
-          } | null;
-        };
-
-        if (payload.user?.displayName) {
-          setDisplayName(payload.user.displayName);
-        }
-      } catch {
-        setDisplayName("Midwife");
-      }
-    }
-
-    void loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
     async function loadNotifications() {
       try {
         const response = await fetch("/api/midwife/notifications", {
@@ -169,7 +145,6 @@ export default function MidwifeDashboard() {
         });
         const payload = (await response.json()) as {
           notifications?: MidwifeNotificationItem[];
-          unreadCount?: number;
           error?: string;
         };
 
@@ -178,11 +153,9 @@ export default function MidwifeDashboard() {
         }
 
         setNotifications(payload.notifications || []);
-        setUnreadNotificationCount(payload.unreadCount || 0);
         setNotificationError("");
       } catch (caughtError) {
         setNotifications([]);
-        setUnreadNotificationCount(0);
         setNotificationError(
           caughtError instanceof Error
             ? caughtError.message
@@ -264,7 +237,7 @@ export default function MidwifeDashboard() {
           parseDateValue(second.assignedAt || second.upcomingCheckup)?.getTime() ?? 0;
         return secondDate - firstDate;
       })
-      .slice(0, 4);
+      .slice(0, 2);
 
     const visitSummary: VisitSummaryItem[] = [
       {
@@ -339,32 +312,18 @@ export default function MidwifeDashboard() {
         seenMothers.add(dedupeKey);
         return true;
       })
-      .slice(0, 4);
+      .slice(0, 2);
   }, [notifications]);
 
   return (
-    <div className="midwife-dashboard doctor-dashboard-page">
+    <div className="midwife-dashboard doctor-dashboard-page midwife-dashboard-page">
       <div className="doctor-page-header">
         <div className="role-header">
-          <h1>Welcome, {displayName}</h1>
+          <h1>Care Dashboard</h1>
           <p>
             Track urgent follow-ups, risk distribution, and the latest mothers added to your care list.
           </p>
         </div>
-
-        <button
-          type="button"
-          className="midwife-notification"
-          aria-label="Notifications"
-          onClick={() => router.push("/midwife/notifications")}
-        >
-          <Bell size={22} />
-          {unreadNotificationCount > 0 ? (
-            <span className="regional-notification-badge">
-              {unreadNotificationCount}
-            </span>
-          ) : null}
-        </button>
       </div>
 
       {isLoading ? (
@@ -376,10 +335,6 @@ export default function MidwifeDashboard() {
           <div className="midwife-top-grid">
             <div className="dashboard-card mothers-card">
               <h3>Mothers Under Your Care</h3>
-              <p className="mothers-card-subtitle">
-                Current case mix and follow-up pressure across your assigned
-                mothers.
-              </p>
 
               <div className="care-modern-wrap">
                 <div className="care-total-card">
@@ -414,10 +369,6 @@ export default function MidwifeDashboard() {
               <div className="checkup-header">
                 <div>
                   <h3 className="checkup-title">Visits Overview</h3>
-                  <p className="checkup-subtitle">
-                    Focus first on overdue mothers, then move through the nearest
-                    scheduled visits.
-                  </p>
                 </div>
 
                 <button
@@ -506,10 +457,6 @@ export default function MidwifeDashboard() {
               <div>
                 <p className="section-eyebrow">Assigned Mothers Snapshot</p>
                 <h3>Recent Assigned Mothers</h3>
-                <p className="recent-mothers-subtitle">
-                  Quick access to the latest mothers added to your dashboard
-                  workload.
-                </p>
               </div>
 
               <button
@@ -587,9 +534,6 @@ export default function MidwifeDashboard() {
               <div>
                 <p className="section-eyebrow">Urgent Alerts</p>
                 <h3>High-Risk Notifications</h3>
-                <p className="recent-mothers-subtitle">
-                  New EPDS submissions that may need early follow-up.
-                </p>
               </div>
             </div>
 

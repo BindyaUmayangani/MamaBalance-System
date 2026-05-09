@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
     const context = await resolveMobileContext(request);
     if (context instanceof NextResponse) return context;
     if (context.role !== "guardian") {
-      return NextResponse.json({ error: "Only guardians can access this dashboard." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Only guardians can access this dashboard." },
+        { status: 403 },
+      );
     }
 
     const doctorUid = readString(context.mother.assignedDoctorUid);
@@ -48,7 +51,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       dashboard: {
-        guardianName: readString(context.user.displayName || context.user.fullName, "Guardian"),
+        guardianName: readString(
+          context.user.displayName || context.user.fullName,
+          "Guardian",
+        ),
         guardianPhoneNumber: readString(context.user.phoneNumber, "-"),
         motherName: readString(context.mother.fullName, "Mother"),
         motherPhoneNumber: readString(context.mother.phoneNumber, "-"),
@@ -57,15 +63,25 @@ export async function GET(request: NextRequest) {
         motherDeliveryDate: readString(context.mother.deliveryDate, "-"),
         motherNoOfChildren: Number(context.mother.noOfChildren || 0),
         motherProfileImageUrl: readString(context.mother.profileImage),
-        relationship: readString(context.guardianLink?.relationship, "Guardian"),
-        nextEpdsAssessmentDate: nextEpdsAvailableAt(context.mother.latestEpdsSubmittedAt),
+        motherLatestEpdsScore: Number(context.mother.latestEpdsScore || 0),
+        motherLatestEpdsDate: toIso(context.mother.latestEpdsSubmittedAt),
+        relationship: readString(
+          context.guardianLink?.relationship,
+          "Guardian",
+        ),
+        nextEpdsAssessmentDate: nextEpdsAvailableAt(
+          context.mother.latestEpdsSubmittedAt,
+        ),
         doctor,
         midwife: midwife || { name: "Assigned midwife", phoneNumber: "-" },
         emergencyContacts: emergencyContacts(context.mother.emergencyContacts),
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load guardian dashboard.";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to load guardian dashboard.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

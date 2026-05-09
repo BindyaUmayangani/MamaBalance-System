@@ -12,6 +12,7 @@
   min-height: 100vh;
 
   padding: 1px;
+  padding-top: var(--role-account-bar-height, 104px);
   background: #f0fff9;
 
   overflow-y: auto;            /* page scroll */

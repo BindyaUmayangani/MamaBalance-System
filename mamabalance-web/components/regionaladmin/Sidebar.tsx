@@ -14,7 +14,7 @@ import {
   CircleHelp,
 } from "lucide-react";
 
-import UserDropdown from "../common/UserDropdown";
+import SidebarNotificationLink from "../common/SidebarNotificationLink";
 import "../superadmin/Sidebar.css"; // reuse same CSS
 
 export default function RegionalAdminSidebar() {
@@ -22,13 +22,6 @@ export default function RegionalAdminSidebar() {
 
   const isActive = (path: string) =>
     pathname.startsWith(path) ? "active" : "";
-
-  /* ===== USER DATA (later from auth/context) ===== */
-  const user = {
-    name: "Bindya Umayangani",
-    role: "RegionalAdmin",
-    region: "Kaduwela",
-  };
 
   return (
     <aside className="sidebar">
@@ -97,6 +90,12 @@ export default function RegionalAdminSidebar() {
           Audit Logs
         </Link>
 
+        <SidebarNotificationLink
+          href="/regionaladmin/notifications"
+          apiPath="/api/regionaladmin/notifications"
+          active={pathname.startsWith("/regionaladmin/notifications")}
+        />
+
         <Link
           href="/regionaladmin/settings"
           className={isActive("/regionaladmin/settings")}
@@ -113,9 +112,6 @@ export default function RegionalAdminSidebar() {
           Help & Support
         </Link>
       </nav>
-
-      {/* ================= USER DROPDOWN ================= */}
-      <UserDropdown user={user} />
     </aside>
   );
 }

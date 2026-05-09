@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
-  Bell,
   Users,
 } from "lucide-react";
 import {
@@ -176,19 +174,8 @@ type DashboardPayload = {
     inactiveUsers: number;
     regions: number;
   };
-  unreadCount: number;
   riskDistribution: Array<{ name: string; value: number; color: string }>;
   weeklyEpds: Array<{ day: string; value: number }>;
-  highRiskMothers: Array<{
-    uid: string;
-    userId: string;
-    name: string;
-    username: string;
-    risk: "low" | "moderate" | "high";
-    score: number | null;
-    region: string;
-    lastActivity: string;
-  }>;
   recentAudit: Array<{
     id: string;
     actor: string;
@@ -213,14 +200,12 @@ const EMPTY_DASHBOARD: DashboardPayload = {
     inactiveUsers: 0,
     regions: 0,
   },
-  unreadCount: 0,
   riskDistribution: [
     { name: "Low", value: 0, color: "#22c55e" },
     { name: "Moderate", value: 0, color: "#fb923c" },
     { name: "High", value: 0, color: "#dc2626" },
   ],
   weeklyEpds: [],
-  highRiskMothers: [],
   recentAudit: [],
 };
 
@@ -304,25 +289,10 @@ export default function SuperAdminDashboard() {
     <div className="midwife-dashboard doctor-dashboard-page superadmin-dashboard-page">
       <div className="doctor-page-header">
         <div className="role-header">
-          <h1>Welcome, {dashboard.displayName}</h1>
+          <h1>System Dashboard</h1>
           <p>
             Monitor platform users, maternal risk distribution, regional coverage, and recent operational activity.
           </p>
-        </div>
-        <div className="doctor-page-header-actions">
-          <button
-            type="button"
-            className="midwife-notification"
-            aria-label="Open support-team notification inbox"
-            onClick={() => router.push("/superadmin/notifications")}
-          >
-            <Bell size={22} />
-            {dashboard.unreadCount > 0 ? (
-              <span className="regional-notification-badge">
-                {dashboard.unreadCount > 9 ? "9+" : dashboard.unreadCount}
-              </span>
-            ) : null}
-          </button>
         </div>
       </div>
 
@@ -335,9 +305,6 @@ export default function SuperAdminDashboard() {
           <div className="midwife-top-grid">
             <div className="dashboard-card mothers-card">
               <h3>Platform Coverage</h3>
-              <p className="mothers-card-subtitle">
-                Current system reach across mothers, care staff, and regions.
-              </p>
 
               <div className="care-modern-wrap">
                 <div className="care-total-card">
@@ -372,9 +339,6 @@ export default function SuperAdminDashboard() {
               <div className="checkup-header">
                 <div>
                   <h3 className="checkup-title">System Overview</h3>
-                  <p className="checkup-subtitle">
-                    Weekly EPDS submission activity across the MamaBalance platform.
-                  </p>
                 </div>
               </div>
 
@@ -408,9 +372,6 @@ export default function SuperAdminDashboard() {
               <div>
                 <p className="section-eyebrow">Risk Intelligence</p>
                 <h3>Overall Risk Distribution</h3>
-                <p className="recent-mothers-subtitle">
-                  Current maternal risk levels across all registered mothers.
-                </p>
               </div>
             </div>
 
@@ -456,72 +417,8 @@ export default function SuperAdminDashboard() {
           <section className="recent-mothers-card">
             <div className="table-header recent-mothers-header">
               <div>
-                <p className="section-eyebrow">Urgent Review</p>
-                <h3>Recent High-Risk Mothers</h3>
-                <p className="recent-mothers-subtitle">
-                  Latest high-risk mother records that may need regional or clinical follow-up.
-                </p>
-              </div>
-
-              <button className="btn-primary" onClick={() => router.push("/superadmin/user-management/mothers")}>
-                View All Mothers
-              </button>
-            </div>
-
-            <div className="recent-mothers-grid">
-              {dashboard.highRiskMothers.length > 0 ? (
-                dashboard.highRiskMothers.map((mother) => (
-                  <article key={mother.uid} className="recent-mother-item">
-                    <div className="recent-mother-top">
-                      <div>
-                        <h4>{mother.name}</h4>
-                        <p>{mother.userId} - @{mother.username}</p>
-                      </div>
-                      <span className={`risk-badge soft ${mother.risk}`}>{mother.risk} risk</span>
-                    </div>
-
-                    <div className="recent-mother-meta">
-                      <div>
-                        <span className="meta-label">EPDS Score</span>
-                        <strong>{mother.score ?? "-"}</strong>
-                      </div>
-                      <div>
-                        <span className="meta-label">Region</span>
-                        <strong>{mother.region}</strong>
-                      </div>
-                    </div>
-
-                    <div className="recent-mother-footer">
-                      <p>Last activity {mother.lastActivity}</p>
-                      <button
-                        className="ghost-action-btn"
-                        onClick={() =>
-                          router.push(
-                            `/superadmin/user-management/mothers?highlight=${encodeURIComponent(mother.userId)}`,
-                          )
-                        }
-                      >
-                        Open record
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="recent-mothers-empty">
-                  <h4>No high-risk mothers right now</h4>
-                  <p>High-risk records will appear here as EPDS scores and risk flags update.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="recent-mothers-card">
-            <div className="table-header recent-mothers-header">
-              <div>
                 <p className="section-eyebrow">Operations</p>
                 <h3>Recent Admin Activity</h3>
-                <p className="recent-mothers-subtitle">Latest platform changes from audit logs.</p>
               </div>
 
               <button className="btn-primary" onClick={() => router.push("/superadmin/audit-logs")}>

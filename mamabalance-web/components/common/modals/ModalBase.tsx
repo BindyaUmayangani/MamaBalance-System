@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 type Props = {
@@ -31,7 +32,7 @@ export default function ModalBase({
     };
   }, []);
 
-  return (
+  const modal = (
     <div className={["modal-overlay", overlayClassName].filter(Boolean).join(" ")} role="presentation">
       <div
         className={["modal", contentClassName].filter(Boolean).join(" ")}
@@ -48,4 +49,10 @@ export default function ModalBase({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(modal, document.body);
 }

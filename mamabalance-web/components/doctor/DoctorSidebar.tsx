@@ -17,7 +17,7 @@ import {
   CircleHelp,
 } from "lucide-react";
 
-import UserDropdown from "../common/UserDropdown";
+import SidebarNotificationLink from "../common/SidebarNotificationLink";
 import "./DoctorSidebar.css";
 import "../superadmin/Sidebar.css";
 
@@ -56,12 +56,6 @@ export default function DoctorSidebar() {
       window.clearInterval(interval);
     };
   }, []);
-
-  /* Doctor User Data */
-  const user = {
-    name: "Nipuni Harshika",
-    role: "Doctor",
-  };
 
   return (
     <aside className="sidebar">
@@ -138,6 +132,12 @@ export default function DoctorSidebar() {
           ) : null}
         </Link>
 
+        <SidebarNotificationLink
+          href="/doctor/notifications"
+          apiPath="/api/doctor/notifications"
+          active={pathname.startsWith("/doctor/notifications")}
+        />
+
         <Link
           href="/doctor/settings"
           className={isActive("/doctor/settings")}
@@ -154,9 +154,6 @@ export default function DoctorSidebar() {
           Help & Support
         </Link>
       </nav>
-
-      {/* ================= USER DROPDOWN ================= */}
-      <UserDropdown user={user} />
     </aside>
   );
 }

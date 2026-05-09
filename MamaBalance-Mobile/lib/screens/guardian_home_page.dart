@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../screens/emergency_contacts_page.dart';
-import '../screens/educational_resources_screen.dart';
 import '../screens/guardian_profile_screen.dart';
-import '../screens/notification_tab.dart';
 import '../services/guardian_dashboard_service.dart';
 import '../utils/image_utils.dart';
 import '../widgets/app_loading_state.dart';
@@ -113,24 +111,19 @@ class GuardianHomePage extends StatelessWidget {
                   const SizedBox(height: 20),
                   _HeroCard(data: data),
                   const SizedBox(height: 22),
-                  const Text(
-                    'Upcoming EPDS assessment',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _text,
-                    ),
+                  const _SectionHeader(
+                    title: 'Upcoming EPDS assessment',
+                    subtitle:
+                        'Monitor the next wellbeing check-in for the linked mother.',
+                    icon: Icons.monitor_heart_outlined,
                   ),
                   const SizedBox(height: 12),
                   _EpdsAssessmentCard(scheduledAt: data.nextEpdsAssessmentDate),
                   const SizedBox(height: 22),
-                  const Text(
-                    'Upcoming schedule',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _text,
-                    ),
+                  const _SectionHeader(
+                    title: 'Upcoming schedule',
+                    subtitle: 'Keep track of home, clinic, and doctor visits.',
+                    icon: Icons.event_note_outlined,
                   ),
                   const SizedBox(height: 12),
                   if (data.visits.isEmpty)
@@ -138,102 +131,244 @@ class GuardianHomePage extends StatelessWidget {
                   else
                     ...data.visits.map((visit) => _VisitCard(visit: visit)),
                   const SizedBox(height: 22),
-                  const Text(
-                    'Quick actions',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _text,
-                    ),
+                  const _SectionHeader(
+                    title: 'Quick actions',
+                    subtitle: 'Open the guardian support actions used most.',
+                    icon: Icons.grid_view_rounded,
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Column(
                     children: [
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.groups_2_outlined,
-                          title: 'Assigned care team',
-                          subtitle:
-                              'View the assigned doctor and midwife details.',
-                          onTap: () {
-                            showModalBottomSheet<void>(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              isScrollControlled: true,
+                      _QuickActionCard(
+                        icon: Icons.groups_2_outlined,
+                        title: 'Assigned care team',
+                        subtitle:
+                            'View the assigned doctor and midwife details.',
+                        onTap: () {
+                          showModalBottomSheet<void>(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder:
+                                (sheetContext) =>
+                                    _AssignedCareTeamSheet(data: data),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _QuickActionCard(
+                        icon: Icons.emergency_outlined,
+                        title: 'Emergency support',
+                        subtitle: 'Open urgent numbers and support contacts.',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
                               builder:
-                                  (sheetContext) =>
-                                      _AssignedCareTeamSheet(data: data),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.menu_book_outlined,
-                          title: 'Resources',
-                          subtitle: 'Guidance prepared for guardians.',
-                          onTap:
-                              () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => const EducationalResourcesScreen(
-                                        audience: 'guardian',
-                                        showBackButton: true,
-                                      ),
-                                ),
-                              ),
-                        ),
+                                  (_) => EmergencyContactsPage(
+                                    audience: 'guardian',
+                                  ),
+                            ),
+                          );
+                        },
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 22),
+                  const _SectionHeader(
+                    title: 'Today\'s support guidance',
+                    subtitle:
+                        'Gentle ways to support the linked mother based on her latest wellbeing score.',
+                    icon: Icons.volunteer_activism_outlined,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.notifications_none_rounded,
-                          title: 'Alerts',
-                          subtitle:
-                              'Check visit, EPDS, and resource reminders.',
-                          onTap:
-                              () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => const NotificationTab(
-                                        audience: NotificationAudience.guardian,
-                                        showBackButton: true,
-                                      ),
-                                ),
-                              ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.emergency_outlined,
-                          title: 'Emergency support',
-                          subtitle: 'Open urgent numbers and support contacts.',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder:
-                                    (_) => EmergencyContactsPage(
-                                      audience: 'guardian',
-                                    ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                  _GuardianGuidanceCard(data: data),
                 ],
               ),
             );
           },
         ),
       ),
+    );
+  }
+}
+
+class _GuardianGuidanceCard extends StatelessWidget {
+  const _GuardianGuidanceCard({required this.data});
+
+  final GuardianDashboardData data;
+
+  static const List<String> _awaitingMessages = [
+    'Invite her to complete the next check-in when she feels ready, and keep the conversation calm and pressure-free.',
+    'Ask one gentle question today, such as how she slept or whether she needs help with one small task.',
+    'Offer practical support first: a meal, a quiet rest period, or help with the baby can make check-ins easier later.',
+  ];
+
+  static const List<String> _steadyMessages = [
+    'Keep support warm and consistent. Notice what is helping her feel steady, and encourage those small routines.',
+    'Celebrate small wins without making them feel like pressure. A calm walk, rest, or shared meal can help maintain balance.',
+    'Stay available even when she seems okay. Gentle listening helps her feel supported before stress builds up.',
+  ];
+
+  static const List<String> _extraCareMessages = [
+    'Offer specific help instead of broad questions: suggest handling one chore, arranging rest, or sitting with her quietly.',
+    'Listen without correcting her feelings. Reassure her that having a difficult week does not mean she is failing.',
+    'Encourage her to stay connected with the doctor, midwife, or a trusted family member if the heaviness continues.',
+  ];
+
+  static const List<String> _closerSupportMessages = [
+    'Stay close and reduce demands where possible. Encourage her to contact the assigned doctor or midwife for extra support.',
+    'Use calm, simple reassurance: she is not alone, help is available, and you can take the next step together.',
+    'If she talks about harming herself, the baby, or feeling unsafe, seek urgent support immediately through emergency contacts.',
+  ];
+
+  bool get _hasScore => data.motherLatestEpdsDate != null;
+
+  String get _riskTitle {
+    if (!_hasScore) return 'Awaiting first check-in';
+    if (data.motherLatestEpdsScore <= 9) return 'Steady support';
+    if (data.motherLatestEpdsScore <= 12) return 'Extra care support';
+    return 'Closer support needed';
+  }
+
+  Color get _accentColor {
+    if (!_hasScore) return GuardianHomePage._mint;
+    if (data.motherLatestEpdsScore <= 9) return const Color(0xFF4A90C2);
+    if (data.motherLatestEpdsScore <= 12) return const Color(0xFFF0A45B);
+    return const Color(0xFFD95454);
+  }
+
+  List<String> get _messages {
+    if (!_hasScore) return _awaitingMessages;
+    if (data.motherLatestEpdsScore <= 9) return _steadyMessages;
+    if (data.motherLatestEpdsScore <= 12) return _extraCareMessages;
+    return _closerSupportMessages;
+  }
+
+  String get _messageForToday {
+    final now = DateTime.now();
+    final dayNumber =
+        DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).difference(DateTime(2024)).inDays;
+    final messages = _messages;
+    final index = (dayNumber + data.motherLatestEpdsScore) % messages.length;
+    return messages[index];
+  }
+
+  String get _scoreLabel {
+    if (!_hasScore) return 'No EPDS score yet';
+    return 'Latest score: ${data.motherLatestEpdsScore}/30';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: GuardianHomePage._surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.favorite_border_rounded, color: _accentColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _riskTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: GuardianHomePage._text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _scoreLabel,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: _accentColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _messageForToday,
+                  style: const TextStyle(
+                    color: GuardianHomePage._muted,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: GuardianHomePage._surface,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: GuardianHomePage._mint),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: GuardianHomePage._text,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 13, color: GuardianHomePage._muted),
+        ),
+      ],
     );
   }
 }
@@ -344,7 +479,7 @@ class _HeroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: GuardianHomePage._mint.withOpacity(0.20),
+            color: GuardianHomePage._mint.withValues(alpha: 0.20),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -395,12 +530,12 @@ class _HeroCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                     width: 3,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
+                      color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
@@ -450,9 +585,9 @@ class _HeroChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.16),
+        color: Colors.white.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.24)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
       ),
       child: Row(
         children: [
@@ -576,8 +711,7 @@ class _QuickActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: const Color(0xFFD6EAF5)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
             Container(
               width: 46,
@@ -588,23 +722,36 @@ class _QuickActionCard extends StatelessWidget {
               ),
               child: Icon(icon, color: GuardianHomePage._mint),
             ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: GuardianHomePage._text,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: GuardianHomePage._text,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.4,
+                      color: GuardianHomePage._muted,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: GuardianHomePage._muted,
-              ),
+            const SizedBox(width: 10),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: GuardianHomePage._muted,
             ),
           ],
         ),
@@ -660,64 +807,6 @@ class _GuardianProfileAvatarButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ContactTile extends StatelessWidget {
-  const _ContactTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD6EAF5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: GuardianHomePage._surface,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: GuardianHomePage._mint),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: GuardianHomePage._text,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: GuardianHomePage._muted),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

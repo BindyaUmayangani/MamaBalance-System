@@ -1,5 +1,22 @@
+.superadmin-dashboard-page .midwife-top-grid {
+  align-items: stretch;
+}
+
+.superadmin-dashboard-page .mothers-card,
 .superadmin-dashboard-page .checkup-card {
-  min-height: 430px;
+  min-height: 0;
+}
+
+.superadmin-dashboard-page .care-modern-wrap {
+  height: auto;
+}
+
+.superadmin-dashboard-page .visit-panel-header {
+  margin-bottom: 18px;
+}
+
+.superadmin-dashboard-page .visit-panel {
+  padding-top: 18px;
 }
 
 .superadmin-chart-row {

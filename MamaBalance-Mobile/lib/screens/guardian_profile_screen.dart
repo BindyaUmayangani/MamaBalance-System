@@ -755,6 +755,8 @@ class GuardianProfileScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
+                  _epdsScoreCard(data),
+                  const SizedBox(height: 14),
                   _detailRow('Phone number', data.motherPhoneNumber),
                   _detailRow('Birthdate', data.motherBirthdate),
                   _detailRow('Delivery date', data.motherDeliveryDate),
@@ -788,6 +790,108 @@ class GuardianProfileScreen extends StatelessWidget {
             ),
           ),
     );
+  }
+
+  Widget _epdsScoreCard(GuardianDashboardData data) {
+    final submittedAt = data.motherLatestEpdsDate;
+    final hasScore = submittedAt != null;
+    final scoreText =
+        hasScore ? '${data.motherLatestEpdsScore}/30' : 'No score yet';
+    final supportLabel = _epdsSupportLabel(
+      data.motherLatestEpdsScore,
+      hasScore,
+    );
+    final dateText =
+        hasScore
+            ? 'Last submitted on ${_formatEpdsDate(submittedAt)}'
+            : 'The linked mother has not submitted an EPDS check-in yet.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.monitor_heart_outlined,
+              color: _mint,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Latest EPDS score',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _muted,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  scoreText,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: _text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$supportLabel | $dateText',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    color: _muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _epdsSupportLabel(int score, bool hasScore) {
+    if (!hasScore) return 'Awaiting first check-in';
+    if (score <= 9) return 'Steady range';
+    if (score <= 12) return 'Extra care may help';
+    return 'Needs closer support';
+  }
+
+  String _formatEpdsDate(DateTime value) {
+    final local = value.toLocal();
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${local.day.toString().padLeft(2, '0')} ${months[local.month - 1]} ${local.year}';
   }
 
   Widget _detailRow(String label, String value) {

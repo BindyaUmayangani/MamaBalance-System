@@ -1,13 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
-  Bell,
   Users,
 } from "lucide-react";
 import {
@@ -32,7 +29,6 @@ import "@/app/superadmin/styles/SuperadminDashboard.css";
 type DashboardPayload = {
   displayName: string;
   regionName: string;
-  unreadCount: number;
   stats: {
     totalDoctors: number;
     totalMidwives: number;
@@ -43,17 +39,6 @@ type DashboardPayload = {
   };
   riskDistribution: Array<{ name: string; value: number; color: string }>;
   weeklyEpds: Array<{ day: string; value: number }>;
-  highRiskMothers: Array<{
-    uid: string;
-    userId: string;
-    name: string;
-    username: string;
-    risk: "low" | "moderate" | "high";
-    score: number | null;
-    assignedMidwife: string;
-    assignedDoctor: string;
-    lastActivity: string;
-  }>;
   recentAudit: Array<{
     id: string;
     actor: string;
@@ -69,7 +54,6 @@ type DashboardPayload = {
 const EMPTY_DASHBOARD: DashboardPayload = {
   displayName: "Regional Admin",
   regionName: "Assigned region",
-  unreadCount: 0,
   stats: {
     totalDoctors: 0,
     totalMidwives: 0,
@@ -84,7 +68,6 @@ const EMPTY_DASHBOARD: DashboardPayload = {
     { name: "High", value: 0, color: "#dc2626" },
   ],
   weeklyEpds: [],
-  highRiskMothers: [],
   recentAudit: [],
 };
 
@@ -168,21 +151,10 @@ export default function RegionalAdminDashboard() {
     <div className="midwife-dashboard doctor-dashboard-page superadmin-dashboard-page">
       <div className="doctor-page-header">
         <div className="role-header">
-          <h1>Welcome, {dashboard.displayName}</h1>
+          <h1>Regional Dashboard</h1>
           <p>
             Monitor mothers, care teams, EPDS activity, and recent operational activity for {dashboard.regionName}.
           </p>
-        </div>
-
-        <div className="doctor-page-header-actions">
-          <Link href="/regionaladmin/notifications" className="midwife-notification" aria-label="Open notifications">
-            <Bell size={22} />
-            {dashboard.unreadCount > 0 && (
-              <span className="regional-notification-badge">
-                {dashboard.unreadCount > 9 ? "9+" : dashboard.unreadCount}
-              </span>
-            )}
-          </Link>
         </div>
       </div>
 
@@ -195,9 +167,6 @@ export default function RegionalAdminDashboard() {
           <div className="midwife-top-grid">
             <div className="dashboard-card mothers-card">
               <h3>Regional Coverage</h3>
-              <p className="mothers-card-subtitle">
-                Current care reach across mothers, clinical staff, and risk groups in {dashboard.regionName}.
-              </p>
 
               <div className="care-modern-wrap">
                 <div className="care-total-card">
@@ -232,9 +201,6 @@ export default function RegionalAdminDashboard() {
               <div className="checkup-header">
                 <div>
                   <h3 className="checkup-title">Regional Overview</h3>
-                  <p className="checkup-subtitle">
-                    Weekly EPDS submission activity for mothers in {dashboard.regionName}.
-                  </p>
                 </div>
               </div>
 
@@ -268,9 +234,6 @@ export default function RegionalAdminDashboard() {
               <div>
                 <p className="section-eyebrow">Risk Intelligence</p>
                 <h3>Regional Risk Distribution</h3>
-                <p className="recent-mothers-subtitle">
-                  Current maternal risk levels across registered mothers in {dashboard.regionName}.
-                </p>
               </div>
             </div>
 
@@ -316,72 +279,8 @@ export default function RegionalAdminDashboard() {
           <section className="recent-mothers-card">
             <div className="table-header recent-mothers-header">
               <div>
-                <p className="section-eyebrow">Urgent Review</p>
-                <h3>Recent High-Risk Mothers</h3>
-                <p className="recent-mothers-subtitle">
-                  Latest high-risk mother records that may need regional or clinical follow-up.
-                </p>
-              </div>
-
-              <button className="btn-primary" onClick={() => router.push("/regionaladmin/user-management/mothers")}>
-                View All Mothers
-              </button>
-            </div>
-
-            <div className="recent-mothers-grid">
-              {dashboard.highRiskMothers.length > 0 ? (
-                dashboard.highRiskMothers.map((mother) => (
-                  <article key={mother.uid} className="recent-mother-item">
-                    <div className="recent-mother-top">
-                      <div>
-                        <h4>{mother.name}</h4>
-                        <p>{mother.userId} - @{mother.username}</p>
-                      </div>
-                      <span className={`risk-badge soft ${mother.risk}`}>{mother.risk} risk</span>
-                    </div>
-
-                    <div className="recent-mother-meta">
-                      <div>
-                        <span className="meta-label">EPDS Score</span>
-                        <strong>{mother.score ?? "-"}</strong>
-                      </div>
-                      <div>
-                        <span className="meta-label">Midwife</span>
-                        <strong>{mother.assignedMidwife}</strong>
-                      </div>
-                    </div>
-
-                    <div className="recent-mother-footer">
-                      <p>Last activity {mother.lastActivity}</p>
-                      <button
-                        className="ghost-action-btn"
-                        onClick={() =>
-                          router.push(
-                            `/regionaladmin/user-management/mothers?highlight=${encodeURIComponent(mother.userId)}`,
-                          )
-                        }
-                      >
-                        Open record
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="recent-mothers-empty">
-                  <h4>No high-risk mothers right now</h4>
-                  <p>High-risk records will appear here as EPDS scores and risk flags update.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="recent-mothers-card">
-            <div className="table-header recent-mothers-header">
-              <div>
                 <p className="section-eyebrow">Operations</p>
                 <h3>Recent Regional Activity</h3>
-                <p className="recent-mothers-subtitle">Latest regional changes from audit logs.</p>
               </div>
 
               <button className="btn-primary" onClick={() => router.push("/regionaladmin/audit-logs")}>

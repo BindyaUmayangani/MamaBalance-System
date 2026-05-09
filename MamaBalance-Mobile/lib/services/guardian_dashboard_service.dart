@@ -39,10 +39,7 @@ class GuardianStaffContact {
   final String name;
   final String phoneNumber;
 
-  const GuardianStaffContact({
-    required this.name,
-    required this.phoneNumber,
-  });
+  const GuardianStaffContact({required this.name, required this.phoneNumber});
 }
 
 class GuardianDashboardData {
@@ -55,6 +52,8 @@ class GuardianDashboardData {
   final String motherDeliveryDate;
   final int motherNoOfChildren;
   final String motherProfileImageUrl;
+  final int motherLatestEpdsScore;
+  final DateTime? motherLatestEpdsDate;
   final String relationship;
   final DateTime? nextEpdsAssessmentDate;
   final GuardianStaffContact? doctor;
@@ -72,6 +71,8 @@ class GuardianDashboardData {
     required this.motherDeliveryDate,
     required this.motherNoOfChildren,
     required this.motherProfileImageUrl,
+    required this.motherLatestEpdsScore,
+    required this.motherLatestEpdsDate,
     required this.relationship,
     required this.nextEpdsAssessmentDate,
     required this.doctor,
@@ -91,9 +92,10 @@ class GuardianDashboardService {
 
   Future<GuardianDashboardData> fetchDashboard() async {
     final payload = await _sendDashboardRequest();
-    final data = payload['dashboard'] is Map<String, dynamic>
-        ? payload['dashboard'] as Map<String, dynamic>
-        : <String, dynamic>{};
+    final data =
+        payload['dashboard'] is Map<String, dynamic>
+            ? payload['dashboard'] as Map<String, dynamic>
+            : <String, dynamic>{};
     final visits = await Future.wait([
       _fetchSoonestMidwifeVisit('home'),
       _fetchSoonestMidwifeVisit('clinic'),
@@ -102,32 +104,56 @@ class GuardianDashboardService {
 
     return GuardianDashboardData(
       guardianName: _readString(data['guardianName'], fallback: 'Guardian'),
-      guardianPhoneNumber: _readString(data['guardianPhoneNumber'], fallback: '-'),
+      guardianPhoneNumber: _readString(
+        data['guardianPhoneNumber'],
+        fallback: '-',
+      ),
       motherName: _readString(data['motherName'], fallback: 'Mother'),
       motherPhoneNumber: _readString(data['motherPhoneNumber'], fallback: '-'),
       motherAddress: _readString(data['motherAddress'], fallback: '-'),
       motherBirthdate: _readString(data['motherBirthdate'], fallback: '-'),
-      motherDeliveryDate: _readString(data['motherDeliveryDate'], fallback: '-'),
-      motherNoOfChildren: int.tryParse('${data['motherNoOfChildren'] ?? 0}') ?? 0,
+      motherDeliveryDate: _readString(
+        data['motherDeliveryDate'],
+        fallback: '-',
+      ),
+      motherNoOfChildren:
+          int.tryParse('${data['motherNoOfChildren'] ?? 0}') ?? 0,
       motherProfileImageUrl: _readString(data['motherProfileImageUrl']),
+      motherLatestEpdsScore:
+          int.tryParse('${data['motherLatestEpdsScore'] ?? 0}') ?? 0,
+      motherLatestEpdsDate: DateTime.tryParse(
+        _readString(data['motherLatestEpdsDate']),
+      ),
       relationship: _readString(data['relationship'], fallback: 'Guardian'),
-      nextEpdsAssessmentDate: DateTime.tryParse(_readString(data['nextEpdsAssessmentDate'])),
+      nextEpdsAssessmentDate: DateTime.tryParse(
+        _readString(data['nextEpdsAssessmentDate']),
+      ),
       doctor: _staffContact(data['doctor']),
-      midwife: _staffContact(data['midwife']) ??
-          const GuardianStaffContact(name: 'Assigned midwife', phoneNumber: '-'),
+      midwife:
+          _staffContact(data['midwife']) ??
+          const GuardianStaffContact(
+            name: 'Assigned midwife',
+            phoneNumber: '-',
+          ),
       visits: visits.whereType<GuardianVisitSummary>().toList(),
       emergencyContacts: _emergencyContacts(data['emergencyContacts']),
     );
   }
 
-  Future<GuardianVisitSummary?> _fetchSoonestMidwifeVisit(String visitType) async {
-    final data = await VisitService.instance.fetchSoonestMidwifeVisit('', visitType);
+  Future<GuardianVisitSummary?> _fetchSoonestMidwifeVisit(
+    String visitType,
+  ) async {
+    final data = await VisitService.instance.fetchSoonestMidwifeVisit(
+      '',
+      visitType,
+    );
     if (data == null) return null;
     return GuardianVisitSummary(
       label: visitType == 'clinic' ? 'Clinic visit' : 'Home visit',
-      subtitle: visitType == 'clinic'
-          ? 'Planned follow-up at the clinic.'
-          : 'Midwife support visit at home.',
+      subtitle:
+          visitType == 'clinic'
+              ? 'Planned follow-up at the clinic.'
+              : 'Midwife support visit at home.',
       scheduledAt: DateTime.tryParse(_readString(data['scheduledAt'])),
       staffRole: 'Midwife',
     );
@@ -146,22 +172,28 @@ class GuardianDashboardService {
 
   Future<Map<String, dynamic>> _sendDashboardRequest() async {
     final user = _auth.currentUser;
-    if (user == null) throw const AppAuthException('Please sign in to continue.');
+    if (user == null) {
+      throw const AppAuthException('Please sign in to continue.');
+    }
     final token = await user.getIdToken();
     if (token == null || token.trim().isEmpty) {
       throw const AppAuthException('Please sign in again to continue.');
     }
     try {
-      final response = await http.get(
-        _dashboardEndpoint(),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      ).timeout(_backendTimeout);
+      final response = await http
+          .get(
+            _dashboardEndpoint(),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(_backendTimeout);
       final payload = _decodeJson(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AppAuthException(payload['error'] as String? ?? 'Unable to load guardian dashboard.');
+        throw AppAuthException(
+          payload['error'] as String? ?? 'Unable to load guardian dashboard.',
+        );
       }
       return payload;
     } on AppAuthException {
@@ -169,18 +201,26 @@ class GuardianDashboardService {
     } on TimeoutException {
       throw const AppAuthException('The guardian dashboard request timed out.');
     } on SocketException {
-      throw const AppAuthException('Unable to reach the guardian dashboard backend.');
+      throw const AppAuthException(
+        'Unable to reach the guardian dashboard backend.',
+      );
     } on FormatException {
-      throw const AppAuthException('The guardian dashboard backend returned an invalid response.');
+      throw const AppAuthException(
+        'The guardian dashboard backend returned an invalid response.',
+      );
     }
   }
 
   Uri _dashboardEndpoint() {
     final baseUrl = AppConfig.backendBaseUrl.trim();
     if (baseUrl.isEmpty) {
-      throw const AppAuthException('The mobile backend URL has not been configured.');
+      throw const AppAuthException(
+        'The mobile backend URL has not been configured.',
+      );
     }
-    return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/guardian-dashboard');
+    return Uri.parse(
+      '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/api/mobile/guardian-dashboard',
+    );
   }
 
   GuardianStaffContact? _staffContact(dynamic value) {
@@ -196,7 +236,10 @@ class GuardianDashboardService {
     return items.whereType<Map<String, dynamic>>().map((item) {
       return GuardianEmergencyContact(
         name: _readString(item['name'], fallback: 'Emergency contact'),
-        relationship: _readString(item['relationship'], fallback: 'Support contact'),
+        relationship: _readString(
+          item['relationship'],
+          fallback: 'Support contact',
+        ),
         phoneNumber: _readString(item['phoneNumber'], fallback: '-'),
       );
     }).toList();

@@ -28,7 +28,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 8px;
+  padding: var(--role-account-bar-height, 104px) 8px 8px;
 }
 
 
@@ -256,7 +256,7 @@ tbody tr:hover {
   }
 
   .admin-content {
-    padding: 20px;
+    padding: calc(var(--role-account-bar-height, 104px) + 20px) 20px 20px;
   }
 
 }

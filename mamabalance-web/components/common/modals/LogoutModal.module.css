@@ -59,9 +59,9 @@
 }
 
 .confirmButton {
-  background: #499d85;
+  background: #dc2626;
   color: #ffffff;
-  border: 1.5px solid #499d85;
+  border: 1.5px solid #dc2626;
   padding: 10px 28px;
   border-radius: 12px;
   font-weight: 600;
@@ -73,8 +73,13 @@
 }
 
 .confirmButton:hover:not(:disabled) {
-  background: #3f8c77;
-  border-color: #3f8c77;
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.confirmButton:active:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
 }
 
 .cancelButton:disabled,
