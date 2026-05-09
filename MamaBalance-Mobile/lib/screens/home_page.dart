@@ -4,10 +4,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/mother_profile.dart';
 import '../services/mother_profile_service.dart';
+import '../services/prescription_service.dart';
 import '../services/weekly_checkin_service.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'chat_page.dart';
 import 'educational_resources_screen.dart';
+import 'emergency_contacts_page.dart';
 import 'notification_tab.dart';
 import 'prescription_page_live.dart';
 import 'profile_screen.dart';
@@ -17,6 +19,7 @@ import 'package:intl/intl.dart';
 
 import '../services/notification_service.dart';
 import '../utils/image_utils.dart';
+import '../widgets/app_loading_state.dart';
 
 const List<String> _gentleSupportMessages = [
   'Take a quiet pause today and notice one thing that helped you feel steady.',
@@ -53,12 +56,14 @@ class _DashboardData {
   final Map<String, dynamic>? homeVisit;
   final Map<String, dynamic>? clinicVisit;
   final Map<String, dynamic>? doctorVisit;
+  final bool hasPrescriptions;
 
   _DashboardData({
     required this.profile,
     this.homeVisit,
     this.clinicVisit,
     this.doctorVisit,
+    required this.hasPrescriptions,
   });
 }
 
@@ -78,11 +83,11 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   late VideoPlayerController _videoController;
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   void initState() {
@@ -115,25 +120,50 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _formatLastTestDate(DateTime? date) {
-    if (date == null) return 'No test submitted';
+    if (date == null) return 'No check-in yet';
     return DateFormat('dd MMM yyyy').format(date.toLocal());
   }
 
   String _checkInStatus(DateTime? date) {
-    if (date == null) return 'Complete your first EPDS check-in to start weekly tracking.';
+    if (date == null) {
+      return 'Complete your first wellbeing check-in to start a weekly rhythm.';
+    }
     final localDate = date.toLocal();
     final now = DateTime.now();
     if (!localDate.isAfter(now)) return 'Your weekly check-in is ready today.';
-    final days = localDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+    final days =
+        localDate.difference(DateTime(now.year, now.month, now.day)).inDays;
     if (days <= 1) return 'Your next check-in opens tomorrow.';
     return 'Your next check-in opens in $days days.';
+  }
+
+  String _wellbeingSupportTitle(MotherProfile profile) {
+    if (profile.latestEpdsDate == null) {
+      return 'Start with a gentle check-in';
+    }
+    if (profile.latestEpdsScore <= 9) return 'You seem steady today';
+    if (profile.latestEpdsScore <= 12) return 'A little extra care may help';
+    return 'Support is close by';
+  }
+
+  String _wellbeingSupportMessage(MotherProfile profile) {
+    if (profile.latestEpdsDate == null) {
+      return 'Take a quiet moment for yourself today. When you feel ready, your care team can use your updates to support you better.';
+    }
+    if (profile.latestEpdsScore <= 9) {
+      return 'Things may be feeling more manageable right now. Keep taking small moments of rest, comfort, and care.';
+    }
+    if (profile.latestEpdsScore <= 12) {
+      return 'This week may feel heavier than usual. Try one gentle pause, and reach out to someone you trust if you need company.';
+    }
+    return 'You deserve extra support right now. You are not alone; contacting your doctor, midwife, or a trusted person can help.';
   }
 
   String _formatVisitDate(dynamic value) {
     if (value == null) return 'No upcoming visits';
     try {
-      final date = (value is DateTime ? value : DateTime.parse('$value'))
-          .toLocal();
+      final date =
+          (value is DateTime ? value : DateTime.parse('$value')).toLocal();
       return DateFormat('dd MMM yyyy').format(date);
     } catch (_) {
       return 'TBD';
@@ -143,8 +173,8 @@ class _HomePageState extends State<HomePage> {
   String _formatVisitDay(dynamic value) {
     if (value == null) return 'Date to be confirmed';
     try {
-      final date = (value is DateTime ? value : DateTime.parse('$value'))
-          .toLocal();
+      final date =
+          (value is DateTime ? value : DateTime.parse('$value')).toLocal();
       return DateFormat('EEEE').format(date);
     } catch (_) {
       return 'Date to be confirmed';
@@ -154,8 +184,8 @@ class _HomePageState extends State<HomePage> {
   String _formatVisitTime(dynamic value) {
     if (value == null) return 'Time to be confirmed';
     try {
-      final date = (value is DateTime ? value : DateTime.parse('$value'))
-          .toLocal();
+      final date =
+          (value is DateTime ? value : DateTime.parse('$value')).toLocal();
       return DateFormat('h:mm a').format(date);
     } catch (_) {
       return 'Time to be confirmed';
@@ -172,61 +202,77 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _showInfoDialog(String title, String content) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title, style: const TextStyle(color: _text, fontWeight: FontWeight.w700)),
-        content: Text(content, style: const TextStyle(height: 1.45)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: _accent, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickAction({required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
-    return Expanded(
+  Widget _buildQuickAction({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: title,
+      hint: subtitle,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Container(
-          margin: const EdgeInsets.all(6),
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFD6ECE6)),
-            boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 6))],
+            border: Border.all(color: const Color(0xFFD6EAF5)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x12000000),
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
               Container(
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE9F7F2), Color(0xFFDDF2EB)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFEAF6FC),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                 ),
                 child: Icon(icon, color: _accent, size: 26),
               ),
-              const SizedBox(height: 14),
-              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
-              const SizedBox(height: 6),
-              Text(subtitle, style: const TextStyle(fontSize: 12.5, color: _muted, height: 1.4)),
-              const SizedBox(height: 12),
-              const Text(
-                'Open',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _accent),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: _muted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: _muted,
               ),
             ],
           ),
@@ -235,14 +281,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHighlightCard({required String title, required String body, required IconData icon}) {
+  Widget _buildHighlightCard({
+    required String title,
+    required String body,
+    required IconData icon,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,15 +302,30 @@ class _HomePageState extends State<HomePage> {
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(
+                  color: _surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: Icon(icon, color: _accent),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text))),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(body, style: const TextStyle(fontSize: 14, color: _muted, height: 1.5)),
+          Text(
+            body,
+            style: const TextStyle(fontSize: 14, color: _muted, height: 1.5),
+          ),
         ],
       ),
     );
@@ -279,8 +344,14 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
-        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 6))],
+        border: Border.all(color: const Color(0xFFD6EAF5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,6 +362,7 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               color: _surface,
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFD6EAF5)),
             ),
             child: Icon(icon, color: _accent, size: 23),
           ),
@@ -301,17 +373,29 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   eyebrow,
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: _accent),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: _accent,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: _text),
+                  style: const TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   body,
-                  style: const TextStyle(fontSize: 13, color: _muted, height: 1.45),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: _muted,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -374,9 +458,9 @@ class _HomePageState extends State<HomePage> {
         items.add(
           _CareUpdateSummary(
             scheduledAt: scheduledAt,
-            title: 'Nearest visit: Doctor checkup',
+            title: 'Nearest visit: Doctor follow-up',
             body:
-                'Your nearest care appointment is a doctor checkup on ${_formatVisitDay(data.doctorVisit!['scheduledAt'])}, ${_formatVisitDate(data.doctorVisit!['scheduledAt'])} at ${_formatVisitTime(data.doctorVisit!['scheduledAt'])}.',
+                'Your nearest doctor follow-up is on ${_formatVisitDay(data.doctorVisit!['scheduledAt'])}, ${_formatVisitDate(data.doctorVisit!['scheduledAt'])} at ${_formatVisitTime(data.doctorVisit!['scheduledAt'])}.',
           ),
         );
       }
@@ -387,7 +471,12 @@ class _HomePageState extends State<HomePage> {
     return items.first;
   }
 
-  Widget _buildSupportSection(_DashboardData data, DateTime? nextCheckInDate, String supportText, String tipTitle) {
+  Widget _buildSupportSection(
+    _DashboardData data,
+    DateTime? nextCheckInDate,
+    String supportText,
+    String tipTitle,
+  ) {
     return Column(
       children: [
         _buildSupportInsightCard(
@@ -413,7 +502,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool _hasUpcomingVisits(_DashboardData data) {
-    return data.homeVisit != null || data.clinicVisit != null || data.doctorVisit != null;
+    return data.homeVisit != null ||
+        data.clinicVisit != null ||
+        data.doctorVisit != null;
   }
 
   Widget _buildVisitCard({
@@ -432,8 +523,14 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
-        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 6))],
+        border: Border.all(color: const Color(0xFFD6EAF5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,6 +541,7 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               color: _surface,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD6EAF5)),
             ),
             child: Icon(icon, color: _accent, size: 24),
           ),
@@ -457,18 +555,29 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: _text),
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: _text,
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: _surface,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         tag,
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: _accent),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: _accent,
+                        ),
                       ),
                     ),
                   ],
@@ -476,29 +585,26 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5FBF8),
+                    color: const Color(0xFFF7FCFE),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: _visitMetaItem(
-                          label: 'Date',
-                          value: date,
-                        ),
+                        child: _visitMetaItem(label: 'Date', value: date),
                       ),
                       Container(
                         width: 1,
                         height: 34,
-                        color: const Color(0xFFD6ECE6),
+                        color: const Color(0xFFD6EAF5),
                       ),
                       Expanded(
-                        child: _visitMetaItem(
-                          label: 'Time',
-                          value: time,
-                        ),
+                        child: _visitMetaItem(label: 'Time', value: time),
                       ),
                     ],
                   ),
@@ -506,12 +612,20 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 10),
                 Text(
                   day,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _accent),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _accent,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 12.5, color: _muted, height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: _muted,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -521,10 +635,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _visitMetaItem({
-    required String label,
-    required String value,
-  }) {
+  Widget _visitMetaItem({required String label, required String value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Column(
@@ -532,14 +643,22 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: _muted, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: _muted,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13.5, color: _text, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: _text,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -580,11 +699,11 @@ class _HomePageState extends State<HomePage> {
     if (data.doctorVisit != null) {
       visitCards.add(
         _buildVisitCard(
-          title: 'Upcoming doctor checkup',
+          title: 'Upcoming doctor follow-up',
           date: _formatVisitDate(data.doctorVisit!['scheduledAt']),
           day: _formatVisitDay(data.doctorVisit!['scheduledAt']),
           time: _formatVisitTime(data.doctorVisit!['scheduledAt']),
-          subtitle: 'Your assigned doctor has a scheduled follow-up checkup.',
+          subtitle: 'Your doctor has a scheduled follow-up with you.',
           tag: 'Doctor',
           icon: Icons.medical_services_outlined,
         ),
@@ -613,14 +732,18 @@ class _HomePageState extends State<HomePage> {
             const Expanded(
               child: Text(
                 'Upcoming visits',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _text),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: _text,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         const Text(
-          'Keep track of your next home, clinic, and doctor appointments.',
+          'Keep track of your next home, clinic, and doctor visits.',
           style: TextStyle(fontSize: 13, color: _muted),
         ),
         const SizedBox(height: 14),
@@ -652,24 +775,27 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _text),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: _text,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style: const TextStyle(fontSize: 13, color: _muted),
-        ),
+        Text(subtitle, style: const TextStyle(fontSize: 13, color: _muted)),
       ],
     );
   }
 
   Widget _buildCareTeamSection(MotherProfile profile) {
-    final hasDoctor = profile.assignedDoctorUid?.trim().isNotEmpty == true &&
+    final hasDoctor =
+        profile.assignedDoctorUid?.trim().isNotEmpty == true &&
         profile.assignedDoctorPhoneNumber.trim().isNotEmpty;
-    final hasMidwife = profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
+    final hasMidwife =
+        profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
         profile.assignedMidwifePhoneNumber.trim().isNotEmpty;
 
     if (!hasDoctor && !hasMidwife) {
@@ -688,18 +814,20 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 14),
         if (hasDoctor)
           _buildHighlightCard(
-            title: profile.assignedDoctorName.trim().isNotEmpty
-                ? profile.assignedDoctorName
-                : 'Assigned doctor',
+            title:
+                profile.assignedDoctorName.trim().isNotEmpty
+                    ? profile.assignedDoctorName
+                    : 'Assigned doctor',
             body: 'Doctor contact number: ${profile.assignedDoctorPhoneNumber}',
             icon: Icons.local_hospital_outlined,
           ),
         if (hasDoctor && hasMidwife) const SizedBox(height: 12),
         if (hasMidwife)
           _buildHighlightCard(
-            title: profile.assignedMidwifeName.trim().isNotEmpty
-                ? profile.assignedMidwifeName
-                : 'Assigned midwife',
+            title:
+                profile.assignedMidwifeName.trim().isNotEmpty
+                    ? profile.assignedMidwifeName
+                    : 'Assigned midwife',
             body:
                 'Midwife contact number: ${profile.assignedMidwifePhoneNumber}',
             icon: Icons.health_and_safety_outlined,
@@ -711,11 +839,11 @@ class _HomePageState extends State<HomePage> {
   Widget _buildHomeContent(_DashboardData data) {
     final profile = data.profile;
     final today = DateTime.now().weekday;
-    final supportText = _gentleSupportMessages[(today - 1) % _gentleSupportMessages.length];
+    final supportText =
+        _gentleSupportMessages[(today - 1) % _gentleSupportMessages.length];
     final tipKeys = dailyTipsWithExplanation.keys.toList();
     final tipTitle = tipKeys[(today - 1) % tipKeys.length];
     final nextCheckInDate = _nextEPDSTestDate(profile);
-    final hasRealEpds = profile.latestEpdsDate != null;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -731,44 +859,81 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.82),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: const Color(0xFFD6ECE6)),
+                          border: Border.all(color: const Color(0xFFD6EAF5)),
                         ),
                         child: const Text(
                           'Care overview',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _accent),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _accent,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Welcome back, ${profile.firstName}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _text)),
+                      Text(
+                        'Welcome back, ${profile.firstName}',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: _text,
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      const Text('Take a quick look at your wellbeing, upcoming check-in, and support for today.', style: TextStyle(fontSize: 14, color: _muted, height: 1.4)),
+                      const Text(
+                        'Take a quick look at your wellbeing, upcoming check-in, and support for today.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _muted,
+                          height: 1.4,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 12),
-                InkWell(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen(showBackButton: true))),
-                  borderRadius: BorderRadius.circular(24),
-                  child: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.white,
-                    backgroundImage: ImageUtils.hasProfileImage(profile.profileImageUrl)
-                        ? ImageUtils.resolveProfileImage(profile.profileImageUrl)
-                        : null,
-                    child: ImageUtils.hasProfileImage(profile.profileImageUrl)
-                        ? null
-                        : Text(
-                            ImageUtils.profileInitials(profile.fullName),
-                            style: const TextStyle(
-                              color: _accent,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
+                Semantics(
+                  button: true,
+                  label: 'Open profile',
+                  child: InkWell(
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) =>
+                                    const ProfileScreen(showBackButton: true),
                           ),
+                        ),
+                    borderRadius: BorderRadius.circular(24),
+                    child: CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.white,
+                      backgroundImage:
+                          ImageUtils.hasProfileImage(profile.profileImageUrl)
+                              ? ImageUtils.resolveProfileImage(
+                                profile.profileImageUrl,
+                              )
+                              : null,
+                      child:
+                          ImageUtils.hasProfileImage(profile.profileImageUrl)
+                              ? null
+                              : Text(
+                                ImageUtils.profileInitials(profile.fullName),
+                                style: const TextStyle(
+                                  color: _accent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                    ),
                   ),
                 ),
               ],
@@ -781,10 +946,16 @@ class _HomePageState extends State<HomePage> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF67BBA1), Color(0xFF4FA58D)],
+                  colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
                 ),
                 borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: _accent.withOpacity(0.18), blurRadius: 20, offset: const Offset(0, 10))],
+                boxShadow: [
+                  BoxShadow(
+                    color: _accent.withOpacity(0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,17 +967,42 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Today\'s wellbeing snapshot', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                            const Text(
+                              'Today\'s wellbeing snapshot',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
                             const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => _showInfoDialog('What is EPDS?', 'EPDS stands for Edinburgh Postnatal Depression Scale. Your score helps track emotional well-being after childbirth.'),
-                              child: Text(
-                                hasRealEpds ? '${profile.latestEpdsScore} / 30' : 'No test yet',
-                                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white),
+                            Text(
+                              _wellbeingSupportTitle(profile),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.18,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(_checkInStatus(nextCheckInDate), style: const TextStyle(fontSize: 13.5, color: Colors.white70, height: 1.35)),
+                            Text(
+                              _wellbeingSupportMessage(profile),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                color: Colors.white,
+                                height: 1.38,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _checkInStatus(nextCheckInDate),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                color: Colors.white70,
+                                height: 1.35,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -816,12 +1012,21 @@ class _HomePageState extends State<HomePage> {
                         child: SizedBox(
                           width: 122,
                           height: 122,
-                          child: _videoController.value.isInitialized
-                              ? AspectRatio(aspectRatio: _videoController.value.aspectRatio, child: VideoPlayer(_videoController))
-                              : Container(
-                                  color: Colors.white.withOpacity(0.18),
-                                  child: const Center(child: CircularProgressIndicator(color: Colors.white)),
-                                ),
+                          child:
+                              _videoController.value.isInitialized
+                                  ? AspectRatio(
+                                    aspectRatio:
+                                        _videoController.value.aspectRatio,
+                                    child: VideoPlayer(_videoController),
+                                  )
+                                  : Container(
+                                    color: Colors.white.withOpacity(0.18),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                         ),
                       ),
                     ],
@@ -831,7 +1036,7 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Expanded(
                         child: _heroMiniCard(
-                          'Last Test',
+                          'Last Check-In',
                           _formatLastTestDate(profile.latestEpdsDate),
                         ),
                       ),
@@ -854,46 +1059,59 @@ class _HomePageState extends State<HomePage> {
               icon: Icons.grid_view_rounded,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildQuickAction(
-                  title: 'Weekly Test',
-                  subtitle: 'Complete this week\'s EPDS check-in',
-                  icon: Icons.fact_check_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyCheckInPage(showBackButton: true))),
-                ),
-                _buildQuickAction(
-                  title: 'Prescription',
-                  subtitle: 'Review medicines and care notes',
-                  icon: Icons.medication_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionPage(showBackButton: true))),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                _buildQuickAction(
-                  title: 'Assigned Care Team',
-                  subtitle: 'View the assigned doctor and midwife details',
-                  icon: Icons.groups_2_outlined,
-                  onTap: () {
-                    showModalBottomSheet<void>(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      builder: (sheetContext) => _AssignedCareTeamSheet(
-                        profile: profile,
+            if (data.hasPrescriptions)
+              _buildQuickAction(
+                title: 'Prescriptions',
+                subtitle: 'Review medicines and care notes',
+                icon: Icons.medication_rounded,
+                onTap:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => const PrescriptionPage(showBackButton: true),
                       ),
-                    );
-                  },
-                ),
-                _buildQuickAction(
-                  title: 'Resources',
-                  subtitle: 'Read supportive articles and tips',
-                  icon: Icons.menu_book_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EducationalResourcesScreen(showBackButton: true))),
-                ),
-              ],
+                    ),
+              ),
+            _buildQuickAction(
+              title: 'My Care Team',
+              subtitle: 'See your doctor and midwife contact details',
+              icon: Icons.groups_2_outlined,
+              onTap: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder:
+                      (sheetContext) =>
+                          _AssignedCareTeamSheet(profile: profile),
+                );
+              },
+            ),
+            _buildQuickAction(
+              title: 'Resources',
+              subtitle: 'Read supportive articles and tips',
+              icon: Icons.menu_book_rounded,
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => const EducationalResourcesScreen(
+                            showBackButton: true,
+                          ),
+                    ),
+                  ),
+            ),
+            _buildQuickAction(
+              title: 'Emergency Support',
+              subtitle: 'Reach urgent help and important contact numbers',
+              icon: Icons.emergency_share_rounded,
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => EmergencyContactsPage()),
+                  ),
             ),
             if (_hasUpcomingVisits(data)) ...[
               const SizedBox(height: 18),
@@ -902,7 +1120,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 6),
             _buildSectionHeader(
               title: 'Today for you',
-              subtitle: 'A gentle reminder, one small action, and your next care update.',
+              subtitle:
+                  'A gentle reminder, one small action, and your next care update.',
               icon: Icons.favorite_outline_rounded,
             ),
             const SizedBox(height: 12),
@@ -924,9 +1143,25 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white70,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -934,17 +1169,22 @@ class _HomePageState extends State<HomePage> {
 
   Future<_DashboardData> _fetchDashboardData() async {
     final profile = await MotherProfileService.instance.fetchCurrentProfile();
-    final visits = await Future.wait([
+    final results = await Future.wait<dynamic>([
       VisitService.instance.fetchSoonestMidwifeVisit(profile.uid, 'home'),
       VisitService.instance.fetchSoonestMidwifeVisit(profile.uid, 'clinic'),
       VisitService.instance.fetchSoonestDoctorCheckup(profile.uid),
+      PrescriptionService.instance.fetchCurrentMotherPrescriptions(),
     ]);
+    final prescriptionSummary = results[3] as PrescriptionSummary;
 
     return _DashboardData(
       profile: profile,
-      homeVisit: visits[0],
-      clinicVisit: visits[1],
-      doctorVisit: visits[2],
+      homeVisit: results[0] as Map<String, dynamic>?,
+      clinicVisit: results[1] as Map<String, dynamic>?,
+      doctorVisit: results[2] as Map<String, dynamic>?,
+      hasPrescriptions:
+          prescriptionSummary.activeMedications.isNotEmpty ||
+          prescriptionSummary.medicationHistory.isNotEmpty,
     );
   }
 
@@ -958,7 +1198,10 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
             backgroundColor: _background,
-            body: Center(child: CircularProgressIndicator(color: _accent)),
+            body: AppLoadingState(
+              title: 'Preparing your home',
+              message: 'Loading your check-ins, visits, and care updates.',
+            ),
           );
         }
 
@@ -968,19 +1211,30 @@ class _HomePageState extends State<HomePage> {
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('Unable to load your home screen right now.', textAlign: TextAlign.center, style: const TextStyle(color: _text, fontSize: 18, fontWeight: FontWeight.w700)),
+                child: Text(
+                  'Unable to load your home screen right now.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: _text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           );
         }
 
         final pages = [
-          _buildHomeContent(_DashboardData(
-            profile: snapshot.data!.profile,
-            homeVisit: snapshot.data!.homeVisit,
-            clinicVisit: snapshot.data!.clinicVisit,
-            doctorVisit: snapshot.data!.doctorVisit,
-          )),
+          _buildHomeContent(
+            _DashboardData(
+              profile: snapshot.data!.profile,
+              homeVisit: snapshot.data!.homeVisit,
+              clinicVisit: snapshot.data!.clinicVisit,
+              doctorVisit: snapshot.data!.doctorVisit,
+              hasPrescriptions: snapshot.data!.hasPrescriptions,
+            ),
+          ),
           const WeeklyCheckInPage(),
           const ChatPage(doctorName: 'Dr. Smith'),
           NotificationTab(),
@@ -999,8 +1253,17 @@ class _HomePageState extends State<HomePage> {
                   child: FloatingActionButton.extended(
                     onPressed: () => Navigator.pushNamed(context, '/chatbot'),
                     backgroundColor: _accent,
-                    icon: const Icon(Icons.volunteer_activism_rounded, color: Colors.white),
-                    label: const Text('Support', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    icon: const Icon(
+                      Icons.volunteer_activism_rounded,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Support',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -1054,6 +1317,99 @@ class _AssignedCareTeamSheet extends StatelessWidget {
       return;
     }
 
+    final shouldCall = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder:
+          (dialogContext) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
+            contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+            title: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _HomePageState._surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
+                  ),
+                  child: const Icon(
+                    Icons.call_outlined,
+                    color: _HomePageState._accent,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Call this contact?',
+                    style: TextStyle(
+                      color: _HomePageState._text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trimmed,
+                  style: const TextStyle(
+                    color: _HomePageState._text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This will open your phone dialer. You can still choose whether to place the call.',
+                  style: TextStyle(color: _HomePageState._muted, height: 1.5),
+                ),
+              ],
+            ),
+            actions: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _HomePageState._accent,
+                  side: const BorderSide(color: _HomePageState._accent),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _HomePageState._accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.call_outlined, size: 18),
+                label: const Text('Open Dialer'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldCall != true || !context.mounted) return;
+
     final uri = Uri(scheme: 'tel', path: trimmed);
     final opened = await launchUrl(uri);
     if (!opened && context.mounted) {
@@ -1067,9 +1423,11 @@ class _AssignedCareTeamSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDoctor = profile.assignedDoctorUid?.trim().isNotEmpty == true &&
+    final hasDoctor =
+        profile.assignedDoctorUid?.trim().isNotEmpty == true &&
         profile.assignedDoctorPhoneNumber.trim().isNotEmpty;
-    final hasMidwife = profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
+    final hasMidwife =
+        profile.assignedMidwifeUid?.trim().isNotEmpty == true &&
         profile.assignedMidwifePhoneNumber.trim().isNotEmpty;
 
     return Container(
@@ -1089,14 +1447,14 @@ class _AssignedCareTeamSheet extends StatelessWidget {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD5E6DF),
+                  color: const Color(0xFFD6EAF5),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
             const SizedBox(height: 18),
             const Text(
-              'Assigned Care Team',
+              'My Care Team',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -1105,7 +1463,7 @@ class _AssignedCareTeamSheet extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'These are the care team members currently assigned to support you.',
+              'These are the people currently available to support you.',
               style: TextStyle(
                 fontSize: 14,
                 height: 1.5,
@@ -1117,10 +1475,12 @@ class _AssignedCareTeamSheet extends StatelessWidget {
               _CareTeamTile(
                 icon: Icons.medical_services_outlined,
                 title: _doctorDisplayName(profile.assignedDoctorName),
-                subtitle:
-                    'Assigned doctor | ${profile.assignedDoctorPhoneNumber}',
-                onCall: () =>
-                    _callContact(context, profile.assignedDoctorPhoneNumber),
+                subtitle: 'Doctor | ${profile.assignedDoctorPhoneNumber}',
+                onCall:
+                    () => _callContact(
+                      context,
+                      profile.assignedDoctorPhoneNumber,
+                    ),
               ),
               const SizedBox(height: 10),
             ],
@@ -1128,10 +1488,12 @@ class _AssignedCareTeamSheet extends StatelessWidget {
               _CareTeamTile(
                 icon: Icons.health_and_safety_outlined,
                 title: _midwifeDisplayName(profile.assignedMidwifeName),
-                subtitle:
-                    'Assigned midwife | ${profile.assignedMidwifePhoneNumber}',
-                onCall: () =>
-                    _callContact(context, profile.assignedMidwifePhoneNumber),
+                subtitle: 'Midwife | ${profile.assignedMidwifePhoneNumber}',
+                onCall:
+                    () => _callContact(
+                      context,
+                      profile.assignedMidwifePhoneNumber,
+                    ),
               ),
             if (!hasDoctor && !hasMidwife)
               Container(
@@ -1140,14 +1502,11 @@ class _AssignedCareTeamSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _HomePageState._surface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFD7EAE3)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                 ),
                 child: const Text(
-                  'Your assigned care team details are not available yet.',
-                  style: TextStyle(
-                    color: _HomePageState._muted,
-                    height: 1.45,
-                  ),
+                  'Your care team details are not available yet.',
+                  style: TextStyle(color: _HomePageState._muted, height: 1.45),
                 ),
               ),
             const SizedBox(height: 16),
@@ -1157,14 +1516,11 @@ class _AssignedCareTeamSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _HomePageState._surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFD7EAE3)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
               child: const Text(
-                'If urgent support is needed, use the call button for the assigned doctor or midwife.',
-                style: TextStyle(
-                  color: _HomePageState._muted,
-                  height: 1.45,
-                ),
+                'If urgent support is needed, use the call button for your doctor or midwife.',
+                style: TextStyle(color: _HomePageState._muted, height: 1.45),
               ),
             ),
             const SizedBox(height: 18),
@@ -1215,7 +1571,7 @@ class _CareTeamTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [

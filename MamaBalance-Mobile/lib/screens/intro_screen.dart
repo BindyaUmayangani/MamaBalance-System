@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -16,25 +16,29 @@ class _IntroScreenState extends State<IntroScreen> {
       'image': 'assets/images/intro1.png',
       'eyebrow': 'MamaBalance Care',
       'heading': 'Welcome to MamaBalance',
-      'text': 'Support your emotional wellbeing through motherhood with check-ins, guidance, and care that stays close to you.',
+      'text':
+          'Support your emotional wellbeing through motherhood with check-ins, guidance, and care that stays close to you.',
     },
     {
       'image': 'assets/images/intro2.png',
-      'eyebrow': 'Weekly EPDS',
+      'eyebrow': 'Weekly Check-In',
       'heading': 'Track how you feel each week',
-      'text': 'Complete your EPDS questionnaire in just a few minutes and help your care team understand how you are doing.',
+      'text':
+          'Complete a short wellbeing check-in and help your care team understand how you are doing.',
     },
     {
       'image': 'assets/images/intro3.png',
       'eyebrow': 'Care Team Support',
       'heading': 'Stay connected with your doctor',
-      'text': 'Reach your assigned doctor, review support updates, and keep important care information in one safe place.',
+      'text':
+          'Reach your assigned doctor, review support updates, and keep important care information in one safe place.',
     },
     {
       'image': 'assets/images/intro4.png',
       'eyebrow': 'Private and Secure',
       'heading': 'Your information stays protected',
-      'text': 'Your records are shared only with authorized medical professionals so you can use MamaBalance with confidence.',
+      'text':
+          'Your records are shared only with authorized medical professionals so you can use MamaBalance with confidence.',
     },
   ];
 
@@ -62,7 +66,7 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -72,16 +76,19 @@ class _IntroScreenState extends State<IntroScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFD5EAE2)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
                     child: const Text(
                       'MamaBalance',
                       style: TextStyle(
-                        color: Color(0xFF2F5D50),
+                        color: Color(0xFF1F6F99),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -91,7 +98,7 @@ class _IntroScreenState extends State<IntroScreen> {
                     child: const Text(
                       'Skip',
                       style: TextStyle(
-                        color: Color(0xFF4FA38A),
+                        color: Color(0xFF4A90C2),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -104,7 +111,8 @@ class _IntroScreenState extends State<IntroScreen> {
                 child: PageView.builder(
                   controller: _controller,
                   itemCount: _pages.length,
-                  onPageChanged: (index) => setState(() => _currentPage = index),
+                  onPageChanged:
+                      (index) => setState(() => _currentPage = index),
                   itemBuilder: (context, index) {
                     final page = _pages[index];
 
@@ -120,12 +128,16 @@ class _IntroScreenState extends State<IntroScreen> {
                               gradient: const LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Color(0xFFF7FCFA), Color(0xFFE8F6F1)],
+                                colors: [Color(0xFFFFFFFF), Color(0xFFEAF6FC)],
                               ),
-                              border: Border.all(color: const Color(0xFFDCEDE6)),
+                              border: Border.all(
+                                color: const Color(0xFFD6EAF5),
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF4FA38A).withOpacity(0.10),
+                                  color: const Color(
+                                    0xFF4A90C2,
+                                  ).withOpacity(0.10),
                                   blurRadius: 28,
                                   offset: const Offset(0, 16),
                                 ),
@@ -135,15 +147,18 @@ class _IntroScreenState extends State<IntroScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDDF3EC),
+                                    color: const Color(0xFFDDF1FA),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Text(
                                     page['eyebrow']!,
                                     style: const TextStyle(
-                                      color: Color(0xFF4A9079),
+                                      color: Color(0xFF1F6F99),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                       letterSpacing: 0.2,
@@ -159,7 +174,9 @@ class _IntroScreenState extends State<IntroScreen> {
                                     color: Colors.white.withOpacity(0.65),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF4FA38A).withOpacity(0.12),
+                                        color: const Color(
+                                          0xFF4A90C2,
+                                        ).withOpacity(0.12),
                                         blurRadius: 22,
                                         offset: const Offset(0, 14),
                                       ),
@@ -178,7 +195,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                     fontSize: 28,
                                     height: 1.2,
                                     fontWeight: FontWeight.w800,
-                                    color: Color(0xFF203C35),
+                                    color: Color(0xFF1F3A5F),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -188,7 +205,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     height: 1.6,
-                                    color: Color(0xFF5F736B),
+                                    color: Color(0xFF5F7285),
                                   ),
                                 ),
                               ],
@@ -211,9 +228,10 @@ class _IntroScreenState extends State<IntroScreen> {
                     height: 8,
                     width: _currentPage == index ? 28 : 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? const Color(0xFF4FA38A)
-                          : const Color(0xFFC6DDD5),
+                      color:
+                          _currentPage == index
+                              ? const Color(0xFF4A90C2)
+                              : const Color(0xFFB7DDF0),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -225,7 +243,7 @@ class _IntroScreenState extends State<IntroScreen> {
                 child: ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4FA38A),
+                    backgroundColor: const Color(0xFF4A90C2),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(

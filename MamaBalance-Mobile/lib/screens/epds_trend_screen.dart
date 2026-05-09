@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 class EpdsTrendScreen extends StatelessWidget {
   const EpdsTrendScreen({super.key});
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _mintSoft = Color(0xFFEAF7F2);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _text = Color(0xFF203C35);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _mintSoft = Color(0xFFEAF6FC);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   final List<Map<String, dynamic>> epdsTrend = const [
     {"label": "Jul 1", "score": 11},
@@ -19,7 +19,7 @@ class EpdsTrendScreen extends StatelessWidget {
   ];
 
   Color _scoreColor(int score) {
-    if (score <= 9) return const Color(0xFF4FA38A);
+    if (score <= 9) return const Color(0xFF4A90C2);
     if (score <= 12) return const Color(0xFFF0A45B);
     return const Color(0xFFE06B63);
   }
@@ -69,7 +69,7 @@ class EpdsTrendScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _mintSoft,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFD6ECE5)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +92,7 @@ class EpdsTrendScreen extends StatelessWidget {
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      _RangeChip(label: '0-9', color: Color(0xFF4FA38A)),
+                      _RangeChip(label: '0-9', color: Color(0xFF4A90C2)),
                       _RangeChip(label: '10-12', color: Color(0xFFF0A45B)),
                       _RangeChip(label: '13-30', color: Color(0xFFE06B63)),
                     ],
@@ -107,7 +107,7 @@ class EpdsTrendScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFDCEDE7)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +132,7 @@ class EpdsTrendScreen extends StatelessWidget {
                           show: true,
                           drawVerticalLine: false,
                           getDrawingHorizontalLine: (value) => const FlLine(
-                            color: Color(0xFFE6F1ED),
+                            color: Color(0xFFEAF6FC),
                             strokeWidth: 1,
                           ),
                         ),

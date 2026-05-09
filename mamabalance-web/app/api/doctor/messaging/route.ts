@@ -11,6 +11,8 @@ type MotherConversation = {
   motherUid: string;
   motherName: string;
   role: string;
+  isOnline: boolean;
+  lastActiveAt: string | null;
   lastMessageText: string;
   lastMessageAt: string | null;
   lastMessageSenderUid: string;
@@ -33,6 +35,28 @@ function toIso(value: unknown) {
 
 function conversationId(motherUid: string, doctorUid: string) {
   return `${motherUid}_doctor_${doctorUid}`;
+}
+
+function isOnline(lastActiveAt: string | null) {
+  if (!lastActiveAt) return false;
+  const timestamp = new Date(lastActiveAt).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  return Date.now() - timestamp <= 2 * 60 * 1000;
+}
+
+async function markStaffActive(uids: string[]) {
+  const uniqueUids = Array.from(new Set(uids.filter(Boolean)));
+  await Promise.all(
+    uniqueUids.map((uid) =>
+      adminDb.collection("users").doc(uid).set(
+        {
+          lastActiveAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    ),
+  );
 }
 
 function motherName(mother: DocumentData, user?: DocumentData) {
@@ -70,6 +94,7 @@ async function handleList(request: NextRequest) {
   }
 
   const linkedDoctorUids = await resolveLinkedDoctorUids(actor);
+  await markStaffActive([actor.uid, ...linkedDoctorUids]);
   const assignedMotherDocs = await getAssignedMothers(linkedDoctorUids);
   const url = new URL(request.url);
   const selectedConversationId = url.searchParams.get("conversationId") || "";
@@ -92,8 +117,18 @@ async function handleList(request: NextRequest) {
     return NextResponse.json({ conversations: [], messages: [] });
   }
 
+  const motherUserIds = Array.from(
+    new Set(
+      assignedMotherDocs.flatMap((doc) => {
+        const mother = doc.data();
+        const userUid = String(mother.userUid || "").trim();
+        return userUid && userUid !== doc.id ? [doc.id, userUid] : [doc.id];
+      }),
+    ),
+  );
+
   const [userSnapshots, conversationSnapshots] = await Promise.all([
-    Promise.all(assignedMotherDocs.map((doc) => adminDb.collection("users").doc(doc.id).get())),
+    Promise.all(motherUserIds.map((uid) => adminDb.collection("users").doc(uid).get())),
     Promise.all(
       assignedMotherDocs.map((doc) => {
         const assignedDoctorUid = String(doc.data().assignedDoctorUid || actor.uid);
@@ -108,16 +143,20 @@ async function handleList(request: NextRequest) {
 
   const conversations: MotherConversation[] = assignedMotherDocs.map((doc, index) => {
     const mother = doc.data();
+    const motherUser = userMap.get(doc.id) || userMap.get(String(mother.userUid || ""));
     const assignedDoctorUid = String(mother.assignedDoctorUid || actor.uid);
     const conversationDoc = conversationSnapshots[index];
     const conversation = conversationDoc.data() || {};
     const lastMessageAt = toIso(conversation.lastMessageAt);
+    const lastActiveAt = toIso(motherUser?.lastActiveAt || motherUser?.lastSeenAt);
 
     return {
       id: conversationId(doc.id, assignedDoctorUid),
       motherUid: doc.id,
-      motherName: motherName(mother, userMap.get(doc.id)),
+      motherName: motherName(mother, motherUser),
       role: mother.isHighRisk || mother.riskLevel === "high" ? "High-risk mother" : "Mother",
+      isOnline: isOnline(lastActiveAt),
+      lastActiveAt,
       lastMessageText: String(conversation.lastMessageText || "No messages yet"),
       lastMessageAt,
       lastMessageSenderUid: String(conversation.lastMessageSenderUid || ""),
@@ -181,6 +220,7 @@ async function handleSend(request: NextRequest) {
   }
 
   const linkedDoctorUids = await resolveLinkedDoctorUids(actor);
+  await markStaffActive([actor.uid, ...linkedDoctorUids]);
   const motherDoc = await adminDb.collection("mothers").doc(motherUid).get();
 
   if (!motherDoc.exists) {

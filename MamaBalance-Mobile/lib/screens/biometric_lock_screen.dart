@@ -72,7 +72,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -83,7 +83,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFFDCEBE5)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),
@@ -100,12 +100,12 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     height: 92,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFE8F5F0),
+                      color: const Color(0xFFEAF6FC),
                     ),
                     child: const Icon(
                       Icons.fingerprint_rounded,
                       size: 48,
-                      color: Color(0xFF4FA38A),
+                      color: Color(0xFF4A90C2),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -115,7 +115,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF203C35),
+                      color: Color(0xFF1F3A5F),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -125,7 +125,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.5,
-                      color: Color(0xFF5F736B),
+                      color: Color(0xFF5F7285),
                     ),
                   ),
                   if (_message != null) ...[
@@ -156,7 +156,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                           ? null
                           : _unlock,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4FA38A),
+                        backgroundColor: const Color(0xFF4A90C2),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -179,7 +179,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     child: const Text(
                       'Sign out and use OTP login',
                       style: TextStyle(
-                        color: Color(0xFF4FA38A),
+                        color: Color(0xFF4A90C2),
                         fontWeight: FontWeight.w700,
                       ),
                     ),

@@ -401,21 +401,21 @@ class _CheckInScreenState extends State<CheckInScreen> {
     final totalPages = (questions.length / questionsPerPage).ceil();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3FBF8),
+      backgroundColor: const Color(0xFFF3FAFD),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF3FBF8),
+        backgroundColor: const Color(0xFFF3FAFD),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF173C3A),
+            color: Color(0xFF1F3A5F),
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Check-In in ${widget.language}',
           style: const TextStyle(
-            color: Color(0xFF173C3A),
+            color: Color(0xFF1F3A5F),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -430,7 +430,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFD6ECE6)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +438,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   Text(
                     'Page ${_pageIndex + 1} of $totalPages',
                     style: const TextStyle(
-                      color: Color(0xFF6A7B79),
+                      color: Color(0xFF5F7285),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -448,9 +448,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     child: LinearProgressIndicator(
                       value: (_pageIndex + 1) / totalPages,
                       minHeight: 8,
-                      backgroundColor: const Color(0xFFE5F2EE),
+                      backgroundColor: const Color(0xFFEAF6FC),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF4FA58D),
+                        Color(0xFF4A90C2),
                       ),
                     ),
                   ),
@@ -471,7 +471,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFD6ECE6)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x12000000),
@@ -488,7 +488,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF173C3A),
+                            color: Color(0xFF1F3A5F),
                             height: 1.4,
                           ),
                         ),
@@ -500,20 +500,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
                             decoration: BoxDecoration(
                               color:
                                   isSelected
-                                      ? const Color(0xFFECF8F4)
-                                      : const Color(0xFFF9FCFB),
+                                      ? const Color(0xFFEAF6FC)
+                                      : const Color(0xFFF7FCFE),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
                                 color:
                                     isSelected
-                                        ? const Color(0xFF4FA58D)
-                                        : const Color(0xFFD6ECE6),
+                                        ? const Color(0xFF4A90C2)
+                                        : const Color(0xFFD6EAF5),
                               ),
                             ),
                             child: RadioListTile<String>(
                               value: o,
                               groupValue: answers[qIndex],
-                              activeColor: const Color(0xFF4FA58D),
+                              activeColor: const Color(0xFF4A90C2),
                               onChanged: (v) {
                                 if (v == null) return;
                                 _selectAnswer(qIndex, v);
@@ -524,7 +524,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                               title: Text(
                                 o,
                                 style: const TextStyle(
-                                  color: Color(0xFF173C3A),
+                                  color: Color(0xFF1F3A5F),
                                   fontSize: 14,
                                   height: 1.4,
                                 ),
@@ -551,8 +551,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 child: OutlinedButton(
                   onPressed: _pageIndex == 0 ? null : _goToPreviousPage,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF173C3A),
-                    side: const BorderSide(color: Color(0xFFD6ECE6)),
+                    foregroundColor: const Color(0xFF1F3A5F),
+                    side: const BorderSide(color: Color(0xFFD6EAF5)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -576,7 +576,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     end == questions.length ? handleSubmit() : _goToNextPage();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4FA58D),
+                    backgroundColor: const Color(0xFF4A90C2),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

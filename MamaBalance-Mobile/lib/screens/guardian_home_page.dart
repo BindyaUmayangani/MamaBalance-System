@@ -8,16 +8,17 @@ import '../screens/guardian_profile_screen.dart';
 import '../screens/notification_tab.dart';
 import '../services/guardian_dashboard_service.dart';
 import '../utils/image_utils.dart';
+import '../widgets/app_loading_state.dart';
 
 class GuardianHomePage extends StatelessWidget {
   GuardianHomePage({super.key});
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _deepMint = Color(0xFF2F7D68);
-  static const Color _bg = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _deepMint = Color(0xFF1F6F99);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   final GuardianDashboardService _dashboardService =
       GuardianDashboardService.instance;
@@ -31,8 +32,9 @@ class GuardianHomePage extends StatelessWidget {
           future: _dashboardService.fetchDashboard(),
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: CircularProgressIndicator(color: _mint),
+              return const AppLoadingState(
+                title: 'Preparing guardian home',
+                message: 'Loading reminders, visits, and care updates.',
               );
             }
 
@@ -63,7 +65,7 @@ class GuardianHomePage extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: const Color(0xFFD6ECE6)),
+                          border: Border.all(color: const Color(0xFFD6EAF5)),
                         ),
                         child: const Text(
                           'Guardian care view',
@@ -80,8 +82,10 @@ class GuardianHomePage extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const GuardianProfileScreen(showBackButton: true),
+                              builder:
+                                  (_) => const GuardianProfileScreen(
+                                    showBackButton: true,
+                                  ),
                             ),
                           );
                         },
@@ -118,9 +122,7 @@ class GuardianHomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _EpdsAssessmentCard(
-                    scheduledAt: data.nextEpdsAssessmentDate,
-                  ),
+                  _EpdsAssessmentCard(scheduledAt: data.nextEpdsAssessmentDate),
                   const SizedBox(height: 22),
                   const Text(
                     'Upcoming schedule',
@@ -151,15 +153,16 @@ class GuardianHomePage extends StatelessWidget {
                         child: _QuickActionCard(
                           icon: Icons.groups_2_outlined,
                           title: 'Assigned care team',
-                          subtitle: 'View the assigned doctor and midwife details.',
+                          subtitle:
+                              'View the assigned doctor and midwife details.',
                           onTap: () {
                             showModalBottomSheet<void>(
                               context: context,
                               backgroundColor: Colors.transparent,
                               isScrollControlled: true,
-                              builder: (sheetContext) => _AssignedCareTeamSheet(
-                                data: data,
-                              ),
+                              builder:
+                                  (sheetContext) =>
+                                      _AssignedCareTeamSheet(data: data),
                             );
                           },
                         ),
@@ -170,14 +173,16 @@ class GuardianHomePage extends StatelessWidget {
                           icon: Icons.menu_book_outlined,
                           title: 'Resources',
                           subtitle: 'Guidance prepared for guardians.',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const EducationalResourcesScreen(
-                                audience: 'guardian',
-                                showBackButton: true,
+                          onTap:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => const EducationalResourcesScreen(
+                                        audience: 'guardian',
+                                        showBackButton: true,
+                                      ),
+                                ),
                               ),
-                            ),
-                          ),
                         ),
                       ),
                     ],
@@ -189,15 +194,18 @@ class GuardianHomePage extends StatelessWidget {
                         child: _QuickActionCard(
                           icon: Icons.notifications_none_rounded,
                           title: 'Alerts',
-                          subtitle: 'Check visit, EPDS, and resource reminders.',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const NotificationTab(
-                                audience: NotificationAudience.guardian,
-                                showBackButton: true,
+                          subtitle:
+                              'Check visit, EPDS, and resource reminders.',
+                          onTap:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => const NotificationTab(
+                                        audience: NotificationAudience.guardian,
+                                        showBackButton: true,
+                                      ),
+                                ),
                               ),
-                            ),
-                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -209,9 +217,10 @@ class GuardianHomePage extends StatelessWidget {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => EmergencyContactsPage(
-                                  audience: 'guardian',
-                                ),
+                                builder:
+                                    (_) => EmergencyContactsPage(
+                                      audience: 'guardian',
+                                    ),
                               ),
                             );
                           },
@@ -244,7 +253,7 @@ class _EpdsAssessmentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [
@@ -257,9 +266,10 @@ class _EpdsAssessmentCard extends StatelessWidget {
             ),
             child: Icon(
               Icons.monitor_heart_outlined,
-              color: isDueNow
-                  ? GuardianHomePage._deepMint
-                  : GuardianHomePage._mint,
+              color:
+                  isDueNow
+                      ? GuardianHomePage._deepMint
+                      : GuardianHomePage._mint,
             ),
           ),
           const SizedBox(width: 14),
@@ -282,8 +292,8 @@ class _EpdsAssessmentCard extends StatelessWidget {
                   scheduledAt == null
                       ? 'The first EPDS assessment has not been scheduled yet.'
                       : isDueNow
-                          ? 'The linked mother\'s weekly EPDS assessment is now ready.'
-                          : 'Keep an eye on the next weekly wellbeing check-in.',
+                      ? 'The linked mother\'s weekly EPDS assessment is now ready.'
+                      : 'Keep an eye on the next weekly wellbeing check-in.',
                   style: const TextStyle(
                     color: GuardianHomePage._muted,
                     height: 1.4,
@@ -293,9 +303,10 @@ class _EpdsAssessmentCard extends StatelessWidget {
                 Text(
                   _formatEpdsDate(scheduledAt),
                   style: TextStyle(
-                    color: isDueNow
-                        ? GuardianHomePage._deepMint
-                        : GuardianHomePage._mint,
+                    color:
+                        isDueNow
+                            ? GuardianHomePage._deepMint
+                            : GuardianHomePage._mint,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -328,7 +339,7 @@ class _HeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF67BBA1), Color(0xFF4FA38A)],
+          colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
@@ -476,7 +487,7 @@ class _VisitCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [
@@ -563,7 +574,7 @@ class _QuickActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFD7EAE3)),
+          border: Border.all(color: const Color(0xFFD6EAF5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,10 +625,8 @@ class _GuardianProfileAvatarButton extends StatelessWidget {
   String _initials(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return 'GU';
-    final parts = trimmed
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .toList();
+    final parts =
+        trimmed.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
@@ -640,7 +649,7 @@ class _GuardianProfileAvatarButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFD6ECE6)),
+            border: Border.all(color: const Color(0xFFD6EAF5)),
           ),
           child: Text(
             _initials(guardianName),
@@ -675,7 +684,7 @@ class _ContactTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [
@@ -727,7 +736,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,10 +751,7 @@ class _InfoCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             message,
-            style: const TextStyle(
-              height: 1.4,
-              color: GuardianHomePage._muted,
-            ),
+            style: const TextStyle(height: 1.4, color: GuardianHomePage._muted),
           ),
         ],
       ),
@@ -814,7 +820,7 @@ class _AssignedCareTeamSheet extends StatelessWidget {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD5E6DF),
+                  color: const Color(0xFFD6EAF5),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -860,14 +866,11 @@ class _AssignedCareTeamSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: GuardianHomePage._surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFD7EAE3)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
               child: const Text(
                 'If urgent support is needed, use the call button for the assigned doctor or midwife.',
-                style: TextStyle(
-                  color: GuardianHomePage._muted,
-                  height: 1.45,
-                ),
+                style: TextStyle(color: GuardianHomePage._muted, height: 1.45),
               ),
             ),
             const SizedBox(height: 18),
@@ -918,7 +921,7 @@ class _EmergencyCareTeamTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [

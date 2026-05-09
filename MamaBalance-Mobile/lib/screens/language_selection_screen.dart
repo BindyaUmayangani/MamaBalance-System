@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'checkin_screen.dart';
 
@@ -16,9 +16,7 @@ class LanguageSelectionScreen extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => CheckInScreen(language: language),
-          ),
+          MaterialPageRoute(builder: (_) => CheckInScreen(language: language)),
         );
       },
       child: Container(
@@ -27,10 +25,10 @@ class LanguageSelectionScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFD7EAE3)),
+          border: Border.all(color: const Color(0xFFD6EAF5)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4FA38A).withOpacity(0.08),
+              color: const Color(0xFF4A90C2).withOpacity(0.08),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -42,13 +40,10 @@ class LanguageSelectionScreen extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDF3EC),
+                color: const Color(0xFFDDF1FA),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
-                Icons.language,
-                color: Color(0xFF4A9079),
-              ),
+              child: const Icon(Icons.language, color: Color(0xFF1F6F99)),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -60,7 +55,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF203C35),
+                      color: Color(0xFF1F3A5F),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -68,7 +63,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF60756D),
+                      color: Color(0xFF5F7285),
                     ),
                   ),
                 ],
@@ -77,7 +72,7 @@ class LanguageSelectionScreen extends StatelessWidget {
             const Icon(
               Icons.arrow_forward_ios_rounded,
               size: 18,
-              color: Color(0xFF6A8D82),
+              color: Color(0xFF5F7285),
             ),
           ],
         ),
@@ -88,18 +83,18 @@ class LanguageSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFEFF8F4),
+        backgroundColor: const Color(0xFFF3FAFD),
         elevation: 0,
         title: const Text(
           'Select Language',
           style: TextStyle(
-            color: Color(0xFF203C35),
+            color: Color(0xFF1F3A5F),
             fontWeight: FontWeight.w700,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF203C35)),
+        iconTheme: const IconThemeData(color: Color(0xFF1F3A5F)),
       ),
       body: SafeArea(
         child: Padding(
@@ -115,9 +110,9 @@ class LanguageSelectionScreen extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFF7FCFA), Color(0xFFE8F6F1)],
+                    colors: [Color(0xFFFFFFFF), Color(0xFFEAF6FC)],
                   ),
-                  border: Border.all(color: const Color(0xFFDCEDE6)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +122,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -136,7 +131,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         height: 1.5,
-                        color: Color(0xFF5F736B),
+                        color: Color(0xFF5F7285),
                       ),
                     ),
                   ],
@@ -152,7 +147,7 @@ class LanguageSelectionScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildLanguageCard(
                 context,
-                title: 'සිංහල',
+                title: '?????',
                 subtitle: 'Continue in Sinhala',
                 language: 'Sinhala',
               ),

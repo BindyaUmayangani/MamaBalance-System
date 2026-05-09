@@ -24,6 +24,8 @@ type MobileConversation = {
   careTeamUid: string;
   careTeamRole: "doctor" | "midwife";
   careTeamName: string;
+  careTeamIsOnline: boolean;
+  careTeamLastActiveAt: string | null;
 };
 
 function readString(value: unknown) {
@@ -46,6 +48,35 @@ function toIso(value: unknown) {
 
 function conversationId(motherUid: string, staffUid: string, role: "doctor" | "midwife") {
   return `${motherUid}_${role}_${staffUid}`;
+}
+
+function isOnline(lastActiveAt: string | null) {
+  if (!lastActiveAt) return false;
+  const timestamp = new Date(lastActiveAt).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  return Date.now() - timestamp <= 2 * 60 * 1000;
+}
+
+async function readUserPresence(uid: string) {
+  if (!uid) return { isOnline: false, lastActiveAt: null };
+  const snapshot = await adminDb.collection("users").doc(uid).get();
+  const data = snapshot.data() || {};
+  const lastActiveAt = toIso(data.lastActiveAt || data.lastSeenAt || data.updatedAt);
+  return {
+    isOnline: isOnline(lastActiveAt),
+    lastActiveAt,
+  };
+}
+
+async function markUserActive(userDocId: string) {
+  if (!userDocId) return;
+  await adminDb.collection("users").doc(userDocId).set(
+    {
+      lastActiveAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 async function verifyMobileRequest(request: NextRequest) {
@@ -240,6 +271,11 @@ async function buildOptions(context: MobileContext) {
     throw new Error("No midwife has been assigned yet.");
   }
 
+  const [doctorPresence, midwifePresence] = await Promise.all([
+    doctorUid ? readUserPresence(doctorUid) : Promise.resolve({ isOnline: false, lastActiveAt: null }),
+    readUserPresence(midwifeUid),
+  ]);
+
   const doctor: MobileConversation | null = doctorUid
     ? {
         id: conversationId(context.motherDocId, doctorUid, "doctor"),
@@ -249,6 +285,8 @@ async function buildOptions(context: MobileContext) {
         careTeamUid: doctorUid,
         careTeamRole: "doctor",
         careTeamName: await staffName(doctorUid, "doctor"),
+        careTeamIsOnline: doctorPresence.isOnline,
+        careTeamLastActiveAt: doctorPresence.lastActiveAt,
       }
     : null;
 
@@ -260,6 +298,8 @@ async function buildOptions(context: MobileContext) {
     careTeamUid: midwifeUid,
     careTeamRole: "midwife",
     careTeamName: await staffName(midwifeUid, "midwife"),
+    careTeamIsOnline: midwifePresence.isOnline,
+    careTeamLastActiveAt: midwifePresence.lastActiveAt,
   };
 
   return { doctor, midwife };
@@ -336,6 +376,7 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const requestedConversationId = readString(url.searchParams.get("conversationId"));
+    await markUserActive(context.userDocId);
     const options = await buildOptions(context);
 
     if (!requestedConversationId) {
@@ -364,6 +405,7 @@ export async function POST(request: NextRequest) {
     };
     const requestedConversationId = readString(payload.conversationId);
     const text = readString(payload.text);
+    await markUserActive(context.userDocId);
 
     if (!requestedConversationId || !text) {
       return NextResponse.json(
@@ -427,6 +469,7 @@ export async function PATCH(request: NextRequest) {
 
     const payload = (await request.json()) as { conversationId?: string };
     const requestedConversationId = readString(payload.conversationId);
+    await markUserActive(context.userDocId);
 
     if (!requestedConversationId) {
       return NextResponse.json({ error: "Conversation is required." }, { status: 400 });

@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../models/mother_profile.dart';
 import '../services/chatbot_service.dart';
 import '../services/mother_profile_service.dart';
+import '../widgets/app_loading_state.dart';
+import 'emergency_contacts_page.dart';
 
 class _DisplayMessage {
   final String role;
@@ -26,18 +28,18 @@ class ChatbotScreen extends StatefulWidget {
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   List<ChatbotMessage> _chatHistory = [];
   final List<_DisplayMessage> _displayMessages = [];
-  
+
   MotherProfile? _profile;
   bool _isLoading = true;
   bool _isTyping = false;
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
   static const List<String> _quickPrompts = <String>[
     "I'm feeling anxious",
     'I need calming ideas',
@@ -60,13 +62,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       } catch (_) {
         savedMessages = const <ChatbotMessage>[];
       }
-      final displayMessages = savedMessages
-          .map((message) => _DisplayMessage(
-                role: message.role,
-                text: message.text,
-                createdAt: message.createdAt,
-              ))
-          .toList();
+      final displayMessages =
+          savedMessages
+              .map(
+                (message) => _DisplayMessage(
+                  role: message.role,
+                  text: message.text,
+                  createdAt: message.createdAt,
+                ),
+              )
+              .toList();
 
       setState(() {
         _profile = profile;
@@ -83,7 +88,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to load your profile right now.')),
+          const SnackBar(
+            content: Text('Unable to load your profile right now.'),
+          ),
         );
       }
     }
@@ -115,11 +122,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     setState(() {
       _displayMessages.add(
-        _DisplayMessage(
-          role: 'user',
-          text: text,
-          createdAt: userTimestamp,
-        ),
+        _DisplayMessage(role: 'user', text: text, createdAt: userTimestamp),
       );
       _isTyping = true;
       _controller.clear();
@@ -141,29 +144,24 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       final botTimestamp = DateTime.now();
       setState(() {
         _displayMessages.add(
-          _DisplayMessage(
-            role: 'bot',
-            text: response,
-            createdAt: botTimestamp,
-          ),
+          _DisplayMessage(role: 'bot', text: response, createdAt: botTimestamp),
         );
-        _chatHistory = ChatbotService.instance.buildModelHistory(
-          <ChatbotMessage>[
-            ..._chatHistory,
-            ChatbotMessage(
-              id: userTimestamp.microsecondsSinceEpoch.toString(),
-              role: 'user',
-              text: text,
-              createdAt: userTimestamp,
-            ),
-            ChatbotMessage(
-              id: botTimestamp.microsecondsSinceEpoch.toString(),
-              role: 'bot',
-              text: response,
-              createdAt: botTimestamp,
-            ),
-          ],
-        );
+        _chatHistory = ChatbotService.instance
+            .buildModelHistory(<ChatbotMessage>[
+              ..._chatHistory,
+              ChatbotMessage(
+                id: userTimestamp.microsecondsSinceEpoch.toString(),
+                role: 'user',
+                text: text,
+                createdAt: userTimestamp,
+              ),
+              ChatbotMessage(
+                id: botTimestamp.microsecondsSinceEpoch.toString(),
+                role: 'bot',
+                text: response,
+                createdAt: botTimestamp,
+              ),
+            ]);
         _isTyping = false;
       });
       _scrollToBottom();
@@ -187,134 +185,148 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     await _sendMessage();
   }
 
+  void _openEmergencyContacts() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EmergencyContactsPage()),
+    );
+  }
+
   Future<void> _clearChat() async {
-    final shouldClear = await showDialog<bool>(
+    final shouldClear =
+        await showDialog<bool>(
           context: context,
           barrierColor: Colors.black.withOpacity(0.35),
-          builder: (context) => Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFFD6ECE6)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x18000000),
-                    blurRadius: 26,
-                    offset: Offset(0, 14),
+          builder:
+              (context) => Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x18000000),
+                        blurRadius: 26,
+                        offset: Offset(0, 14),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFF1F1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFD04545),
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Text(
+                              'Clear chat history?',
+                              style: TextStyle(
+                                color: _text,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'This will remove your saved supportive conversation from this account.',
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFF1F1),
-                          shape: BoxShape.circle,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7F7),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFF4CDCD)),
                         ),
-                        child: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFD04545),
-                          size: 26,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Text(
-                          'Clear chat history?',
+                        child: const Text(
+                          'This only clears the chat on this device session. You can start a new conversation any time.',
                           style: TextStyle(
-                            color: _text,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF8B5E5E),
+                            fontSize: 13,
+                            height: 1.45,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(52),
+                                side: BorderSide(
+                                  color: _accent.withOpacity(0.35),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                foregroundColor: _accent,
+                                textStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              child: const Text('Keep Chat'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(52),
+                                backgroundColor: const Color(0xFFD95454),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              child: const Text('Clear Chat'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'This will remove your saved supportive conversation from this account.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7F7),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFF4CDCD)),
-                    ),
-                    child: const Text(
-                      'This only clears the chat on this device session. You can start a new conversation any time.',
-                      style: TextStyle(
-                        color: Color(0xFF8B5E5E),
-                        fontSize: 13,
-                        height: 1.45,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            side: BorderSide(color: _accent.withOpacity(0.35)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            foregroundColor: _accent,
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          child: const Text('Keep Chat'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            backgroundColor: const Color(0xFFD95454),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          child: const Text('Clear Chat'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
         ) ??
         false;
 
@@ -331,10 +343,179 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _controller.clear();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Chat history cleared.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Chat history cleared.')));
     _scrollToBottom();
+  }
+
+  void _showSupportInfoSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (sheetContext) => Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD6EAF5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF6FC),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.psychology_rounded,
+                          color: _accent,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'About Supportive Companion',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _supportInfoTile(
+                    icon: Icons.favorite_outline_rounded,
+                    title: 'Supportive conversation',
+                    message:
+                        'You can share how you feel, ask for calming ideas, or talk about motherhood at your own pace.',
+                  ),
+                  _supportInfoTile(
+                    icon: Icons.info_outline_rounded,
+                    title: 'Support only',
+                    message:
+                        'This tool is not for diagnosis, treatment, or making health decisions.',
+                  ),
+                  _supportInfoTile(
+                    icon: Icons.volunteer_activism_outlined,
+                    title: 'Extra support',
+                    message:
+                        'Your care team may be alerted if strong distress is detected, so they can support you early.',
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        _openEmergencyContacts();
+                      },
+                      icon: const Icon(Icons.emergency_share_rounded),
+                      label: const Text('Need Help Now?'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _accent,
+                        side: const BorderSide(color: Color(0xFFD6EAF5)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Close',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _supportInfoTile({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FCFE),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFEAF6FC)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: _accent, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: _text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMessage(_DisplayMessage message) {
@@ -356,14 +537,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             bottomLeft: Radius.circular(isUser ? 18 : 6),
             bottomRight: Radius.circular(isUser ? 6 : 18),
           ),
-          border: isUser ? null : Border.all(color: const Color(0xFFD6ECE6)),
-          boxShadow: isUser ? null : const [
-            BoxShadow(
-              color: Color(0x08000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          border: isUser ? null : Border.all(color: const Color(0xFFD6EAF5)),
+          boxShadow:
+              isUser
+                  ? null
+                  : const [
+                    BoxShadow(
+                      color: Color(0x08000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
         ),
         child: Column(
           crossAxisAlignment:
@@ -385,9 +569,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               Text(
                 _formatTimestamp(message.createdAt!),
                 style: TextStyle(
-                  color: isUser
-                      ? Colors.white.withOpacity(0.8)
-                      : _muted.withOpacity(0.9),
+                  color:
+                      isUser
+                          ? Colors.white.withOpacity(0.8)
+                          : _muted.withOpacity(0.9),
                   fontSize: 11,
                   height: 1.2,
                 ),
@@ -410,9 +595,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     for (final match in pattern.allMatches(text)) {
       if (match.start > currentIndex) {
-        spans.add(
-          TextSpan(text: text.substring(currentIndex, match.start)),
-        );
+        spans.add(TextSpan(text: text.substring(currentIndex, match.start)));
       }
 
       spans.add(
@@ -436,7 +619,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: _background,
-        body: Center(child: CircularProgressIndicator(color: _accent)),
+        body: AppLoadingState(
+          title: 'Opening support chat',
+          message: 'Preparing your personal support space.',
+        ),
       );
     }
 
@@ -459,6 +645,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ),
         actions: [
           IconButton(
+            onPressed: _openEmergencyContacts,
+            tooltip: 'Need Help Now?',
+            icon: const Icon(Icons.emergency_share_rounded),
+          ),
+          IconButton(
             onPressed: _displayMessages.isEmpty ? null : _clearChat,
             tooltip: 'Clear chat',
             icon: const Icon(Icons.delete_outline_rounded),
@@ -469,57 +660,53 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         children: [
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(18, 4, 18, 10),
-            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFFD6ECE6)),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0xFFD6EAF5)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Color(0xFFE4F4EF),
-                      child: Icon(Icons.psychology_rounded, color: _accent),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Supportive Companion',
-                            style: TextStyle(
-                              color: _text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            'Active session | Private & Secure',
-                            style: TextStyle(
-                              color: _accent.withOpacity(0.8),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Color(0xFFEAF6FC),
+                  child: Icon(Icons.psychology_rounded, color: _accent),
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Share how you feel, ask for calming ideas, or talk about motherhood. Your care team will be alerted if high distress is detected.',
-                  style: TextStyle(
-                    color: _muted,
-                    fontSize: 13,
-                    height: 1.45,
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Supportive Companion',
+                        style: TextStyle(
+                          color: _text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Supportive tool only | Not for clinical decisions',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: 12,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                IconButton(
+                  onPressed: _showSupportInfoSheet,
+                  tooltip: 'About this support tool',
+                  icon: const Icon(Icons.info_outline_rounded, color: _accent),
                 ),
               ],
             ),
@@ -529,63 +716,72 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 18),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFECF8F4),
+                color: const Color(0xFFEAF6FC),
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFFD6ECE6)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
               ),
-              child: _displayMessages.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.chat_bubble_outline_rounded, size: 48, color: Color(0xFFB0CFCA)),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Tell me how you are feeling.\nWe can take it one step at a time.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _muted,
-                              fontSize: 15,
+              child:
+                  _displayMessages.isEmpty
+                      ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 48,
+                              color: Color(0xFFB7DDF0),
                             ),
-                          ),
-                          const SizedBox(height: 18),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _quickPrompts
-                                .map(
-                                  (prompt) => ActionChip(
-                                    onPressed: () => _sendQuickPrompt(prompt),
-                                    backgroundColor: Colors.white,
-                                    side: const BorderSide(color: Color(0xFFD6ECE6)),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    label: Text(
-                                      prompt,
-                                      style: const TextStyle(
-                                        color: _text,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Tell me how you are feeling.\nWe can take it one step at a time.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: _muted, fontSize: 15),
+                            ),
+                            const SizedBox(height: 18),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  _quickPrompts
+                                      .map(
+                                        (prompt) => ActionChip(
+                                          onPressed:
+                                              () => _sendQuickPrompt(prompt),
+                                          backgroundColor: Colors.white,
+                                          side: const BorderSide(
+                                            color: Color(0xFFD6EAF5),
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          label: Text(
+                                            prompt,
+                                            style: const TextStyle(
+                                              color: _text,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                          ],
+                        ),
+                      )
+                      : ListView.builder(
+                        controller: _scrollController,
+                        itemCount:
+                            _displayMessages.length + (_isTyping ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _displayMessages.length) {
+                            return _buildTypingIndicator();
+                          }
+                          return _buildMessage(_displayMessages[index]);
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      itemCount: _displayMessages.length + (_isTyping ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _displayMessages.length) {
-                          return _buildTypingIndicator();
-                        }
-                        return _buildMessage(_displayMessages[index]);
-                      },
-                    ),
             ),
           ),
           SafeArea(
@@ -596,7 +792,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFD6ECE6)),
+                border: Border.all(color: const Color(0xFFD6EAF5)),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x12000000),
@@ -613,23 +809,35 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       textCapitalization: TextCapitalization.sentences,
                       decoration: const InputDecoration(
                         hintText: 'Share what is on your mind...',
-                        hintStyle: TextStyle(color: Color(0xFF8AA19D)),
+                        hintStyle: TextStyle(color: Color(0xFF7B8FA3)),
                         border: InputBorder.none,
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _sendMessage,
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _isTyping ? _accent.withOpacity(0.5) : _accent,
+                  Tooltip(
+                    message: _isTyping ? 'Sending message' : 'Send message',
+                    child: Semantics(
+                      button: true,
+                      label: _isTyping ? 'Sending message' : 'Send message',
+                      child: InkWell(
+                        onTap: _isTyping ? null : _sendMessage,
                         borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:
+                                _isTyping ? _accent.withOpacity(0.5) : _accent,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
                       ),
-                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -650,7 +858,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFD6ECE6)),
+          border: Border.all(color: const Color(0xFFD6EAF5)),
         ),
         child: const Text(
           'MamaBalance is thinking...',
@@ -664,4 +872,3 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 }
-

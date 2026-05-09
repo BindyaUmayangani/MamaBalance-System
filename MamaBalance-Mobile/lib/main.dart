@@ -15,8 +15,6 @@ import 'screens/emergency_contacts_page.dart';
 import 'screens/epds_trend_screen.dart';
 import 'screens/faq_page.dart';
 import 'screens/forgot_password_screen.dart';
-import 'screens/guardian_home_page.dart';
-import 'screens/guardian_profile_screen.dart';
 import 'screens/guardian_shell_screen.dart';
 import 'screens/home_page.dart';
 import 'screens/intro_screen.dart';
@@ -32,12 +30,11 @@ import 'screens/reset_password_screen.dart';
 import 'screens/signin_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/weekly_checkin_page.dart';
+import 'theme/app_colors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -170,14 +167,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        scaffoldBackgroundColor: AppColors.background,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4FA38A),
-          primary: const Color(0xFF4FA38A),
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+          secondary: AppColors.primarySoft,
+          surface: AppColors.surface,
+          error: AppColors.danger,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.text,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.surfaceTint,
+            disabledForegroundColor: AppColors.muted,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.border),
+          ),
+        ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: AppColors.primary,
         ),
         textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: Color(0xFF4FA38A),
-          selectionColor: Color(0x404FA38A),
-          selectionHandleColor: Color(0xFF4FA38A),
+          cursorColor: AppColors.primary,
+          selectionColor: Color(0x404A90C2),
+          selectionHandleColor: AppColors.primary,
         ),
       ),
       initialRoute: '/',
@@ -186,7 +213,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '/intro': (context) => IntroScreen(),
         '/signin': (context) => const AccountRoleSelectionScreen(),
         '/mother-signin': (context) => const SignInScreen(),
-        '/guardian-signin': (context) => const SignInScreen(
+        '/guardian-signin':
+            (context) => const SignInScreen(
               audience: SignInAudience.guardian,
               initialMethod: SignInMethod.phone,
             ),
@@ -194,9 +222,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '/reset': (context) => ResetPasswordScreen(),
         '/home': (context) => HomePage(),
         '/guardian-home': (context) => const GuardianShellScreen(),
-        '/guardian-profile': (context) => const GuardianShellScreen(initialIndex: 3),
-        '/guardian-notifications': (context) => const GuardianShellScreen(initialIndex: 1),
-        '/guardian-resources': (context) => const GuardianShellScreen(initialIndex: 2),
+        '/guardian-profile':
+            (context) => const GuardianShellScreen(initialIndex: 3),
+        '/guardian-notifications':
+            (context) => const GuardianShellScreen(initialIndex: 1),
+        '/guardian-resources':
+            (context) => const GuardianShellScreen(initialIndex: 2),
         '/biometric-lock': (context) => const BiometricLockScreen(),
         '/weekly-checkin': (context) => WeeklyCheckInPage(),
         '/profile': (context) => ProfileScreen(),

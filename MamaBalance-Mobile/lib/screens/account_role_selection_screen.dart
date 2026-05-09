@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 class AccountRoleSelectionScreen extends StatelessWidget {
   const AccountRoleSelectionScreen({super.key});
 
-  static const Color _accent = Color(0xFF4FA38A);
-  static const Color _text = Color(0xFF203C35);
-  static const Color _muted = Color(0xFF5F736B);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -110,7 +110,7 @@ class _RoleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFDCEBE5)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -126,7 +126,7 @@ class _RoleCard extends StatelessWidget {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF6F1),
+              color: const Color(0xFFEAF6FC),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(icon, color: AccountRoleSelectionScreen._accent),

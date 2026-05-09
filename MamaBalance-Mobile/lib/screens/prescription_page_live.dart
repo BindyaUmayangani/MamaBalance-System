@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/prescription_service.dart';
+import '../widgets/app_loading_state.dart';
 
 class PrescriptionPage extends StatefulWidget {
   const PrescriptionPage({super.key, this.showBackButton = false});
@@ -17,11 +18,11 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
   int _activeMedicationPage = 1;
   int _medicationHistoryPage = 1;
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
   static const int _medicationsPerPage = 1;
 
   @override
@@ -49,7 +50,10 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
           future: _prescriptionsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: _accent));
+              return const AppLoadingState(
+                title: 'Loading prescriptions',
+                message: 'Checking your medicines and care notes.',
+              );
             }
 
             if (snapshot.hasError) {
@@ -62,7 +66,8 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
               );
             }
 
-            final summary = snapshot.data ??
+            final summary =
+                snapshot.data ??
                 const PrescriptionSummary(
                   activeMedications: [],
                   medicationHistory: [],
@@ -81,10 +86,16 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                       children: [
                         if (widget.showBackButton) ...[
                           IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: _text,
+                            ),
                             onPressed: () => Navigator.pop(context),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
                           ),
                           const SizedBox(width: 16),
                         ],
@@ -102,50 +113,58 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                     ),
                     const SizedBox(height: 10),
                     Padding(
-                      padding: EdgeInsets.only(left: widget.showBackButton ? 52 : 0),
+                      padding: EdgeInsets.only(
+                        left: widget.showBackButton ? 52 : 0,
+                      ),
                       child: const Text(
                         'Review the medicines, timing, and important care notes shared by your doctor.',
-                        style: TextStyle(fontSize: 14, color: _muted, height: 1.45),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _muted,
+                          height: 1.45,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
-                  _overviewCard(summary),
-                  const SizedBox(height: 22),
-                  _medicationToggle(summary),
-                  const SizedBox(height: 18),
-                  if (!_showHistory)
-                    _medicationSection(
-                      title: 'Active medications',
-                      emptyTitle: 'No active medications',
-                      emptyMessage:
-                          'Medicines prescribed by your doctor will appear here.',
-                      medications: summary.activeMedications,
-                      currentPage: _activeMedicationPage,
-                      isHistory: false,
-                      onPageChanged: (page) =>
-                          setState(() => _activeMedicationPage = page),
-                    )
-                  else
-                    _medicationSection(
-                      title: 'Medication history',
-                      emptyTitle: 'No medication history',
-                      emptyMessage:
-                          'Completed or stopped medications will appear here.',
-                      medications: summary.medicationHistory,
-                      currentPage: _medicationHistoryPage,
-                      isHistory: true,
-                      onPageChanged: (page) =>
-                          setState(() => _medicationHistoryPage = page),
-                    ),
-                ],
+                    _overviewCard(summary),
+                    const SizedBox(height: 22),
+                    _medicationToggle(summary),
+                    const SizedBox(height: 18),
+                    if (!_showHistory)
+                      _medicationSection(
+                        title: 'Active medications',
+                        emptyTitle: 'No active medicines right now',
+                        emptyMessage:
+                            'If your doctor prescribes medicine, the name, timing, and instructions will appear here. It is okay if this section is empty.',
+                        medications: summary.activeMedications,
+                        currentPage: _activeMedicationPage,
+                        isHistory: false,
+                        onPageChanged:
+                            (page) =>
+                                setState(() => _activeMedicationPage = page),
+                      )
+                    else
+                      _medicationSection(
+                        title: 'Medication history',
+                        emptyTitle: 'No medication history',
+                        emptyMessage:
+                            'Past medicines will appear here after they are completed, stopped, or updated by your care team.',
+                        medications: summary.medicationHistory,
+                        currentPage: _medicationHistoryPage,
+                        isHistory: true,
+                        onPageChanged:
+                            (page) =>
+                                setState(() => _medicationHistoryPage = page),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _medicationToggle(PrescriptionSummary summary) {
     return Container(
@@ -153,7 +172,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [
@@ -208,7 +227,9 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
 
   Widget _overviewCard(PrescriptionSummary summary) {
     final latestActive =
-        summary.activeMedications.isNotEmpty ? summary.activeMedications.first : null;
+        summary.activeMedications.isNotEmpty
+            ? summary.activeMedications.first
+            : null;
 
     return Container(
       width: double.infinity,
@@ -217,7 +238,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF67BBA1), Color(0xFF4FA58D)],
+          colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
@@ -242,9 +263,19 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _heroChip('Active', '${summary.activeMedications.length}')),
+              Expanded(
+                child: _heroChip(
+                  'Active',
+                  '${summary.activeMedications.length}',
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _heroChip('History', '${summary.medicationHistory.length}')),
+              Expanded(
+                child: _heroChip(
+                  'History',
+                  '${summary.medicationHistory.length}',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -329,7 +360,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
           decoration: BoxDecoration(
             color: _surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFD6ECE6)),
+            border: Border.all(color: const Color(0xFFD6EAF5)),
           ),
           child: Text(
             count,
@@ -371,9 +402,13 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
         boxShadow: const [
-          BoxShadow(color: Color(0x12000000), blurRadius: 12, offset: Offset(0, 5)),
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 12,
+            offset: Offset(0, 5),
+          ),
         ],
       ),
       child: Column(
@@ -385,7 +420,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: isHistory ? const Color(0xFFF5F7F6) : _surface,
+                  color: isHistory ? const Color(0xFFF7FCFE) : _surface,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -408,7 +443,9 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      medication.isActive ? 'Active medication' : medication.status,
+                      medication.isActive
+                          ? 'Active medication'
+                          : medication.status,
                       style: const TextStyle(
                         fontSize: 13,
                         color: _muted,
@@ -421,7 +458,9 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
             ],
           ),
           const SizedBox(height: 16),
-          ...detailRows.map((detail) => _detailLine(detail.label, detail.value)),
+          ...detailRows.map(
+            (detail) => _detailLine(detail.label, detail.value),
+          ),
           if (medication.instructions.isNotEmpty) ...[
             const SizedBox(height: 10),
             _noteBox('Instructions', medication.instructions),
@@ -445,7 +484,10 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
             width: 104,
             child: Text(
               label,
-              style: const TextStyle(color: _muted, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Expanded(
@@ -472,7 +514,10 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: _text)),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700, color: _text),
+          ),
           const SizedBox(height: 6),
           ...points.map((point) => _bulletPoint(point)),
         ],
@@ -486,21 +531,25 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       return [];
     }
 
-    final lineItems = normalized
-        .split(RegExp(r'[\n\r]+'))
-        .map((item) => item.trim().replaceFirst(RegExp(r'^[-*\u2022]\s*'), ''))
-        .where((item) => item.isNotEmpty)
-        .toList();
+    final lineItems =
+        normalized
+            .split(RegExp(r'[\n\r]+'))
+            .map(
+              (item) => item.trim().replaceFirst(RegExp(r'^[-*\u2022]\s*'), ''),
+            )
+            .where((item) => item.isNotEmpty)
+            .toList();
 
     if (lineItems.length > 1) {
       return lineItems;
     }
 
-    final sentenceItems = normalized
-        .split(RegExp(r'[.!?]+'))
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
+    final sentenceItems =
+        normalized
+            .split(RegExp(r'[.!?]+'))
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
 
     return sentenceItems.isEmpty ? [normalized] : sentenceItems;
   }
@@ -535,13 +584,16 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD6ECE6)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Column(
         children: [
           const Icon(Icons.local_pharmacy_outlined, color: _accent, size: 34),
           const SizedBox(height: 10),
-          Text(title, style: const TextStyle(color: _text, fontWeight: FontWeight.w800)),
+          Text(
+            title,
+            style: const TextStyle(color: _text, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 6),
           Text(
             message,
@@ -576,10 +628,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
           const SizedBox(width: 12),
           Text(
             'Page $currentPage of $totalPages',
-            style: const TextStyle(
-              color: _muted,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -600,8 +649,8 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       child: ElevatedButton(
         onPressed: enabled ? onTap : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? _accent : const Color(0xFFE6EFEC),
-          foregroundColor: enabled ? Colors.white : const Color(0xFF86A09A),
+          backgroundColor: enabled ? _accent : const Color(0xFFEAF6FC),
+          foregroundColor: enabled ? Colors.white : const Color(0xFF5F7285),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -648,7 +697,9 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accent,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
               child: Text(actionLabel),

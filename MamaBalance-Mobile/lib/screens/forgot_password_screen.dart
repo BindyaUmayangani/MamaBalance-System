@@ -123,7 +123,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -133,7 +133,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF203C35)),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1F3A5F)),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -145,7 +145,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                   ),
@@ -161,7 +161,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,
-                    color: Color(0xFF5F736B),
+                    color: Color(0xFF5F7285),
                   ),
                 ),
               ),
@@ -175,7 +175,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     color: Colors.white.withOpacity(0.7),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF4FA38A).withOpacity(0.14),
+                        color: const Color(0xFF4A90C2).withOpacity(0.14),
                         blurRadius: 24,
                         offset: const Offset(0, 14),
                       ),
@@ -184,7 +184,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: const Icon(
                     Icons.lock_reset_rounded,
                     size: 74,
-                    color: Color(0xFF4FA38A),
+                    color: Color(0xFF4A90C2),
                   ),
                 ),
               ),
@@ -194,7 +194,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFDCEBE5)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -213,7 +213,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -223,19 +223,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           : 'Use the phone number saved on your MamaBalance account.',
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF60756D),
+                        color: Color(0xFF5F7285),
                       ),
                     ),
                     const SizedBox(height: 18),
                     TextField(
                       controller: _usesEmail ? _emailController : _phoneController,
-                      cursorColor: const Color(0xFF4FA38A),
+                      cursorColor: const Color(0xFF4A90C2),
                       keyboardType:
                           _usesEmail ? TextInputType.emailAddress : TextInputType.phone,
                       decoration: InputDecoration(
                         labelText: _usesEmail ? 'Personal email' : 'Mobile number',
                         floatingLabelStyle:
-                            const TextStyle(color: Color(0xFF4FA38A)),
+                            const TextStyle(color: Color(0xFF4A90C2)),
                         hintText:
                             _usesEmail ? 'your@email.com' : '+94 7X XXX XXXX',
                         prefixIcon: Icon(
@@ -253,7 +253,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(14)),
                           borderSide:
-                              BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+                              BorderSide(color: Color(0xFF4A90C2), width: 1.5),
                         ),
                       ),
                     ),
@@ -287,7 +287,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ? _continueWithEmail
                                 : _continueWithPhone,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4FA38A),
+                          backgroundColor: const Color(0xFF4A90C2),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

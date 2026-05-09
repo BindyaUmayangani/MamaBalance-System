@@ -122,9 +122,9 @@ class _SignInScreenState extends State<SignInScreen> {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F8F7),
+        color: const Color(0xFFF7FCFE),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD8E8E2)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: Row(
         children: [
@@ -166,12 +166,12 @@ class _SignInScreenState extends State<SignInScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4FA38A) : Colors.transparent,
+          color: isSelected ? const Color(0xFF4A90C2) : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF4FA38A).withOpacity(0.22),
+                    color: const Color(0xFF4A90C2).withOpacity(0.22),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -184,13 +184,13 @@ class _SignInScreenState extends State<SignInScreen> {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? Colors.white : const Color(0xFF49635A),
+              color: isSelected ? Colors.white : const Color(0xFF5F7285),
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF35584E),
+                color: isSelected ? Colors.white : const Color(0xFF1F6F99),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -219,18 +219,18 @@ class _SignInScreenState extends State<SignInScreen> {
           'Sign in with the personal email registered for your MamaBalance account, or use your phone number below.',
           style: TextStyle(
             fontSize: 14,
-            color: Color(0xFF5E6F69),
+            color: Color(0xFF5F7285),
             height: 1.45,
           ),
         ),
         const SizedBox(height: 18),
         TextField(
           controller: _emailController,
-          cursorColor: const Color(0xFF4FA38A),
+          cursorColor: const Color(0xFF4A90C2),
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Email address',
-            floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
+            floatingLabelStyle: const TextStyle(color: Color(0xFF4A90C2)),
             hintText: 'your personal email',
             prefixIcon: const Icon(Icons.alternate_email),
             border: OutlineInputBorder(
@@ -242,18 +242,18 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(14)),
-              borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+              borderSide: BorderSide(color: Color(0xFF4A90C2), width: 1.5),
             ),
           ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: _passwordController,
-          cursorColor: const Color(0xFF4FA38A),
+          cursorColor: const Color(0xFF4A90C2),
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Password',
-            floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
+            floatingLabelStyle: const TextStyle(color: Color(0xFF4A90C2)),
             prefixIcon: const Icon(Icons.lock_outline),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -264,7 +264,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(14)),
-              borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+              borderSide: BorderSide(color: Color(0xFF4A90C2), width: 1.5),
             ),
             suffixIcon: IconButton(
               icon: Icon(
@@ -285,7 +285,7 @@ class _SignInScreenState extends State<SignInScreen> {
             child: const Text(
               'Forgot Password?',
               style: TextStyle(
-                color: Color(0xFF4FA38A),
+                color: Color(0xFF4A90C2),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -296,7 +296,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: ElevatedButton(
             onPressed: _isSubmitting ? null : _signInWithEmail,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4FA38A),
+              backgroundColor: const Color(0xFF4A90C2),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -320,18 +320,18 @@ class _SignInScreenState extends State<SignInScreen> {
               : 'Use the phone number saved on your MamaBalance account. Mothers can sign in here with +94 or 07XXXXXXXX format.',
           style: const TextStyle(
             fontSize: 14,
-            color: Color(0xFF5E6F69),
+            color: Color(0xFF5F7285),
             height: 1.45,
           ),
         ),
         const SizedBox(height: 18),
         TextField(
           controller: _phoneController,
-          cursorColor: const Color(0xFF4FA38A),
+          cursorColor: const Color(0xFF4A90C2),
           keyboardType: TextInputType.phone,
           decoration: InputDecoration(
             labelText: 'Phone number',
-            floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
+            floatingLabelStyle: const TextStyle(color: Color(0xFF4A90C2)),
             hintText: '+94 7X XXX XXXX',
             prefixIcon: const Icon(Icons.phone_iphone_outlined),
             border: OutlineInputBorder(
@@ -343,7 +343,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(14)),
-              borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+              borderSide: BorderSide(color: Color(0xFF4A90C2), width: 1.5),
             ),
           ),
         ),
@@ -352,7 +352,7 @@ class _SignInScreenState extends State<SignInScreen> {
           'We will send a one-time verification code to this number.',
           style: TextStyle(
             fontSize: 13,
-            color: Color(0xFF7A8B85),
+            color: Color(0xFF5F7285),
           ),
         ),
         const SizedBox(height: 24),
@@ -361,7 +361,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: ElevatedButton(
             onPressed: _isSubmitting ? null : _sendOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4FA38A),
+              backgroundColor: const Color(0xFF4A90C2),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -378,7 +378,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -391,7 +391,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF203C35),
+                  color: Color(0xFF1F3A5F),
                 ),
               ),
               const SizedBox(height: 10),
@@ -399,7 +399,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 _welcomeSubtitle,
                 style: const TextStyle(
                   fontSize: 15,
-                  color: Color(0xFF5F736B),
+                  color: Color(0xFF5F7285),
                   height: 1.5,
                 ),
               ),
@@ -412,7 +412,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF4FA38A).withOpacity(0.14),
+                        color: const Color(0xFF4A90C2).withOpacity(0.14),
                         blurRadius: 24,
                         offset: const Offset(0, 14),
                       ),
@@ -432,7 +432,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFDCEBE5)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -449,7 +449,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -461,14 +461,14 @@ class _SignInScreenState extends State<SignInScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2FAF7),
+                          color: const Color(0xFFF3FAFD),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFD3EAE1)),
+                          border: Border.all(color: const Color(0xFFD6EAF5)),
                         ),
                         child: const Text(
                           'Guardian accounts use phone OTP for sign-in. Once a session is saved, quick fingerprint or face unlock can be enabled on this device.',
                           style: TextStyle(
-                            color: Color(0xFF4D655D),
+                            color: Color(0xFF5F7285),
                             fontWeight: FontWeight.w600,
                             height: 1.45,
                           ),
@@ -496,7 +496,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: const Text(
                           'Switch account type',
                           style: TextStyle(
-                            color: Color(0xFF4FA38A),
+                            color: Color(0xFF4A90C2),
                             fontWeight: FontWeight.w700,
                           ),
                         ),

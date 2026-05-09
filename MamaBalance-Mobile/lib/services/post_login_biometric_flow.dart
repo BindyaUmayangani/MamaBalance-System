@@ -64,12 +64,12 @@ class PostLoginBiometricFlow {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE9F6F1),
+                        color: const Color(0xFFEAF6FC),
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: const Icon(
                         Icons.fingerprint_rounded,
-                        color: Color(0xFF4FA38A),
+                        color: Color(0xFF4A90C2),
                         size: 30,
                       ),
                     ),
@@ -83,7 +83,7 @@ class PostLoginBiometricFlow {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF203C35),
+                              color: Color(0xFF1F3A5F),
                             ),
                           ),
                           SizedBox(height: 4),
@@ -91,7 +91,7 @@ class PostLoginBiometricFlow {
                             'Optional for faster access on this device',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF6B8078),
+                              color: Color(0xFF5F7285),
                             ),
                           ),
                         ],
@@ -105,7 +105,7 @@ class PostLoginBiometricFlow {
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.55,
-                    color: Color(0xFF4E645C),
+                    color: Color(0xFF5F7285),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -113,9 +113,9 @@ class PostLoginBiometricFlow {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5FAF8),
+                    color: const Color(0xFFF7FCFE),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFD8ECE4)),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
                   ),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +126,7 @@ class PostLoginBiometricFlow {
                           Icon(
                             Icons.verified_user_outlined,
                             size: 18,
-                            color: Color(0xFF4FA38A),
+                            color: Color(0xFF4A90C2),
                           ),
                           SizedBox(width: 10),
                           Expanded(
@@ -134,7 +134,7 @@ class PostLoginBiometricFlow {
                               'Your OTP or password is still your real sign-in method.',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF203C35),
+                                color: Color(0xFF1F3A5F),
                               ),
                             ),
                           ),
@@ -145,7 +145,7 @@ class PostLoginBiometricFlow {
                         'MamaBalance only uses the fingerprint or face ID already added in your phone settings. The app does not create or store a new fingerprint.',
                         style: TextStyle(
                           height: 1.5,
-                          color: Color(0xFF60756D),
+                          color: Color(0xFF5F7285),
                         ),
                       ),
                     ],
@@ -157,8 +157,8 @@ class PostLoginBiometricFlow {
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF4FA38A),
-                          side: const BorderSide(color: Color(0xFF4FA38A)),
+                          foregroundColor: const Color(0xFF4A90C2),
+                          side: const BorderSide(color: Color(0xFF4A90C2)),
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -175,7 +175,7 @@ class PostLoginBiometricFlow {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4FA38A),
+                          backgroundColor: const Color(0xFF4A90C2),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 15),

@@ -206,7 +206,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     final destination = emailResetSession?.email ?? session?.phoneNumber ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -216,7 +216,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF203C35)),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1F3A5F)),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -228,7 +228,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                   ),
@@ -246,7 +246,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.5,
-                    color: Color(0xFF5F736B),
+                    color: Color(0xFF5F7285),
                   ),
                 ),
               ),
@@ -260,7 +260,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     color: Colors.white.withOpacity(0.7),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF4FA38A).withOpacity(0.14),
+                        color: const Color(0xFF4A90C2).withOpacity(0.14),
                         blurRadius: 24,
                         offset: const Offset(0, 14),
                       ),
@@ -269,7 +269,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   child: const Icon(
                     Icons.verified_user_outlined,
                     size: 72,
-                    color: Color(0xFF4FA38A),
+                    color: Color(0xFF4A90C2),
                   ),
                 ),
               ),
@@ -279,7 +279,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFDCEBE5)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -296,7 +296,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -304,7 +304,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       'Type the OTP exactly as it appears in the message.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF60756D),
+                        color: Color(0xFF5F7285),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -343,7 +343,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             ? null
                             : () => _verifyOtp(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4FA38A),
+                          backgroundColor: const Color(0xFF4A90C2),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -378,7 +378,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                                   ? 'Resend code in ${_secondsRemaining}s' 
                                   : 'Resend OTP',
                           style: TextStyle(
-                            color: _secondsRemaining > 0 ? const Color(0xFF6A7B79) : const Color(0xFF4FA38A),
+                            color: _secondsRemaining > 0 ? const Color(0xFF5F7285) : const Color(0xFF4A90C2),
                             fontWeight: FontWeight.w700,
                           ),
                         ),

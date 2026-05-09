@@ -8,20 +8,18 @@ import 'educational_resources_screen.dart';
 import 'emergency_contacts_page.dart';
 import 'faq_page.dart';
 import 'privacy_policy_page.dart';
+import '../widgets/app_loading_state.dart';
 
 class GuardianProfileScreen extends StatelessWidget {
-  const GuardianProfileScreen({
-    super.key,
-    this.showBackButton = true,
-  });
+  const GuardianProfileScreen({super.key, this.showBackButton = true});
 
   final bool showBackButton;
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _bg = Color(0xFFEFF8F4);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF203C35);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +30,9 @@ class GuardianProfileScreen extends StatelessWidget {
           future: GuardianDashboardService.instance.fetchDashboard(),
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: CircularProgressIndicator(color: _mint),
+              return const AppLoadingState(
+                title: 'Loading guardian profile',
+                message: 'Preparing your linked account and support options.',
               );
             }
 
@@ -126,7 +125,7 @@ class GuardianProfileScreen extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF67BBA1), Color(0xFF4FA38A)],
+                        colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
@@ -241,13 +240,14 @@ class GuardianProfileScreen extends StatelessWidget {
                           text: _doctorDisplayName(data.doctor!.name),
                           subtitle:
                               'Assigned doctor | ${data.doctor!.phoneNumber}',
-                          onTap: () => _showCareTeamContactDialog(
-                            context,
-                            title: _doctorDisplayName(data.doctor!.name),
-                            roleLabel: 'Assigned doctor',
-                            phoneNumber: data.doctor!.phoneNumber,
-                            icon: Icons.local_hospital_outlined,
-                          ),
+                          onTap:
+                              () => _showCareTeamContactDialog(
+                                context,
+                                title: _doctorDisplayName(data.doctor!.name),
+                                roleLabel: 'Assigned doctor',
+                                phoneNumber: data.doctor!.phoneNumber,
+                                icon: Icons.local_hospital_outlined,
+                              ),
                         ),
                       if (data.doctor != null) _buildDivider(),
                       _buildListTile(
@@ -256,13 +256,14 @@ class GuardianProfileScreen extends StatelessWidget {
                         text: _midwifeDisplayName(data.midwife.name),
                         subtitle:
                             'Assigned midwife | ${data.midwife.phoneNumber}',
-                        onTap: () => _showCareTeamContactDialog(
-                          context,
-                          title: _midwifeDisplayName(data.midwife.name),
-                          roleLabel: 'Assigned midwife',
-                          phoneNumber: data.midwife.phoneNumber,
-                          icon: Icons.health_and_safety_outlined,
-                        ),
+                        onTap:
+                            () => _showCareTeamContactDialog(
+                              context,
+                              title: _midwifeDisplayName(data.midwife.name),
+                              roleLabel: 'Assigned midwife',
+                              phoneNumber: data.midwife.phoneNumber,
+                              icon: Icons.health_and_safety_outlined,
+                            ),
                       ),
                     ],
                   ),
@@ -294,9 +295,10 @@ class GuardianProfileScreen extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => EmergencyContactsPage(
-                                audience: 'guardian',
-                              ),
+                              builder:
+                                  (_) => EmergencyContactsPage(
+                                    audience: 'guardian',
+                                  ),
                             ),
                           );
                         },
@@ -307,15 +309,17 @@ class GuardianProfileScreen extends StatelessWidget {
                         icon: Icons.menu_book_outlined,
                         text: 'Resources',
                         subtitle: 'Browse educational content for guardians',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const EducationalResourcesScreen(
-                              showBackButton: true,
-                              audience: 'guardian',
+                        onTap:
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => const EducationalResourcesScreen(
+                                      showBackButton: true,
+                                      audience: 'guardian',
+                                    ),
+                              ),
                             ),
-                          ),
-                        ),
                       ),
                       _buildDivider(),
                       _buildListTile(
@@ -356,9 +360,10 @@ class GuardianProfileScreen extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const PrivacyPolicyPage(
-                                audience: 'guardian',
-                              ),
+                              builder:
+                                  (_) => const PrivacyPolicyPage(
+                                    audience: 'guardian',
+                                  ),
                             ),
                           );
                         },
@@ -372,7 +377,8 @@ class GuardianProfileScreen extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const FAQPage(audience: 'guardian'),
+                              builder:
+                                  (_) => const FAQPage(audience: 'guardian'),
                             ),
                           );
                         },
@@ -422,7 +428,8 @@ class GuardianProfileScreen extends StatelessWidget {
     }
 
     final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ');
-    final words = normalized.split(' ').where((word) => word.isNotEmpty).toList();
+    final words =
+        normalized.split(' ').where((word) => word.isNotEmpty).toList();
 
     if (words.length >= 2) {
       return '${words.first[0]}${words[1][0]}'.toUpperCase();
@@ -454,7 +461,7 @@ class GuardianProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
         boxShadow: [
           BoxShadow(
             color: _mint.withOpacity(0.08),
@@ -503,7 +510,7 @@ class GuardianProfileScreen extends StatelessWidget {
       trailing: const Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
-        color: Color(0xFF7B9088),
+        color: Color(0xFF5F7285),
       ),
       onTap: onTap,
     );
@@ -512,7 +519,7 @@ class GuardianProfileScreen extends StatelessWidget {
   Widget _buildDivider() {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
-      child: Divider(height: 1, color: Color(0xFFE6F0EC)),
+      child: Divider(height: 1, color: Color(0xFFEAF6FC)),
     );
   }
 
@@ -525,144 +532,150 @@ class GuardianProfileScreen extends StatelessWidget {
   }) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 30,
-                offset: const Offset(0, 18),
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
+            ),
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: _surface,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Icon(icon, color: _mint, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: _text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              roleLabel,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: _muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: _surface,
                       borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
-                    child: Icon(icon, color: _mint, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: _text,
-                          ),
+                        const Icon(
+                          Icons.phone_in_talk_outlined,
+                          color: _mint,
+                          size: 18,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          roleLabel,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: _muted,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            phoneNumber.trim().isEmpty ? '-' : phoneNumber,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _text,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFD8ECE4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.phone_in_talk_outlined,
-                      color: _mint,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        phoneNumber.trim().isEmpty ? '-' : phoneNumber,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _text,
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _mint,
+                            side: const BorderSide(color: _mint),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text(
+                            'Close',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _mint,
-                        side: const BorderSide(color: _mint),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _mint,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed:
+                              phoneNumber.trim().isEmpty ||
+                                      phoneNumber.trim() == '-'
+                                  ? null
+                                  : () async {
+                                    Navigator.pop(dialogContext);
+                                    await _launchDialer(phoneNumber);
+                                  },
+                          icon: const Icon(Icons.call_outlined),
+                          label: const Text(
+                            'Call',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text(
-                        'Close',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _mint,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: phoneNumber.trim().isEmpty || phoneNumber.trim() == '-'
-                          ? null
-                          : () async {
-                              Navigator.pop(dialogContext);
-                              await _launchDialer(phoneNumber);
-                            },
-                      icon: const Icon(Icons.call_outlined),
-                      label: const Text(
-                        'Call',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -679,97 +692,101 @@ class GuardianProfileScreen extends StatelessWidget {
   ) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 30,
-                offset: const Offset(0, 18),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: _surface,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Icon(
-                      Icons.woman_rounded,
-                      color: _mint,
-                      size: 30,
-                    ),
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
+            ),
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, 18),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          data.motherName,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: _text,
-                          ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: _surface,
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Linked mother personal details',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _muted,
-                          ),
+                        child: const Icon(
+                          Icons.woman_rounded,
+                          color: _mint,
+                          size: 30,
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data.motherName,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: _text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Linked mother personal details',
+                              style: TextStyle(fontSize: 13, color: _muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _detailRow('Phone number', data.motherPhoneNumber),
+                  _detailRow('Birthdate', data.motherBirthdate),
+                  _detailRow('Delivery date', data.motherDeliveryDate),
+                  _detailRow(
+                    'Number of children',
+                    '${data.motherNoOfChildren}',
+                  ),
+                  _detailRow('Home address', data.motherAddress),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _mint,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text(
+                        'Close',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              _detailRow('Phone number', data.motherPhoneNumber),
-              _detailRow('Birthdate', data.motherBirthdate),
-              _detailRow('Delivery date', data.motherDeliveryDate),
-              _detailRow('Number of children', '${data.motherNoOfChildren}'),
-              _detailRow('Home address', data.motherAddress),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _mint,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -782,7 +799,7 @@ class GuardianProfileScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: _surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFD8ECE4)),
+          border: Border.all(color: const Color(0xFFD6EAF5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -813,93 +830,102 @@ class GuardianProfileScreen extends StatelessWidget {
   void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
-        contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-        title: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFCEDEC),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFB6403D),
-              ),
+      builder:
+          (dialogContext) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Logout',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20,
-                  color: _text,
+            titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
+            contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+            title: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFCEDEC),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFFB6403D),
+                  ),
                 ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Logout',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: _text,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to logout from MamaBalance?',
+                  style: TextStyle(
+                    color: _text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'You can sign back in anytime to continue with care schedules, messages, and support resources.',
+                  style: TextStyle(color: _muted, height: 1.5),
+                ),
+              ],
+            ),
+            actions: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _mint,
+                  side: const BorderSide(color: _mint),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(),
               ),
-            ),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to logout from MamaBalance?',
-              style: TextStyle(
-                color: _text,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB6403D),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text('Logout'),
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await AuthService.instance.signOut();
+                  if (!context.mounted) return;
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/signin',
+                    (route) => false,
+                  );
+                },
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'You can sign back in anytime to continue with care schedules, messages, and support resources.',
-              style: TextStyle(color: _muted, height: 1.5),
-            ),
-          ],
-        ),
-        actions: [
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _mint,
-              side: const BorderSide(color: _mint),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB6403D),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text('Logout'),
-            onPressed: () async {
-              Navigator.of(dialogContext).pop();
-              await AuthService.instance.signOut();
-              if (!context.mounted) return;
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/signin',
-                (route) => false,
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 
@@ -914,117 +940,118 @@ class GuardianProfileScreen extends StatelessWidget {
     if (availability != BiometricSetupAvailability.available) {
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 30,
-                  offset: const Offset(0, 18),
+        builder:
+            (dialogContext) => Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 24,
+              ),
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 30,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFCEDEC),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(
-                        Icons.fingerprint_rounded,
-                        color: Color(0xFFB6403D),
-                        size: 30,
+                    Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFCEDEC),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(
+                            Icons.fingerprint_rounded,
+                            color: Color(0xFFB6403D),
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Biometric Login Unavailable',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF1F3A5F),
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Set it up in your phone settings first',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF5F7285),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '$biometricLabel is not available on this device right now. Add fingerprint or face authentication in your phone settings, then come back and enable quick unlock here.',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        height: 1.55,
+                        color: Color(0xFF5F7285),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Biometric Login Unavailable',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF203C35),
-                            ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7F6),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFF3D1CE)),
+                      ),
+                      child: const Text(
+                        'Quick unlock only works with the fingerprint or face ID already enrolled on this device.',
+                        style: TextStyle(height: 1.5, color: Color(0xFF5F7285)),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4A90C2),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Set it up in your phone settings first',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B8078),
-                            ),
-                          ),
-                        ],
+                        ),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  '$biometricLabel is not available on this device right now. Add fingerprint or face authentication in your phone settings, then come back and enable quick unlock here.',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.55,
-                    color: Color(0xFF4E645C),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7F6),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFF3D1CE)),
-                  ),
-                  child: const Text(
-                    'Quick unlock only works with the fingerprint or face ID already enrolled on this device.',
-                    style: TextStyle(
-                      height: 1.5,
-                      color: Color(0xFF60756D),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4FA38A),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(dialogContext),
-                    child: const Text(
-                      'Close',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
       );
       return;
     }
@@ -1032,160 +1059,169 @@ class GuardianProfileScreen extends StatelessWidget {
     final shouldEnable = !isEnabled;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 30,
-                offset: const Offset(0, 18),
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
+            ),
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color:
+                              shouldEnable
+                                  ? const Color(0xFFEAF6FC)
+                                  : const Color(0xFFFCEDEC),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Icon(
+                          shouldEnable
+                              ? Icons.fingerprint_rounded
+                              : Icons.lock_reset_rounded,
+                          color:
+                              shouldEnable
+                                  ? const Color(0xFF4A90C2)
+                                  : const Color(0xFFB6403D),
+                          size: 30,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              shouldEnable
+                                  ? 'Enable Quick Unlock?'
+                                  : 'Turn Off Quick Unlock?',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1F3A5F),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              shouldEnable
+                                  ? 'Optional for faster guardian access'
+                                  : 'You can enable it again later',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF5F7285),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    shouldEnable
+                        ? 'Use $biometricLabel to unlock your saved guardian session faster on this device after your normal OTP sign-in.'
+                        : 'Turn off $biometricLabel quick unlock for this guardian session on this device?',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.55,
+                      color: Color(0xFF5F7285),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: shouldEnable
-                          ? const Color(0xFFE9F6F1)
-                          : const Color(0xFFFCEDEC),
+                      color:
+                          shouldEnable
+                              ? const Color(0xFFF7FCFE)
+                              : const Color(0xFFFFF7F6),
                       borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color:
+                            shouldEnable
+                                ? const Color(0xFFD6EAF5)
+                                : const Color(0xFFF3D1CE),
+                      ),
                     ),
-                    child: Icon(
+                    child: Text(
                       shouldEnable
-                          ? Icons.fingerprint_rounded
-                          : Icons.lock_reset_rounded,
-                      color: shouldEnable
-                          ? const Color(0xFF4FA38A)
-                          : const Color(0xFFB6403D),
-                      size: 30,
+                          ? 'MamaBalance uses the fingerprint or face ID already enrolled on your phone. It does not create or store a new biometric.'
+                          : '$biometricLabel is currently protecting your saved guardian session on this device. If you turn it off, the app will stop asking for quick biometric unlock on reopen.',
+                      style: const TextStyle(
+                        height: 1.5,
+                        color: Color(0xFF5F7285),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shouldEnable
-                              ? 'Enable Quick Unlock?'
-                              : 'Turn Off Quick Unlock?',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF203C35),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF4A90C2),
+                            side: const BorderSide(color: Color(0xFF4A90C2)),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          shouldEnable
-                              ? 'Optional for faster guardian access'
-                              : 'You can enable it again later',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B8078),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                shouldEnable
+                                    ? const Color(0xFF4A90C2)
+                                    : const Color(0xFFB6403D),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(dialogContext, true),
+                          child: Text(
+                            shouldEnable ? 'Enable' : 'Turn Off',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Text(
-                shouldEnable
-                    ? 'Use $biometricLabel to unlock your saved guardian session faster on this device after your normal OTP sign-in.'
-                    : 'Turn off $biometricLabel quick unlock for this guardian session on this device?',
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.55,
-                  color: Color(0xFF4E645C),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: shouldEnable
-                      ? const Color(0xFFF5FAF8)
-                      : const Color(0xFFFFF7F6),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: shouldEnable
-                        ? const Color(0xFFD8ECE4)
-                        : const Color(0xFFF3D1CE),
-                  ),
-                ),
-                child: Text(
-                  shouldEnable
-                      ? 'MamaBalance uses the fingerprint or face ID already enrolled on your phone. It does not create or store a new biometric.'
-                      : '$biometricLabel is currently protecting your saved guardian session on this device. If you turn it off, the app will stop asking for quick biometric unlock on reopen.',
-                  style: const TextStyle(
-                    height: 1.5,
-                    color: Color(0xFF60756D),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF4FA38A),
-                        side: const BorderSide(color: Color(0xFF4FA38A)),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: shouldEnable
-                            ? const Color(0xFF4FA38A)
-                            : const Color(0xFFB6403D),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      child: Text(
-                        shouldEnable ? 'Enable' : 'Turn Off',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
 
     if (confirmed != true) return;
@@ -1197,9 +1233,7 @@ class GuardianProfileScreen extends StatelessWidget {
       if (!authenticated) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$biometricLabel was not confirmed.'),
-          ),
+          SnackBar(content: Text('$biometricLabel was not confirmed.')),
         );
         return;
       }

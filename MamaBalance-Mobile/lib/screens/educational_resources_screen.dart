@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
+import '../widgets/app_loading_state.dart';
 
 class EducationalResource {
   const EducationalResource({
@@ -79,19 +80,20 @@ class EducationalResourcesScreen extends StatefulWidget {
   final bool showBackButton;
   final String audience;
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _deepMint = Color(0xFF2F7D68);
-  static const Color _bg = Color(0xFFEFF8F4);
-  static const Color _text = Color(0xFF203C35);
-  static const Color _muted = Color(0xFF60756D);
-  static const Color _line = Color(0xFFD7EAE3);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _deepMint = Color(0xFF1F6F99);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
+  static const Color _line = Color(0xFFD6EAF5);
 
   @override
   State<EducationalResourcesScreen> createState() =>
       _EducationalResourcesScreenState();
 }
 
-class _EducationalResourcesScreenState extends State<EducationalResourcesScreen> {
+class _EducationalResourcesScreenState
+    extends State<EducationalResourcesScreen> {
   late Future<List<EducationalResource>> _resourcesFuture;
 
   static const Color _mint = EducationalResourcesScreen._mint;
@@ -133,27 +135,29 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
     ).replace(queryParameters: {'audience': widget.audience});
 
     try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 20));
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
       final decoded = jsonDecode(response.body);
-      final payload = decoded is Map<String, dynamic>
-          ? decoded
-          : <String, dynamic>{};
+      final payload =
+          decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception(payload['error'] ?? 'Unable to load resources.');
       }
 
       final rawResources = payload['resources'];
-      final resources = (rawResources is List ? rawResources : const [])
-          .whereType<Map<String, dynamic>>()
-          .map(EducationalResource.fromJson)
-          .where((resource) => resource.hasResource)
-          .toList();
+      final resources =
+          (rawResources is List ? rawResources : const [])
+              .whereType<Map<String, dynamic>>()
+              .map(EducationalResource.fromJson)
+              .where((resource) => resource.hasResource)
+              .toList();
 
       return resources;
     } on TimeoutException {
@@ -185,10 +189,16 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
                     children: [
                       if (widget.showBackButton) ...[
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: _text,
+                          ),
                           onPressed: () => Navigator.pop(context),
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
                         ),
                         const SizedBox(width: 12),
                       ],
@@ -206,10 +216,16 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
                   ),
                   const SizedBox(height: 10),
                   Padding(
-                    padding: EdgeInsets.only(left: widget.showBackButton ? 48 : 0),
+                    padding: EdgeInsets.only(
+                      left: widget.showBackButton ? 48 : 0,
+                    ),
                     child: const Text(
                       'Read trusted guides and resources shared by MamaBalance care administrators.',
-                      style: TextStyle(fontSize: 15, height: 1.5, color: _muted),
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.5,
+                        color: _muted,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
@@ -225,9 +241,9 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
                   else if (resources.isEmpty)
                     const _ResourceMessageState(
                       icon: Icons.menu_book_rounded,
-                      title: 'No resources yet',
+                      title: 'No resources available yet',
                       message:
-                          'New educational content will appear here when it is published.',
+                          'Supportive articles and videos shared by your care team will appear here. You can check back later.',
                     )
                   else
                     ...resources.map(
@@ -236,9 +252,10 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => EducationalResourceDetailPage(
-                                resource: resource,
-                              ),
+                              builder:
+                                  (_) => EducationalResourceDetailPage(
+                                    resource: resource,
+                                  ),
                             ),
                           );
                         },
@@ -252,7 +269,6 @@ class _EducationalResourcesScreenState extends State<EducationalResourcesScreen>
       ),
     );
   }
-
 }
 
 class EducationalResourceDetailPage extends StatelessWidget {
@@ -301,10 +317,16 @@ class EducationalResourceDetailPage extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: _text,
+                  ),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 const Expanded(
@@ -541,7 +563,7 @@ class _ResourceVisual extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFDDF3EC), Color(0xFFFFFFFF)],
+          colors: [Color(0xFFDDF1FA), Color(0xFFFFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -571,7 +593,7 @@ class _ResourceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFDDF3EC),
+      color: const Color(0xFFDDF1FA),
       child: Icon(resource.icon, color: _deepMint, size: 32),
     );
   }
@@ -614,27 +636,14 @@ class _TypePill extends StatelessWidget {
 class _ResourceLoadingState extends StatelessWidget {
   const _ResourceLoadingState();
 
-  static const Color _mint = EducationalResourcesScreen._mint;
-  static const Color _muted = EducationalResourcesScreen._muted;
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 46),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: const Column(
-        children: [
-          CircularProgressIndicator(color: _mint),
-          SizedBox(height: 16),
-          Text(
-            'Loading resources...',
-            style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
-          ),
-        ],
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: AppLoadingState(
+        title: 'Loading resources',
+        message: 'Finding supportive articles and videos for you.',
+        compact: true,
       ),
     );
   }

@@ -16,8 +16,8 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF4FA58D);
-    const muted = Color(0xFF6A7B79);
+    const accent = Color(0xFF4A90C2);
+    const muted = Color(0xFF5F7285);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -32,7 +32,7 @@ class BottomNavBar extends StatelessWidget {
             offset: Offset(0, 10),
           ),
         ],
-        border: Border.all(color: const Color(0xFFD7EEE7)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,

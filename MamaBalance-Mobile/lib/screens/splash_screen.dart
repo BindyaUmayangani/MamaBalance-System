@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/biometric_auth_service.dart';
+import '../widgets/app_loading_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,9 +31,10 @@ class _SplashScreenState extends State<SplashScreen> {
     final hasSession = restoreStatus == SessionRestoreStatus.restored;
     final shouldRequireUnlock =
         hasSession && await BiometricAuthService.instance.shouldRequireUnlock();
-    final homeRoute = hasSession
-        ? await AuthService.instance.homeRouteForCurrentUser()
-        : '/home';
+    final homeRoute =
+        hasSession
+            ? await AuthService.instance.homeRouteForCurrentUser()
+            : '/home';
 
     if (!mounted) return;
 
@@ -41,8 +43,8 @@ class _SplashScreenState extends State<SplashScreen> {
       hasSession
           ? (shouldRequireUnlock ? '/biometric-lock' : homeRoute)
           : (restoreStatus == SessionRestoreStatus.expired
-                ? '/signin'
-                : '/intro'),
+              ? '/signin'
+              : '/intro'),
     );
   }
 
@@ -54,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFF7FCFA), Color(0xFFE7F5F0), Color(0xFFF1FAF7)],
+            colors: [Color(0xFFF7FCFE), Color(0xFFEAF6FC), Color(0xFFF3FAFD)],
           ),
         ),
         child: Stack(
@@ -64,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
               right: -70,
               child: _decorCircle(
                 size: 250,
-                colors: const [Color(0xFFD8F0E7), Color(0xFFC6E9DB)],
+                colors: const [Color(0xFFD7F0FA), Color(0xFFB7DDF0)],
               ),
             ),
             Positioned(
@@ -72,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
               bottom: 90,
               child: _decorCircle(
                 size: 210,
-                colors: const [Color(0xFFEAF8F3), Color(0xFFD9F0E6)],
+                colors: const [Color(0xFFEAF6FC), Color(0xFFD6EAF5)],
               ),
             ),
             Positioned(
@@ -84,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDFF3EB).withOpacity(0.7),
+                    color: const Color(0xFFDDF1FA).withOpacity(0.7),
                     borderRadius: BorderRadius.circular(34),
                   ),
                 ),
@@ -100,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   color: Colors.white.withOpacity(0.34),
                   borderRadius: BorderRadius.circular(28),
                   border: Border.all(
-                    color: const Color(0xFFD3ECE3).withOpacity(0.9),
+                    color: const Color(0xFFD6EAF5).withOpacity(0.9),
                   ),
                 ),
               ),
@@ -113,9 +115,8 @@ class _SplashScreenState extends State<SplashScreen> {
                   opacity: _contentVisible ? 1 : 0,
                   child: AnimatedSlide(
                     duration: const Duration(milliseconds: 500),
-                    offset: _contentVisible
-                        ? Offset.zero
-                        : const Offset(0, 0.04),
+                    offset:
+                        _contentVisible ? Offset.zero : const Offset(0, 0.04),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -127,10 +128,12 @@ class _SplashScreenState extends State<SplashScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.82),
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFD6ECE6)),
+                            border: Border.all(color: const Color(0xFFD6EAF5)),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF4FA38A).withOpacity(0.06),
+                                color: const Color(
+                                  0xFF4A90C2,
+                                ).withOpacity(0.06),
                                 blurRadius: 18,
                                 offset: const Offset(0, 10),
                               ),
@@ -141,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF4FA38A),
+                              color: Color(0xFF4A90C2),
                             ),
                           ),
                         ),
@@ -166,9 +169,10 @@ class _SplashScreenState extends State<SplashScreen> {
                                       horizontal: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: index == 1
-                                          ? const Color(0xFF4FA38A)
-                                          : const Color(0xFFCFE3DB),
+                                      color:
+                                          index == 1
+                                              ? const Color(0xFF4A90C2)
+                                              : const Color(0xFFCDEAF6),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                   ),
@@ -185,7 +189,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF173C3A),
+                              color: Color(0xFF1F3A5F),
                               letterSpacing: -0.4,
                             ),
                           ),
@@ -198,7 +202,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             style: TextStyle(
                               fontSize: 15.5,
                               height: 1.5,
-                              color: Color(0xFF5E746B),
+                              color: Color(0xFF5F7285),
                             ),
                           ),
                         ),
@@ -207,56 +211,40 @@ class _SplashScreenState extends State<SplashScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
-                            vertical: 17,
+                            vertical: 14,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.88),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0xFFD6ECE6)),
+                            border: Border.all(color: const Color(0xFFD6EAF5)),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF4FA38A).withOpacity(0.08),
+                                color: const Color(
+                                  0xFF4A90C2,
+                                ).withOpacity(0.08),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
                             ],
                           ),
                           child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF4FA38A),
-                                  ),
-                                ),
+                              AppLoadingState(
+                                compact: true,
+                                showLogo: false,
+                                size: 42,
+                                compactPadding: EdgeInsets.zero,
                               ),
                               SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Preparing your care space',
-                                      style: TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF173C3A),
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Checking your account and loading your latest updates.',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        height: 1.4,
-                                        color: Color(0xFF6A7B79),
-                                      ),
-                                    ),
-                                  ],
+                              Flexible(
+                                child: Text(
+                                  'Preparing your care space...',
+                                  style: TextStyle(
+                                    color: Color(0xFF1F3A5F),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
@@ -274,10 +262,7 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  Widget _decorCircle({
-    required double size,
-    required List<Color> colors,
-  }) {
+  Widget _decorCircle({required double size, required List<Color> colors}) {
     return Container(
       width: size,
       height: size,

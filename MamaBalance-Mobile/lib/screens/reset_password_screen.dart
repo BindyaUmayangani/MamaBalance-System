@@ -125,7 +125,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
   }) {
     return InputDecoration(
       labelText: label,
-      floatingLabelStyle: const TextStyle(color: Color(0xFF4FA38A)),
+      floatingLabelStyle: const TextStyle(color: Color(0xFF4A90C2)),
       prefixIcon: Icon(icon),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -136,7 +136,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
       ),
       focusedBorder: const OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(14)),
-        borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+        borderSide: BorderSide(color: Color(0xFF4A90C2), width: 1.5),
       ),
       suffixIcon: IconButton(
         icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
@@ -148,7 +148,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: Stack(
         children: [
           SafeArea(
@@ -160,7 +160,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF203C35)),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1F3A5F)),
                         onPressed: () => Navigator.pop(context),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -172,7 +172,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF203C35),
+                            color: Color(0xFF1F3A5F),
                           ),
                         ),
                       ),
@@ -186,7 +186,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                       style: TextStyle(
                         fontSize: 15,
                         height: 1.5,
-                        color: Color(0xFF5F736B),
+                        color: Color(0xFF5F7285),
                       ),
                     ),
                   ),
@@ -196,7 +196,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFDCEBE5)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -213,7 +213,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF203C35),
+                            color: Color(0xFF1F3A5F),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -221,13 +221,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                           'Use at least 8 characters and avoid reusing your previous password.',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF60756D),
+                            color: Color(0xFF5F7285),
                           ),
                         ),
                         const SizedBox(height: 18),
                         TextField(
                           controller: _newPasswordController,
-                          cursorColor: const Color(0xFF4FA38A),
+                          cursorColor: const Color(0xFF4A90C2),
                           obscureText: _obscureNewPassword,
                           decoration: _inputDecoration(
                             label: 'New password',
@@ -243,7 +243,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                         const SizedBox(height: 16),
                         TextField(
                           controller: _confirmPasswordController,
-                          cursorColor: const Color(0xFF4FA38A),
+                          cursorColor: const Color(0xFF4A90C2),
                           obscureText: _obscureConfirmPassword,
                           decoration: _inputDecoration(
                             label: 'Confirm password',
@@ -282,7 +282,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                           child: ElevatedButton(
                             onPressed: _isSubmitting ? null : _onConfirm,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4FA38A),
+                              backgroundColor: const Color(0xFF4A90C2),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
@@ -314,14 +314,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0xFFDCEBE5)),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
                   ),
                   child: const Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.check_circle_rounded,
-                        color: Color(0xFF4FA38A),
+                        color: Color(0xFF4A90C2),
                         size: 84,
                       ),
                       SizedBox(height: 18),
@@ -329,7 +329,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                         'Password Changed Successfully',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF203C35),
+                          color: Color(0xFF1F3A5F),
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -339,7 +339,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                         'You can now sign in with your updated password.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF60756D),
+                          color: Color(0xFF5F7285),
                           fontSize: 15,
                           height: 1.5,
                         ),

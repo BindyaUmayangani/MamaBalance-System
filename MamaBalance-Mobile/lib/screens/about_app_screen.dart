@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 class AboutAppScreen extends StatelessWidget {
   const AboutAppScreen({super.key});
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _deepMint = Color(0xFF2F7D68);
-  static const Color _bg = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _deepMint = Color(0xFF1F6F99);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   Widget _buildSection({
     required String title,
@@ -21,7 +21,7 @@ class AboutAppScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
         boxShadow: [
           BoxShadow(
             color: _mint.withOpacity(0.08),
@@ -63,11 +63,7 @@ class AboutAppScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             content,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: _muted,
-            ),
+            style: const TextStyle(fontSize: 14, height: 1.6, color: _muted),
           ),
         ],
       ),
@@ -89,10 +85,16 @@ class AboutAppScreen extends StatelessWidget {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: _text,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -127,7 +129,7 @@ class AboutAppScreen extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF67BBA1), Color(0xFF4FA38A)],
+                        colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
@@ -191,17 +193,25 @@ class AboutAppScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFD7EAE3)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
                     child: const Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.favorite_outline_rounded, color: _deepMint, size: 22),
+                        Icon(
+                          Icons.favorite_outline_rounded,
+                          color: _deepMint,
+                          size: 22,
+                        ),
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'We focus on helping mothers feel seen, supported, and connected through regular check-ins and easier access to care guidance.',
-                            style: TextStyle(fontSize: 13.5, color: _muted, height: 1.45),
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: _muted,
+                              height: 1.45,
+                            ),
                           ),
                         ),
                       ],
@@ -229,10 +239,10 @@ class AboutAppScreen extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFFF7FCFA), Color(0xFFE8F6F1)],
+                        colors: [Color(0xFFF7FCFE), Color(0xFFEAF6FC)],
                       ),
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFFDCEDE6)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
                     child: const Text.rich(
                       TextSpan(
@@ -271,7 +281,7 @@ class AboutAppScreen extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
-                    color: Color(0xFF7A8D85),
+                    color: Color(0xFF5F7285),
                   ),
                 ),
               ),

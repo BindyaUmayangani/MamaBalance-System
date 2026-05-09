@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/notification_service.dart';
+import '../widgets/app_loading_state.dart';
 
 enum NotificationAudience { mother, guardian }
 
@@ -19,11 +20,11 @@ class NotificationTab extends StatefulWidget {
 }
 
 class _NotificationTabState extends State<NotificationTab> {
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   late Future<MotherNotificationSummary> _summaryFuture;
   String? _selectedFilter;
@@ -48,7 +49,11 @@ class _NotificationTabState extends State<NotificationTab> {
   }
 
   Future<void> _markAllRead(MotherNotificationSummary summary) async {
-    final ids = summary.items.where((item) => !item.read).map((item) => item.id).toList();
+    final ids =
+        summary.items
+            .where((item) => !item.read)
+            .map((item) => item.id)
+            .toList();
     if (widget.audience == NotificationAudience.guardian) {
       await NotificationService.instance.markAllGuardianRead(ids);
     } else {
@@ -133,7 +138,9 @@ class _NotificationTabState extends State<NotificationTab> {
     });
   }
 
-  List<MotherNotificationItem> _filterItems(List<MotherNotificationItem> items) {
+  List<MotherNotificationItem> _filterItems(
+    List<MotherNotificationItem> items,
+  ) {
     if (_selectedFilter == null) return items;
 
     switch (_selectedFilter) {
@@ -148,7 +155,9 @@ class _NotificationTabState extends State<NotificationTab> {
         return items
             .where(
               (item) =>
-                  item.createdAt.isAfter(start.subtract(const Duration(milliseconds: 1))) &&
+                  item.createdAt.isAfter(
+                    start.subtract(const Duration(milliseconds: 1)),
+                  ) &&
                   item.createdAt.isBefore(end),
             )
             .toList();
@@ -193,7 +202,9 @@ class _NotificationTabState extends State<NotificationTab> {
                       ],
                       Expanded(
                         child: Text(
-                          isGuardian ? 'Guardian Notifications' : 'Notifications',
+                          isGuardian
+                              ? 'Guardian Notifications'
+                              : 'Notifications',
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -205,12 +216,18 @@ class _NotificationTabState extends State<NotificationTab> {
                   ),
                   const SizedBox(height: 6),
                   Padding(
-                    padding: EdgeInsets.only(left: widget.showBackButton ? 48 : 0),
+                    padding: EdgeInsets.only(
+                      left: widget.showBackButton ? 48 : 0,
+                    ),
                     child: Text(
                       isGuardian
                           ? 'Stay updated with upcoming visits, overdue visits, EPDS reminders, and newly added guardian resources.'
                           : 'Stay updated with check-in reminders, care team messages, visits, resources, and schedule changes.',
-                      style: const TextStyle(fontSize: 14, color: _muted, height: 1.4),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: _muted,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -220,7 +237,7 @@ class _NotificationTabState extends State<NotificationTab> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(26),
-                      border: Border.all(color: const Color(0xFFD6ECE6)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
                     child: Row(
                       children: [
@@ -261,15 +278,17 @@ class _NotificationTabState extends State<NotificationTab> {
                         onPressed: () => _markAllRead(summary),
                         child: const Text(
                           'Mark all as read',
-                          style: TextStyle(color: _accent, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: _accent,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
                   if (snapshot.connectionState == ConnectionState.waiting)
-                    const _NotificationMessageState(
-                      icon: Icons.notifications_active_outlined,
-                      title: 'Loading notifications...',
-                      message: 'Please wait a moment while we check your latest care updates.',
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: AppLoadingState(compact: true),
                     )
                   else if (snapshot.hasError)
                     _NotificationMessageState(
@@ -281,15 +300,18 @@ class _NotificationTabState extends State<NotificationTab> {
                     _NotificationMessageState(
                       icon: Icons.notifications_none_rounded,
                       title: 'No notifications yet',
-                      message: isGuardian
-                          ? 'Upcoming visits, overdue reminders, EPDS alerts, and new resources will appear here for guardians.'
-                          : 'When there are new reminders, care updates, messages, or resources, they will appear here.',
+                      message:
+                          isGuardian
+                              ? 'Upcoming visits, overdue reminders, EPDS alerts, and new resources will appear here for guardians.'
+                              : 'When there are new reminders, care updates, messages, or resources, they will appear here.',
                     )
                   else if (_filterItems(summary.items).isEmpty)
                     _NotificationMessageState(
                       icon: Icons.filter_list_off_rounded,
-                      title: 'No ${_selectedFilter?.toLowerCase() ?? ""} notifications',
-                      message: 'You don\'t have any notifications that match this filter.',
+                      title:
+                          'No ${_selectedFilter?.toLowerCase() ?? ""} notifications',
+                      message:
+                          'You don\'t have any notifications that match this filter.',
                     )
                   else
                     ..._filterItems(summary.items).map(
@@ -310,7 +332,12 @@ class _NotificationTabState extends State<NotificationTab> {
     );
   }
 
-  Widget _summaryChip(String label, String value, {required bool isSelected, required VoidCallback onTap}) {
+  Widget _summaryChip(
+    String label,
+    String value, {
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -322,7 +349,9 @@ class _NotificationTabState extends State<NotificationTab> {
           decoration: BoxDecoration(
             color: isSelected ? _accent : _surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: isSelected ? _accent : Colors.transparent),
+            border: Border.all(
+              color: isSelected ? _accent : Colors.transparent,
+            ),
           ),
           child: Column(
             children: [
@@ -366,10 +395,10 @@ class _NotificationCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
@@ -380,8 +409,17 @@ class _NotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: item.read ? const Color(0xFFD6ECE6) : const Color(0xFFB8DED2)),
-        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 6))],
+        border: Border.all(
+          color: item.read ? const Color(0xFFD6EAF5) : const Color(0xFFB7DDF0),
+          width: item.read ? 1 : 1.3,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -396,7 +434,11 @@ class _NotificationCard extends StatelessWidget {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
+                  ),
                   child: Icon(icon, color: _accent),
                 ),
                 const SizedBox(width: 14),
@@ -410,40 +452,72 @@ class _NotificationCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               item.title,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: _text,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             timeLabel,
-                            style: const TextStyle(fontSize: 12, color: _muted, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: _muted,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
                         item.description,
-                        style: const TextStyle(fontSize: 13, color: _muted, height: 1.45),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: _muted,
+                          height: 1.45,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(999)),
-                            child: Text(item.type, style: const TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.w700)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _surface,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              item.type,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           if (isHighPriority)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFCEDEC),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: const Text(
                                 'Important',
-                                style: TextStyle(fontSize: 12, color: Color(0xFFB6403D), fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFB6403D),
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           const Spacer(),
@@ -458,9 +532,16 @@ class _NotificationCard extends StatelessWidget {
                             ),
                           IconButton(
                             onPressed: onDismiss,
-                            icon: const Icon(Icons.close_rounded, size: 18, color: _muted),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: _muted,
+                            ),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
                           ),
                         ],
                       ),
@@ -487,9 +568,9 @@ class _NotificationMessageState extends StatelessWidget {
   final String title;
   final String message;
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {

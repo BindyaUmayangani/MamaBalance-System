@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 
 class FAQPage extends StatelessWidget {
-  const FAQPage({
-    super.key,
-    this.audience = 'mother',
-  });
+  const FAQPage({super.key, this.audience = 'mother'});
 
   final String audience;
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _bg = Color(0xFFEFF8F4);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF203C35);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   static const List<Map<String, String>> _motherFaqs = [
     {
       'question': 'How do I complete my weekly check-in?',
       'answer':
-          'Open the Weekly Check-In page, choose your preferred language, and answer each EPDS question based on how you felt during the past 7 days.',
+          'Open the Weekly Wellbeing Check-In page, choose your preferred language, and answer each question based on how you felt during the past 7 days.',
     },
     {
       'question': 'What should I do if I forget my password?',
@@ -88,10 +85,16 @@ class FAQPage extends StatelessWidget {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _text),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: _text,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -113,7 +116,11 @@ class FAQPage extends StatelessWidget {
                   _isGuardian
                       ? 'Quick answers to the questions guardians ask most often.'
                       : 'Quick answers to the questions mothers ask most often.',
-                  style: const TextStyle(fontSize: 14, color: _muted, height: 1.45),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _muted,
+                    height: 1.45,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -123,7 +130,7 @@ class FAQPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: const Color(0xFFD7EAE3)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                 ),
                 child: Row(
                   children: [
@@ -161,7 +168,7 @@ class FAQPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFD7EAE3)),
+                    border: Border.all(color: const Color(0xFFD6EAF5)),
                   ),
                   child: ExpansionTile(
                     tilePadding: const EdgeInsets.symmetric(

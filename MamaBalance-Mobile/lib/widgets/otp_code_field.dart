@@ -92,11 +92,11 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               maxLength: 1,
-              cursorColor: const Color(0xFF4FA38A),
+              cursorColor: const Color(0xFF4A90C2),
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF203C35),
+                color: Color(0xFF1F3A5F),
               ),
               decoration: InputDecoration(
                 counterText: "",
@@ -112,7 +112,7 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: Color(0xFF4FA38A), width: 1.5),
+                  borderSide: BorderSide(color: Color(0xFF4A90C2), width: 1.5),
                 ),
               ),
               onChanged: (value) => _handleChanged(index, value),

@@ -8,12 +8,12 @@ class PrivacyPolicyPage extends StatelessWidget {
 
   final String audience;
 
-  static const Color _mint = Color(0xFF4FA38A);
-  static const Color _deepMint = Color(0xFF2F7D68);
-  static const Color _bg = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF60756D);
+  static const Color _mint = Color(0xFF4A90C2);
+  static const Color _deepMint = Color(0xFF1F6F99);
+  static const Color _bg = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   bool get _isGuardian => audience.trim().toLowerCase() == 'guardian';
 
@@ -28,7 +28,7 @@ class PrivacyPolicyPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD7EAE3)),
+        border: Border.all(color: const Color(0xFFD6EAF5)),
         boxShadow: [
           BoxShadow(
             color: _mint.withOpacity(0.08),
@@ -134,7 +134,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF67BBA1), Color(0xFF4FA38A)],
+                    colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
                   ),
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
@@ -180,7 +180,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFD7EAE3)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

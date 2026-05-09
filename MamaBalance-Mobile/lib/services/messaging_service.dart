@@ -34,6 +34,8 @@ class SecureConversation {
   final String careTeamUid;
   final String careTeamRole;
   final String careTeamName;
+  final bool careTeamIsOnline;
+  final DateTime? careTeamLastActiveAt;
 
   const SecureConversation({
     required this.id,
@@ -43,6 +45,8 @@ class SecureConversation {
     required this.careTeamUid,
     required this.careTeamRole,
     required this.careTeamName,
+    required this.careTeamIsOnline,
+    required this.careTeamLastActiveAt,
   });
 }
 
@@ -50,10 +54,7 @@ class CareChatOptions {
   final SecureConversation? doctor;
   final SecureConversation midwife;
 
-  const CareChatOptions({
-    required this.doctor,
-    required this.midwife,
-  });
+  const CareChatOptions({required this.doctor, required this.midwife});
 }
 
 class MessagingService {
@@ -118,19 +119,14 @@ class MessagingService {
 
     await _sendMessagingRequest(
       method: 'POST',
-      body: {
-        'conversationId': conversation.id,
-        'text': trimmed,
-      },
+      body: {'conversationId': conversation.id, 'text': trimmed},
     );
   }
 
   Future<void> markConversationRead(SecureConversation conversation) async {
     await _sendMessagingRequest(
       method: 'PATCH',
-      body: {
-        'conversationId': conversation.id,
-      },
+      body: {'conversationId': conversation.id},
     );
   }
 
@@ -195,7 +191,9 @@ class MessagingService {
   Uri _messagingEndpoint(Map<String, String>? queryParameters) {
     final baseUrl = AppConfig.backendBaseUrl.trim();
     if (baseUrl.isEmpty) {
-      throw const AppAuthException('The mobile backend URL has not been configured.');
+      throw const AppAuthException(
+        'The mobile backend URL has not been configured.',
+      );
     }
 
     final uri = Uri.parse(
@@ -210,9 +208,8 @@ class MessagingService {
   }
 
   CareChatOptions _optionsFromJson(dynamic rawOptions) {
-    final options = rawOptions is Map<String, dynamic>
-        ? rawOptions
-        : <String, dynamic>{};
+    final options =
+        rawOptions is Map<String, dynamic> ? rawOptions : <String, dynamic>{};
     final midwife = _conversationFromJson(options['midwife']);
     if (midwife == null) {
       throw const AppAuthException('No midwife has been assigned yet.');
@@ -240,6 +237,11 @@ class MessagingService {
         _readString(rawConversation['careTeamName']),
         _readString(rawConversation['careTeamRole']),
       ),
+      careTeamIsOnline: _readBool(rawConversation['careTeamIsOnline']),
+      careTeamLastActiveAt:
+          DateTime.tryParse(
+            _readString(rawConversation['careTeamLastActiveAt']),
+          )?.toLocal(),
     );
   }
 
@@ -266,6 +268,11 @@ class MessagingService {
   String _readString(dynamic value) {
     if (value == null) return '';
     return '$value'.trim();
+  }
+
+  bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    return '$value'.trim().toLowerCase() == 'true';
   }
 
   String _staffName(String value, String role) {

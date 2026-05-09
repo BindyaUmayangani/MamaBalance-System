@@ -63,11 +63,11 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
     },
   ];
 
-  static const Color _accent = Color(0xFF4FA58D);
-  static const Color _background = Color(0xFFF3FBF8);
-  static const Color _surface = Color(0xFFECF8F4);
-  static const Color _text = Color(0xFF173C3A);
-  static const Color _muted = Color(0xFF6A7B79);
+  static const Color _accent = Color(0xFF4A90C2);
+  static const Color _background = Color(0xFFF3FAFD);
+  static const Color _surface = Color(0xFFEAF6FC);
+  static const Color _text = Color(0xFF1F3A5F);
+  static const Color _muted = Color(0xFF5F7285);
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +124,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF67BBA1), Color(0xFF4FA58D)],
+                        colors: [Color(0xFF7EC8E3), Color(0xFF4A90C2)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [BoxShadow(color: _accent.withOpacity(0.18), blurRadius: 20, offset: const Offset(0, 10))],
@@ -163,7 +163,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFD6ECE6)),
+                        border: Border.all(color: const Color(0xFFD6EAF5)),
                         boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 12, offset: Offset(0, 5))],
                       ),
                       child: Column(
@@ -215,7 +215,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFD6ECE6)),
+                      border: Border.all(color: const Color(0xFFD6EAF5)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +256,7 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
                           decoration: BoxDecoration(
                             color: isSelected ? _accent : Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFD6ECE6)),
+                            border: Border.all(color: const Color(0xFFD6EAF5)),
                           ),
                           alignment: Alignment.center,
                           child: Text('${index + 1}', style: TextStyle(color: isSelected ? Colors.white : _text, fontWeight: FontWeight.w700)),
@@ -301,8 +301,8 @@ class _PrescriptionPageState extends State<PrescriptionPage> {
       child: ElevatedButton(
         onPressed: enabled ? onTap : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? _accent : const Color(0xFFE6EFEC),
-          foregroundColor: enabled ? Colors.white : const Color(0xFF86A09A),
+          backgroundColor: enabled ? _accent : const Color(0xFFEAF6FC),
+          foregroundColor: enabled ? Colors.white : const Color(0xFF5F7285),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 0,
         ),

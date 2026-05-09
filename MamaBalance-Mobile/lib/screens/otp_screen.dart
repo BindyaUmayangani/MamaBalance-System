@@ -112,7 +112,7 @@ class _OtpScreenState extends State<OtpScreen> {
         ModalRoute.of(context)?.settings.arguments as OtpSession?;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF8F4),
+      backgroundColor: const Color(0xFFF3FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -122,7 +122,7 @@ class _OtpScreenState extends State<OtpScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF203C35)),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1F3A5F)),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -134,7 +134,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF203C35),
+                        color: Color(0xFF1F3A5F),
                       ),
                     ),
                   ),
@@ -166,7 +166,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFDCEBE5)),
+                  border: Border.all(color: const Color(0xFFD6EAF5)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -203,7 +203,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                 ? null
                                 : () => _verifyOtp(otpSession.verificationId),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4FA38A),
+                          backgroundColor: const Color(0xFF4A90C2),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -228,7 +228,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                 ? 'Resend code in ${_secondsRemaining}s' 
                                 : 'Resend OTP',
                         style: TextStyle(
-                          color: _secondsRemaining > 0 ? Color(0xFF6A7B79) : const Color(0xFF4FA38A),
+                          color: _secondsRemaining > 0 ? Color(0xFF5F7285) : const Color(0xFF4A90C2),
                           fontWeight: FontWeight.w700,
                         ),
                       ),

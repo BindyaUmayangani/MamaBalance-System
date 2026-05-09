@@ -11,6 +11,8 @@ type ChatPreview = {
   motherName: string;
   lastMessageText: string;
   role: string;
+  isOnline: boolean;
+  lastActiveAt: string | null;
   lastMessageAt: string | null;
   lastMessageSenderUid: string;
   unread: boolean;
@@ -202,6 +204,10 @@ export default function MessagingPage() {
               >
                 <div className="chat-avatar-wrap">
                   <div className="chat-avatar">{initial(conversation.motherName)}</div>
+                  <span
+                    className={conversation.isOnline ? "chat-online-dot" : "chat-online-dot offline"}
+                    aria-label={conversation.isOnline ? "Online" : "Offline"}
+                  />
                 </div>
 
                 <div className="chat-preview-copy">
@@ -228,10 +234,20 @@ export default function MessagingPage() {
         <section className="chat-panel">
           <div className="chat-panel-header">
             <div className="chat-user-meta">
-              <div className="chat-avatar large">{initial(activeConversation?.motherName || "")}</div>
+              <div className="chat-avatar-wrap">
+                <div className="chat-avatar large">{initial(activeConversation?.motherName || "")}</div>
+                {activeConversation && (
+                  <span
+                    className={activeConversation.isOnline ? "chat-online-dot large" : "chat-online-dot large offline"}
+                    aria-label={activeConversation.isOnline ? "Online" : "Offline"}
+                  />
+                )}
+              </div>
               <div>
                 <h2>{activeConversation?.motherName || "Secure messaging"}</h2>
-                <span className="chat-status">{activeConversation?.role || "Select a mother"}</span>
+                <span className={activeConversation?.isOnline ? "chat-status online" : "chat-status offline"}>
+                  {activeConversation ? `${activeConversation.role} | ${activeConversation.isOnline ? "Online" : "Offline"}` : "Select a mother"}
+                </span>
               </div>
             </div>
 
