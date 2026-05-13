@@ -57,6 +57,14 @@ type AnalyticsData = {
   careTeamBreakdown: CareTeamRow[];
 };
 
+function niceYAxisMax(dataMax: number) {
+  if (!Number.isFinite(dataMax) || dataMax <= 0) return 5;
+  const padded = Math.ceil(dataMax * 1.2);
+  if (padded <= 5) return 5;
+  if (padded <= 10) return 10;
+  return Math.ceil(padded / 5) * 5;
+}
+
 export default function RegionalAnalyticsPage() {
   const [timeFilter, setTimeFilter] = useState("Month");
   const [isExporting, setIsExporting] = useState(false);
@@ -540,8 +548,8 @@ export default function RegionalAnalyticsPage() {
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} allowDecimals={false} />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tickMargin={10} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <YAxis axisLine={false} tickLine={false} domain={[0, niceYAxisMax]} tickCount={6} tick={{ fill: "#6b7280", fontSize: 13 }} allowDecimals={false} />
                   <Tooltip cursor={{ fill: "#f3f4f6" }} contentStyle={{ borderRadius: "12px", border: "none" }} />
                   <Bar
                     dataKey="value"

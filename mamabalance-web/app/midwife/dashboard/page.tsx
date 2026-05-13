@@ -38,7 +38,7 @@ type QueueVisit = {
 
 type MidwifeNotificationItem = {
   id: string;
-  type: "assignment" | "high_risk" | "overdue_visit" | "doctor_observation";
+  type: "assignment" | "high_risk" | "overdue_epds" | "overdue_visit" | "doctor_observation";
   title: string;
   message: string;
   motherUid: string | null;
@@ -301,7 +301,7 @@ export default function MidwifeDashboard() {
     const seenMothers = new Set<string>();
 
     return notifications
-      .filter((item) => item.type === "high_risk")
+      .filter((item) => item.type === "high_risk" || item.type === "overdue_epds")
       .filter((item) => {
         const dedupeKey = item.motherUid || item.motherName || item.id;
 
@@ -533,7 +533,7 @@ export default function MidwifeDashboard() {
             <div className="table-header recent-mothers-header">
               <div>
                 <p className="section-eyebrow">Urgent Alerts</p>
-                <h3>High-Risk Notifications</h3>
+                <h3>High-Risk and EPDS Follow-Ups</h3>
               </div>
             </div>
 
@@ -575,7 +575,9 @@ export default function MidwifeDashboard() {
                         className="ghost-action-btn"
                         onClick={() =>
                           router.push(
-                            `/midwife/high-risk-mothers${item.motherUid ? `?highlight=${encodeURIComponent(item.motherUid)}` : ""}`,
+                            item.type === "overdue_epds"
+                              ? `/midwife/assigned-mothers${item.motherUid ? `?highlight=${encodeURIComponent(item.motherUid)}` : ""}`
+                              : `/midwife/high-risk-mothers${item.motherUid ? `?highlight=${encodeURIComponent(item.motherUid)}` : ""}`,
                           )
                         }
                       >

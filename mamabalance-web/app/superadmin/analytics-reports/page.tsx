@@ -51,6 +51,14 @@ type AnalyticsData = {
   regionalBreakdown: RegionalData[];
 };
 
+function niceYAxisMax(dataMax: number) {
+  if (!Number.isFinite(dataMax) || dataMax <= 0) return 5;
+  const padded = Math.ceil(dataMax * 1.2);
+  if (padded <= 5) return 5;
+  if (padded <= 10) return 10;
+  return Math.ceil(padded / 5) * 5;
+}
+
 export default function AnalyticsReportsPage() {
   const [timeFilter, setTimeFilter] = useState("Month");
   const [isExporting, setIsExporting] = useState(false);
@@ -424,7 +432,7 @@ export default function AnalyticsReportsPage() {
           <div className="analytics-grid top-charts">
             {/* RISK DISTRIBUTION */}
             <div className="chart-card">
-              <h3>EPDS Risk Distribution</h3>
+              <h3>System EPDS Risk Distribution</h3>
               <p className="chart-subtitle">Aggregate breakdown of maternal mental health across all regions</p>
               <div className="risk-chart-wrap">
                 <ResponsiveContainer width={220} height={220}>
@@ -494,8 +502,8 @@ export default function AnalyticsReportsPage() {
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tickMargin={10} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <YAxis allowDecimals={false} domain={[0, niceYAxisMax]} tickCount={6} axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} />
                   <Tooltip cursor={{ fill: "#f3f4f6" }} contentStyle={{ borderRadius: "12px", border: "none" }} />
                   <Bar
                     dataKey="value"

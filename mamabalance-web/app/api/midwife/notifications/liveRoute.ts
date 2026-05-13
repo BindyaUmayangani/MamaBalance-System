@@ -8,6 +8,7 @@ import { resolveLinkedMidwifeUids } from "@/lib/midwife/identity";
 type MidwifeNotificationType =
   | "assignment"
   | "high_risk"
+  | "overdue_epds"
   | "overdue_visit"
   | "doctor_observation";
 
@@ -93,6 +94,32 @@ function resolveVisitStatus(rawStatus: unknown, scheduledAt: unknown) {
   return parsed.getTime() < Date.now() ? "Overdue" : "Upcoming";
 }
 
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function dateKey(value: Date) {
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function nextEpdsAvailableAt(value: unknown) {
+  const latestIso = toIsoString(value);
+  if (!latestIso) return null;
+  return addDays(new Date(latestIso), 7);
+}
+
 function resolveDoctorName(user: DocumentData | undefined, fallback: unknown) {
   const name = String(user?.displayName || user?.username || fallback || "Doctor");
   return name.startsWith("Dr. ") ? name : `Dr. ${name}`;
@@ -106,6 +133,8 @@ async function loadMotherUsers(motherUids: string[]) {
 }
 
 async function buildNotifications(actorUid: string, linkedMidwifeUids: string[]) {
+  const now = new Date();
+  const epdsEscalationReminderDate = startOfDay(now);
   const [motherSnapshots, storedSnapshots, stateSnapshot] = await Promise.all([
     Promise.all(
       chunk(linkedMidwifeUids, 10).map((uids) =>
@@ -228,6 +257,29 @@ async function buildNotifications(actorUid: string, linkedMidwifeUids: string[])
         createdAt: riskCreatedAt,
       });
     }
+
+    const nextEpdsDueAt = nextEpdsAvailableAt(mother.latestEpdsSubmittedAt);
+    if (nextEpdsDueAt && nextEpdsDueAt < now) {
+      const overdueDays = Math.max(0, Math.floor((now.getTime() - nextEpdsDueAt.getTime()) / 86400000));
+
+      if (overdueDays > 7) {
+        const epdsOverdueKey = `overdue_epds:${motherUid}:${dateKey(epdsEscalationReminderDate)}`;
+
+        notifications.push({
+          id: epdsOverdueKey,
+          type: "overdue_epds",
+          title: "EPDS check-in needs extra attention",
+          message: `${motherName}'s weekly EPDS check-in was due on ${toDisplayDateTime(nextEpdsDueAt)} and is now ${overdueDays} days overdue. Please give this mother more attention and arrange follow-up support.`,
+          motherUid,
+          motherName,
+          score: Number.isFinite(latestEpdsScore) && latestEpdsScore > 0 ? latestEpdsScore : null,
+          riskLevel,
+          priority: "high",
+          read: readStateMap.get(epdsOverdueKey) ?? false,
+          createdAt: epdsEscalationReminderDate.toISOString(),
+        });
+      }
+    }
   });
 
   visitSnapshots.forEach((snapshot) => {
@@ -296,7 +348,7 @@ async function buildNotifications(actorUid: string, linkedMidwifeUids: string[])
 
       notifications.push({
         id: `stored:${doc.id}`,
-        type: "high_risk",
+        type: data.type === "overdue_epds" ? "overdue_epds" : "high_risk",
         title: String(data.title || "Notification"),
         message: String(data.message || ""),
         motherUid: (data.motherUid as string | undefined) || null,

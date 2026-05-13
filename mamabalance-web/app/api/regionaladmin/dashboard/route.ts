@@ -32,6 +32,14 @@ function formatDateTime(value: unknown) {
   });
 }
 
+function dateKey(value: Date) {
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function resolveRiskLevel(mother: DocumentData | undefined): RiskLevel {
   const explicit = String(mother?.riskLevel || "").toLowerCase();
 
@@ -60,13 +68,15 @@ function resolveLatestEpdsDate(mother: DocumentData | undefined, user: DocumentD
 function buildWeekBuckets() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay());
 
   return Array.from({ length: 7 }).map((_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (6 - index));
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + index);
 
     return {
-      key: date.toISOString().slice(0, 10),
+      key: dateKey(date),
       day: date.toLocaleDateString("en-US", { weekday: "short" }),
       value: 0,
     };
@@ -219,7 +229,7 @@ export async function GET() {
     const submittedAt = getAssessmentDate(assessment);
     if (!submittedAt) return;
 
-    const bucket = weekBucketMap.get(submittedAt.toISOString().slice(0, 10));
+    const bucket = weekBucketMap.get(dateKey(submittedAt));
     if (!bucket) return;
 
     bucket.value += 1;
@@ -233,7 +243,7 @@ export async function GET() {
       const latestDate = toDate(resolveLatestEpdsDate(mother, user));
 
       if (latestEpdsScore > 0 && latestDate) {
-        const bucket = weekBucketMap.get(latestDate.toISOString().slice(0, 10));
+        const bucket = weekBucketMap.get(dateKey(latestDate));
         if (bucket) bucket.value += 1;
       }
     });

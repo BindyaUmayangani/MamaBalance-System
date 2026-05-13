@@ -33,6 +33,7 @@ const COLORS = {
   high: "#dc2626",
   bar: "#7ccfb2",
 };
+const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function LegacySuperAdminDashboard() {
   /* ===== BAR CHART DATA ===== */
@@ -218,6 +219,22 @@ function formatShare(count: number, total: number) {
   return `${Math.round((count / total) * 100)}% of mothers`;
 }
 
+function normalizeWeeklyEpds(data: Array<{ day: string; value: number }>) {
+  const valuesByDay = new Map(data.map((item) => [item.day.slice(0, 3), item.value]));
+  return WEEK_DAYS.map((day) => ({
+    day,
+    value: valuesByDay.get(day) ?? 0,
+  }));
+}
+
+function niceYAxisMax(dataMax: number) {
+  if (!Number.isFinite(dataMax) || dataMax <= 0) return 5;
+  const padded = Math.ceil(dataMax * 1.2);
+  if (padded <= 5) return 5;
+  if (padded <= 10) return 10;
+  return Math.ceil(padded / 5) * 5;
+}
+
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardPayload>(EMPTY_DASHBOARD);
@@ -282,7 +299,10 @@ export default function SuperAdminDashboard() {
       },
     ] as const;
 
-    return { careSummary };
+    return {
+      careSummary,
+      weeklyEpds: normalizeWeeklyEpds(dashboard.weeklyEpds),
+    };
   }, [dashboard]);
 
   return (
@@ -353,10 +373,10 @@ export default function SuperAdminDashboard() {
 
                   <div style={{ width: "100%", height: 210 }}>
                     <ResponsiveContainer>
-                      <BarChart data={dashboard.weeklyEpds} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+                      <BarChart data={dashboardData.weeklyEpds} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 12 }} />
-                        <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 12 }} />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} interval={0} tickMargin={8} tick={{ fill: "#6b7280", fontSize: 12 }} />
+                        <YAxis allowDecimals={false} domain={[0, niceYAxisMax]} tickCount={6} axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 12 }} />
                         <Tooltip cursor={{ fill: "#eefaf5" }} contentStyle={{ borderRadius: "12px", border: "none" }} />
                         <Bar dataKey="value" fill="#499d85" radius={[8, 8, 0, 0]} maxBarSize={42} />
                       </BarChart>

@@ -11,7 +11,7 @@ import "@/app/regionaladmin/styles/notifications.css";
 
 type NotificationItem = {
   id: string;
-  type: "assignment" | "high_risk" | "overdue_visit" | "doctor_observation";
+  type: "assignment" | "high_risk" | "overdue_epds" | "overdue_visit" | "doctor_observation";
   title: string;
   message: string;
   motherUid: string | null;
@@ -44,6 +44,7 @@ function formatDateTime(value: string | null) {
 }
 
 function openLabel(type: NotificationItem["type"]) {
+  if (type === "overdue_epds") return "Open mother record";
   if (type === "overdue_visit") return "Open in Upcoming Visits";
   if (type === "doctor_observation") return "Open observations";
   if (type === "high_risk") return "Open high-risk record";
@@ -123,6 +124,13 @@ export default function MidwifeNotificationsPage() {
       if (item.type === "high_risk" && item.motherUid) {
         router.push(
           `/midwife/high-risk-mothers?highlight=${encodeURIComponent(item.motherUid)}`,
+        );
+        return;
+      }
+
+      if (item.type === "overdue_epds" && item.motherUid) {
+        router.push(
+          `/midwife/assigned-mothers?highlight=${encodeURIComponent(item.motherUid)}`,
         );
         return;
       }
@@ -223,7 +231,7 @@ export default function MidwifeNotificationsPage() {
       <div className="doctor-page-header">
         <div className="role-header">
           <h1>Notification Inbox</h1>
-          <p>Review assignments, high-risk alerts, overdue visits, and doctor observations for your assigned mothers.</p>
+          <p>Review assignments, high-risk alerts, overdue EPDS check-ins, overdue visits, and doctor observations for your assigned mothers.</p>
         </div>
         <div className="doctor-page-header-actions regional-notifications-actions">
           <div className="regional-notification-summary">
@@ -249,7 +257,7 @@ export default function MidwifeNotificationsPage() {
         <div className="notifications-empty-card">
           <AlertTriangle size={28} />
           <h3>No notifications yet</h3>
-          <p>Assignments, high-risk changes, overdue visits, and doctor observations will appear here.</p>
+          <p>Assignments, high-risk changes, overdue EPDS check-ins, overdue visits, and doctor observations will appear here.</p>
         </div>
       ) : (
         <div className="notifications-list">

@@ -38,6 +38,20 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function dateKey(value: Date) {
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function nextEpdsAvailableAt(value: unknown) {
   const latestIso = toIso(value);
   if (!latestIso) return null;
@@ -353,17 +367,21 @@ async function buildNotifications(context: MobileContext) {
     }));
   } else if (nextDue <= now) {
     const overdueDays = Math.max(0, Math.floor((now.getTime() - nextDue.getTime()) / 86400000));
+    const isOverdue = overdueDays > 0;
+    const reminderDate = isOverdue ? startOfDay(now) : nextDue;
     items.push(notification({
-      id: `${context.role === "guardian" ? "guardian:" : ""}epds:${overdueDays > 0 ? `overdue:${overdueDays}` : "due"}`,
+      id: `${context.role === "guardian" ? "guardian:" : ""}epds:${isOverdue ? `overdue:${dateKey(reminderDate)}` : "due"}`,
       title: context.role === "guardian"
-        ? overdueDays > 0 ? "EPDS assessment is overdue" : "EPDS assessment is due now"
-        : overdueDays > 0 ? "Your weekly EPDS check-in is overdue" : "Time for your weekly EPDS check-in",
-      description: overdueDays > 0
-        ? `The EPDS assessment was due on ${formatDate(nextDue)}.`
+        ? isOverdue ? "EPDS assessment is overdue" : "EPDS assessment is due now"
+        : isOverdue ? "Your weekly EPDS check-in is overdue" : "Time for your weekly EPDS check-in",
+      description: isOverdue
+        ? context.role === "guardian"
+          ? `The linked mother's EPDS assessment was due on ${formatDate(nextDue)}. Please encourage her to complete today's check-in reminder.`
+          : `Your EPDS assessment was due on ${formatDate(nextDue)}. Please complete today's check-in reminder so your care team can keep supporting you.`
         : "A weekly EPDS assessment is now due.",
       type: "Assessment",
-      priority: overdueDays > 0 ? "high" : "medium",
-      createdAt: nextDue,
+      priority: isOverdue ? "high" : "medium",
+      createdAt: reminderDate,
     }));
   }
 

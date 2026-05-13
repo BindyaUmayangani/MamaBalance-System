@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server";
+import type { DocumentData } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import { getCurrentSessionUser } from "@/lib/auth/server";
 import { DEFAULT_REGIONS, normalizeRegionName } from "@/lib/admin/regions";
 
 type RiskLevel = "low" | "moderate" | "high";
+type TimeFilter = "week" | "month" | "year";
 
-function toDate(value: any) {
+function toDate(value: unknown) {
   if (!value) return null;
   if (value instanceof Date) return value;
-  if (typeof value === "object" && value.toDate && typeof value.toDate === "function") return value.toDate();
-  const d = new Date(value);
+  if (typeof (value as { toDate?: () => Date })?.toDate === "function") {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  const d = new Date(String(value));
   return isNaN(d.getTime()) ? null : d;
 }
 
-function resolveRiskLevel(mother: any): RiskLevel {
+function resolveRiskLevel(mother: DocumentData | undefined): RiskLevel {
   const explicit = String(mother?.riskLevel || "").toLowerCase();
   if (explicit === "high" || explicit === "moderate" || explicit === "low") {
     return explicit as RiskLevel;
@@ -24,6 +28,77 @@ function resolveRiskLevel(mother: any): RiskLevel {
   return "low";
 }
 
+function normalizeTimeFilter(value: string | null): TimeFilter {
+  return value === "week" || value === "year" ? value : "month";
+}
+
+function startOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function buildBuckets(timeFilter: TimeFilter) {
+  const now = new Date();
+  const labels =
+    timeFilter === "week"
+      ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      : timeFilter === "year"
+        ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        : ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
+  const buckets = Object.fromEntries(labels.map((label) => [label, 0])) as Record<string, number>;
+
+  if (timeFilter === "week") {
+    const start = startOfDay(now);
+    start.setDate(start.getDate() - start.getDay());
+    const end = endOfDay(start);
+    end.setDate(start.getDate() + 6);
+    return { labels, buckets, start, end };
+  }
+
+  if (timeFilter === "year") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = endOfDay(new Date(now.getFullYear(), 11, 31));
+    return { labels, buckets, start, end };
+  }
+
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  return { labels, buckets, start, end };
+}
+
+function isInRange(date: Date, start: Date, end: Date) {
+  return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
+}
+
+function getBucketKey(date: Date, timeFilter: TimeFilter) {
+  if (timeFilter === "week") return date.toLocaleDateString("en-US", { weekday: "short" });
+  if (timeFilter === "year") return date.toLocaleDateString("en-US", { month: "short" });
+  return `Week ${Math.ceil(date.getDate() / 7)}`;
+}
+
+function getActivityDate(data: DocumentData) {
+  return toDate(
+    data.submittedAt ??
+      data.observedAt ??
+      data.completedAt ??
+      data.scheduledAt ??
+      data.createdAt ??
+      data.updatedAt,
+  );
+}
+
+function getMotherUser(motherDocId: string, mother: DocumentData, usersById: Map<string, DocumentData>) {
+  const userUid = String(mother.userUid || mother.motherUid || mother.uid || "");
+  return usersById.get(motherDocId) || (userUid ? usersById.get(userUid) : undefined);
+}
+
 export async function GET(request: Request) {
   const actor = await getCurrentSessionUser();
   if (!actor || actor.role !== "superadmin") {
@@ -31,12 +106,13 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const timeFilter = searchParams.get("filter") || "month"; // week, month, year
+  const timeFilter = normalizeTimeFilter(searchParams.get("filter"));
 
   try {
-    const [usersSnapshot, mothersSnapshot, regionsSnapshot, careObsSnapshot, midwifeObsSnapshot] = await Promise.all([
+    const [usersSnapshot, mothersSnapshot, epdsSnapshot, regionsSnapshot, careObsSnapshot, midwifeObsSnapshot] = await Promise.all([
       adminDb.collection("users").get(),
       adminDb.collection("mothers").get(),
+      adminDb.collection("epdsAssessments").get(),
       adminDb.collection("regions").get(),
       adminDb.collection("careObservations").get(),
       adminDb.collection("midwifeObservations").get(),
@@ -46,10 +122,19 @@ export async function GET(request: Request) {
       ? DEFAULT_REGIONS
       : regionsSnapshot.docs.map(doc => ({
           id: doc.id,
-          name: String(doc.data().name || doc.id),
+          name: normalizeRegionName(String(doc.data().name || doc.id)),
         }));
 
     const usersById = new Map(usersSnapshot.docs.map(doc => [doc.id, doc.data()]));
+    const mothersById = new Map<string, DocumentData>();
+    mothersSnapshot.docs.forEach((doc) => {
+      const mother = doc.data();
+      mothersById.set(doc.id, mother);
+      [mother.userUid, mother.motherUid, mother.uid].forEach((value) => {
+        const key = String(value || "");
+        if (key) mothersById.set(key, mother);
+      });
+    });
 
     const stats = {
       totalMothers: 0,
@@ -79,7 +164,7 @@ export async function GET(request: Request) {
       };
     });
 
-    // Populate stats and breakdown (Submissions now includes both EPDS and Observations)
+    // Populate stats and breakdown.
     usersSnapshot.docs.forEach(doc => {
       const user = doc.data();
       if (user.role === "doctor") stats.totalDoctors++;
@@ -88,7 +173,7 @@ export async function GET(request: Request) {
 
     mothersSnapshot.docs.forEach(doc => {
       const mother = doc.data();
-      const user = usersById.get(doc.id);
+      const user = getMotherUser(doc.id, mother, usersById);
       const risk = resolveRiskLevel(mother);
       const regionId = user?.regionId || mother.regionId || "unknown";
 
@@ -99,82 +184,59 @@ export async function GET(request: Request) {
       if (regionalBreakdown[regionId]) {
         regionalBreakdown[regionId].totalMothers++;
         regionalBreakdown[regionId][risk]++;
-        if (Number(mother.latestEpdsScore || 0) > 0) {
-          regionalBreakdown[regionId].submissions++;
-        }
-      }
-    });
-
-    // Count observations in regional breakdown
-    [...careObsSnapshot.docs, ...midwifeObsSnapshot.docs].forEach(doc => {
-      const obs = doc.data();
-      const regionId = obs.regionId || (usersById.get(obs.motherUid)?.regionId) || "unknown";
-      if (regionalBreakdown[regionId]) {
-        regionalBreakdown[regionId].submissions++;
       }
     });
 
     // Generate trend data based on time filter
-    const now = new Date();
-    
-    const getBucketKey = (date: Date) => {
-      if (timeFilter === "week") return date.toLocaleDateString("en-US", { weekday: "short" });
-      if (timeFilter === "month") return `Week ${Math.ceil(date.getDate() / 7)}`;
-      return date.toLocaleDateString("en-US", { month: "short" });
-    };
-
-    const epdsBuckets: Record<string, number> = {};
-    const obsBuckets: Record<string, number> = {};
-    const labelOrder: string[] = [];
-
-    if (timeFilter === "week") {
-      ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => {
-        epdsBuckets[d] = 0;
-        obsBuckets[d] = 0;
-        labelOrder.push(d);
-      });
-    } else if (timeFilter === "month") {
-      ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"].forEach(w => {
-        epdsBuckets[w] = 0;
-        obsBuckets[w] = 0;
-        labelOrder.push(w);
-      });
-    } else {
-      ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].forEach(m => {
-        epdsBuckets[m] = 0;
-        obsBuckets[m] = 0;
-        labelOrder.push(m);
-      });
-    }
-
-    const isInRange = (date: Date) => {
-      const diffMs = now.getTime() - date.getTime();
-      const diffDays = diffMs / (1000 * 60 * 60 * 24);
-      if (timeFilter === "week" && diffDays <= 7) return true;
-      if (timeFilter === "month" && diffDays <= 30) return true;
-      if (timeFilter === "year" && diffDays <= 365) return true;
-      return false;
-    };
+    const { labels: labelOrder, buckets: epdsBuckets, start, end } = buildBuckets(timeFilter);
+    const { buckets: obsBuckets } = buildBuckets(timeFilter);
+    let hasAssessmentDocs = false;
 
     // EPDS Activity
-    mothersSnapshot.docs.forEach(doc => {
-      const mother = doc.data();
-      // ONLY count if there is a real submission score > 0
-      if (Number(mother.latestEpdsScore || 0) > 0) {
-        const submittedAt = toDate(mother.latestEpdsSubmittedAt || mother.updatedAt);
-        if (submittedAt && isInRange(submittedAt)) {
-          const key = getBucketKey(submittedAt);
-          if (epdsBuckets[key] !== undefined) epdsBuckets[key]++;
-        }
-      }
+    epdsSnapshot.docs.forEach(doc => {
+      const assessment = doc.data();
+      const submittedAt = getActivityDate(assessment);
+      if (!submittedAt) return;
+
+      hasAssessmentDocs = true;
+
+      const motherId = String(assessment.motherId || "");
+      const motherUid = String(assessment.motherUid || assessment.userUid || "");
+      const mother = mothersById.get(motherId) || mothersById.get(motherUid);
+      const user = mother ? getMotherUser(motherId || motherUid, mother, usersById) : usersById.get(motherUid);
+      const regionId = String(assessment.regionId || user?.regionId || mother?.regionId || "");
+      if (regionalBreakdown[regionId]) regionalBreakdown[regionId].submissions++;
+
+      if (!isInRange(submittedAt, start, end)) return;
+
+      const key = getBucketKey(submittedAt, timeFilter);
+      if (epdsBuckets[key] !== undefined) epdsBuckets[key]++;
     });
+
+    if (!hasAssessmentDocs) {
+      mothersSnapshot.docs.forEach(doc => {
+        const mother = doc.data();
+        // Only count if there is a real submission score.
+        if (Number(mother.latestEpdsScore || 0) > 0) {
+          const submittedAt = toDate(mother.latestEpdsSubmittedAt || mother.updatedAt);
+          const user = getMotherUser(doc.id, mother, usersById);
+          const regionId = String(user?.regionId || mother.regionId || "");
+          if (regionalBreakdown[regionId]) regionalBreakdown[regionId].submissions++;
+
+          if (submittedAt && isInRange(submittedAt, start, end)) {
+            const key = getBucketKey(submittedAt, timeFilter);
+            if (epdsBuckets[key] !== undefined) epdsBuckets[key]++;
+          }
+        }
+      });
+    }
 
     // Observation Activity
     [...careObsSnapshot.docs, ...midwifeObsSnapshot.docs].forEach(doc => {
       const obs = doc.data();
       const observedAt = toDate(obs.observedAt || obs.createdAt);
-      if (observedAt && isInRange(observedAt)) {
-        const key = getBucketKey(observedAt);
+      if (observedAt && isInRange(observedAt, start, end)) {
+        const key = getBucketKey(observedAt, timeFilter);
         if (obsBuckets[key] !== undefined) obsBuckets[key]++;
       }
     });

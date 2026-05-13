@@ -6,6 +6,7 @@ import { getCurrentSessionUser } from "@/lib/auth/server";
 import { adminDb } from "@/lib/firebase/admin";
 
 type RiskLevel = "low" | "moderate" | "high";
+type TimeFilter = "week" | "month" | "year";
 
 function toDate(value: unknown) {
   if (!value) return null;
@@ -33,6 +34,22 @@ function resolveRiskLevel(mother: DocumentData | undefined): RiskLevel {
   return "low";
 }
 
+function normalizeTimeFilter(value: string | null): TimeFilter {
+  return value === "week" || value === "year" ? value : "month";
+}
+
+function startOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfDay(value: Date) {
+  const date = new Date(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
 function getMotherUser(motherDocId: string, mother: DocumentData, usersById: Map<string, DocumentData>) {
   const userUid = String(mother.userUid || mother.motherUid || mother.uid || "");
   return usersById.get(motherDocId) || (userUid ? usersById.get(userUid) : undefined);
@@ -54,7 +71,8 @@ function getActivityDate(data: DocumentData) {
   );
 }
 
-function buildBuckets(timeFilter: string) {
+function buildBuckets(timeFilter: TimeFilter) {
+  const now = new Date();
   const labels =
     timeFilter === "week"
       ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -62,13 +80,28 @@ function buildBuckets(timeFilter: string) {
         ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         : ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
 
-  return {
-    labels,
-    buckets: Object.fromEntries(labels.map((label) => [label, 0])) as Record<string, number>,
-  };
+  const buckets = Object.fromEntries(labels.map((label) => [label, 0])) as Record<string, number>;
+
+  if (timeFilter === "week") {
+    const start = startOfDay(now);
+    start.setDate(start.getDate() - start.getDay());
+    const end = endOfDay(start);
+    end.setDate(start.getDate() + 6);
+    return { labels, buckets, start, end };
+  }
+
+  if (timeFilter === "year") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = endOfDay(new Date(now.getFullYear(), 11, 31));
+    return { labels, buckets, start, end };
+  }
+
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  return { labels, buckets, start, end };
 }
 
-function getBucketKey(date: Date, timeFilter: string) {
+function getBucketKey(date: Date, timeFilter: TimeFilter) {
   if (timeFilter === "week") {
     return date.toLocaleDateString("en-US", { weekday: "short" });
   }
@@ -80,13 +113,8 @@ function getBucketKey(date: Date, timeFilter: string) {
   return `Week ${Math.ceil(date.getDate() / 7)}`;
 }
 
-function isInRange(date: Date, timeFilter: string) {
-  const now = new Date();
-  const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
-
-  if (timeFilter === "week") return diffDays >= 0 && diffDays <= 7;
-  if (timeFilter === "year") return diffDays >= 0 && diffDays <= 365;
-  return diffDays >= 0 && diffDays <= 31;
+function isInRange(date: Date, start: Date, end: Date) {
+  return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
 }
 
 export async function GET(request: Request) {
@@ -97,7 +125,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const timeFilter = searchParams.get("filter") || "month";
+  const timeFilter = normalizeTimeFilter(searchParams.get("filter"));
 
   const [
     usersSnapshot,
@@ -146,15 +174,20 @@ export async function GET(request: Request) {
       regionalMotherIds.add(doc.id);
       regionalMotherById.set(doc.id, mother);
       if (user?.uid) regionalMotherUserIds.add(String(user.uid));
-      if (mother.userUid) regionalMotherUserIds.add(String(mother.userUid));
-      if (mother.motherUid) regionalMotherUserIds.add(String(mother.motherUid));
+      [mother.userUid, mother.motherUid, mother.uid].forEach((value) => {
+        const key = String(value || "");
+        if (key) {
+          regionalMotherUserIds.add(key);
+          regionalMotherById.set(key, mother);
+        }
+      });
       riskCounts[resolveRiskLevel(mother)] += 1;
     }
 
     return isRegionalMother;
   });
 
-  const { labels: epdsLabels, buckets: epdsBuckets } = buildBuckets(timeFilter);
+  const { labels: epdsLabels, buckets: epdsBuckets, start, end } = buildBuckets(timeFilter);
   const { labels: obsLabels, buckets: obsBuckets } = buildBuckets(timeFilter);
   let epdsSubmissions = 0;
   let observationTotal = 0;
@@ -163,16 +196,18 @@ export async function GET(request: Request) {
     const data = doc.data();
     const motherId = String(data.motherId || "");
     const motherUid = String(data.motherUid || data.userUid || "");
+    const mother = regionalMotherById.get(motherId) || regionalMotherById.get(motherUid);
     const isRegional =
       data.regionId === actorRegionId ||
       regionalMotherIds.has(motherId) ||
-      regionalMotherUserIds.has(motherUid);
+      regionalMotherUserIds.has(motherUid) ||
+      (mother ? getMotherRegionId(motherId || motherUid, mother, usersById) === actorRegionId : false);
 
     if (!isRegional) return;
     epdsSubmissions += 1;
 
     const submittedAt = getActivityDate(data);
-    if (!submittedAt || !isInRange(submittedAt, timeFilter)) return;
+    if (!submittedAt || !isInRange(submittedAt, start, end)) return;
 
     const key = getBucketKey(submittedAt, timeFilter);
     if (epdsBuckets[key] !== undefined) epdsBuckets[key] += 1;
@@ -186,7 +221,7 @@ export async function GET(request: Request) {
 
       if (latestEpdsScore <= 0 || !submittedAt) return;
       epdsSubmissions += 1;
-      if (!isInRange(submittedAt, timeFilter)) return;
+      if (!isInRange(submittedAt, start, end)) return;
 
       const key = getBucketKey(submittedAt, timeFilter);
       if (epdsBuckets[key] !== undefined) epdsBuckets[key] += 1;
@@ -205,7 +240,7 @@ export async function GET(request: Request) {
     observationTotal += 1;
 
     const observedAt = getActivityDate(data);
-    if (!observedAt || !isInRange(observedAt, timeFilter)) return;
+    if (!observedAt || !isInRange(observedAt, start, end)) return;
 
     const key = getBucketKey(observedAt, timeFilter);
     if (obsBuckets[key] !== undefined) obsBuckets[key] += 1;

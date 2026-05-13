@@ -1,7 +1,7 @@
 /* ================= SIDEBAR ================= */
 
 :root {
-  --role-account-bar-height: 104px;
+  --role-account-bar-height: 92px;
 }
 
 .sidebar {
@@ -132,7 +132,7 @@
   align-items: center;
   gap: 24px;
   height: var(--role-account-bar-height);
-  padding: 14px 40px;
+  padding: 10px 40px;
   position: fixed;
   top: 0;
   right: 0;
