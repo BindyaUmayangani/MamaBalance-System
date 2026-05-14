@@ -40,6 +40,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   static const Color _background = Color(0xFFF3FAFD);
   static const Color _text = Color(0xFF1F3A5F);
   static const Color _muted = Color(0xFF5F7285);
+  static const Color _warning = Color(0xFFE08A1E);
   static const List<String> _quickPrompts = <String>[
     "I'm feeling anxious",
     'I need calming ideas',
@@ -184,6 +185,31 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _controller.text = prompt;
     await _sendMessage();
   }
+
+  bool get _hasAssignedDoctor =>
+      _profile?.assignedDoctorUid?.trim().isNotEmpty == true;
+
+  String get _medicalDecisionContact {
+    final profile = _profile;
+    if (profile == null) return 'your assigned doctor or midwife';
+
+    if (_hasAssignedDoctor) {
+      final doctorName = profile.assignedDoctorName.trim();
+      if (doctorName.isEmpty) return 'your assigned doctor';
+      return doctorName.toLowerCase().startsWith('dr.')
+          ? doctorName
+          : 'Dr. $doctorName';
+    }
+
+    final midwifeName = profile.assignedMidwifeName.trim();
+    if (midwifeName.isEmpty) return 'your assigned midwife';
+    return midwifeName.toLowerCase().startsWith('midwife ')
+        ? midwifeName
+        : 'Midwife $midwifeName';
+  }
+
+  String get _medicalDecisionNotice =>
+      'This is an AI supportive tool only, not for medical decisions. For medical decisions, contact $_medicalDecisionContact.';
 
   void _openEmergencyContacts() {
     Navigator.push(
@@ -413,10 +439,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         'You can share how you feel, ask for calming ideas, or talk about motherhood at your own pace.',
                   ),
                   _supportInfoTile(
-                    icon: Icons.info_outline_rounded,
-                    title: 'Support only',
-                    message:
-                        'This tool is not for diagnosis, treatment, or making health decisions.',
+                    icon: Icons.medical_information_outlined,
+                    title: 'Medical decisions',
+                    message: _medicalDecisionNotice,
                   ),
                   _supportInfoTile(
                     icon: Icons.volunteer_activism_outlined,
@@ -511,6 +536,49 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalDecisionNotice() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF3D6A6)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE8C2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.medical_information_outlined,
+              color: _warning,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _medicalDecisionNotice,
+              style: const TextStyle(
+                color: Color(0xFF7A4D12),
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -690,7 +758,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Supportive tool only | Not for clinical decisions',
+                        'AI support only | Not for medical decisions',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -711,6 +779,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               ],
             ),
           ),
+          _buildMedicalDecisionNotice(),
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 18),

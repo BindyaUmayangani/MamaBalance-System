@@ -117,6 +117,14 @@ const doctorActor = {
   displayName: "Dr. Anjali",
 };
 
+function futureIsoDate(daysFromNow: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  date.setHours(9, 0, 0, 0);
+
+  return date.toISOString();
+}
+
 describe("GET /api/doctor/mothers integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -198,7 +206,7 @@ describe("GET /api/doctor/mothers integration", () => {
         id: "checkup-1",
         data: {
           motherUid: "mother-high",
-          scheduledAt: "2026-05-01T09:00:00.000Z",
+          scheduledAt: futureIsoDate(7),
           status: "Upcoming",
         },
       },

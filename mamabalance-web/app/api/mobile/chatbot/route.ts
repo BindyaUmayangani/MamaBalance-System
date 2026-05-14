@@ -188,6 +188,11 @@ function buildContext(context: ResolvedMobileContext) {
   const fullName = readString(mother.fullName || context.user.displayName, "Mother");
   const doctorAssigned = readString(mother.assignedDoctorUid).length > 0;
   const midwifeAssigned = readString(mother.assignedMidwifeUid).length > 0;
+  const assignedDoctorName = readString(mother.assignedDoctorName, "Assigned doctor");
+  const assignedMidwifeName = readString(mother.assignedMidwifeName, "Assigned midwife");
+  const medicalDecisionContact = doctorAssigned
+    ? `assigned doctor (${assignedDoctorName})`
+    : `assigned midwife (${assignedMidwifeName})`;
 
   return [
     `Mother name: ${fullName}`,
@@ -198,7 +203,10 @@ function buildContext(context: ResolvedMobileContext) {
     `Current EPDS risk band: ${epdsRisk(score)}`,
     `Latest EPDS submitted at: ${toIso(mother.latestEpdsSubmittedAt) || "Unknown"}`,
     `Assigned doctor available: ${doctorAssigned ? "Yes" : "No"}`,
+    `Assigned doctor name: ${assignedDoctorName}`,
     `Assigned midwife available: ${midwifeAssigned ? "Yes" : "No"}`,
+    `Assigned midwife name: ${assignedMidwifeName}`,
+    `Medical decision contact: ${medicalDecisionContact}`,
   ].join("\n");
 }
 
@@ -212,10 +220,13 @@ Strict scope:
 
 Safety:
 - Do not diagnose, prescribe, or replace a doctor, midwife, or emergency care.
+- Clearly state that you are only an AI supportive tool, not a medical decision tool, when the user asks about symptoms, diagnosis, treatment, medication changes, or medical decisions.
+- For any medical decision, tell the user to contact the medical decision contact from the mother context. If an assigned doctor is available, direct them to the assigned doctor. If no doctor is assigned, direct them to the assigned midwife.
+- Do not make medication, treatment, diagnosis, or urgent care decisions for the user.
 - If the user suggests self-harm, suicide, severe panic, inability to cope, or inability to care for the baby:
   1. Respond warmly and urgently.
   2. Encourage contacting a trusted person immediately.
-  3. Encourage contacting the assigned doctor or midwife right away.
+  3. Encourage contacting the medical decision contact right away.
   4. Include Sri Lanka support numbers: NIMH 1926 and Sumithrayo 011 269 6666.
   5. End with [CRISIS_DETECTED].
 

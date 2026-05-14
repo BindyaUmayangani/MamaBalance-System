@@ -17,6 +17,11 @@ const firestoreMock = vi.hoisted(() => {
       data: Record<string, unknown>;
       options?: Record<string, unknown>;
     }>,
+    documentSets: [] as Array<{
+      path: string;
+      data: Record<string, unknown>;
+      options?: Record<string, unknown>;
+    }>,
   };
 
   function ref(path: string) {
@@ -36,6 +41,15 @@ const firestoreMock = vi.hoisted(() => {
           data: () => data,
         });
       }),
+      set: vi.fn(
+        (
+          data: Record<string, unknown>,
+          options?: Record<string, unknown>,
+        ) => {
+          state.documentSets.push({ path, data, options });
+          return Promise.resolve();
+        },
+      ),
     };
   }
 
@@ -104,6 +118,7 @@ describe("POST /api/doctor/messaging integration", () => {
     vi.clearAllMocks();
     firestoreMock.state.mothers = new Map();
     firestoreMock.state.transactionSets = [];
+    firestoreMock.state.documentSets = [];
   });
 
   it("validates message target and text", async () => {
@@ -132,6 +147,13 @@ describe("POST /api/doctor/messaging integration", () => {
       error: "You can only message assigned mothers.",
     });
     expect(response.status).toBe(403);
+    expect(firestoreMock.state.documentSets).toHaveLength(1);
+    expect(firestoreMock.state.documentSets[0]).toEqual(
+      expect.objectContaining({
+        path: "users/doctor-1",
+        options: { merge: true },
+      }),
+    );
   });
 
   it("stores doctor messages through a transaction with encrypted text", async () => {
