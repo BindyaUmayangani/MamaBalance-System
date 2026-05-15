@@ -108,13 +108,13 @@ Open:
 http://localhost:3000
 ```
 
-If testing with a physical mobile phone connected to the same backend, start the web app on all network interfaces:
+For browser-only web testing, `localhost` is enough. If a physical mobile phone must call this local PC backend directly, start the web app on all network interfaces:
 
 ```powershell
 npm run dev -- --hostname 0.0.0.0
 ```
 
-Then use the PC local network IP address in the mobile app API base URL.
+Then use the PC local network IP address in the mobile app API base URL. This same-Wi-Fi/LAN setup is only required for a direct local PC backend. If the backend is hosted online or exposed through a secure tunnel, the phone can use mobile data or any Wi-Fi network as long as it can reach that backend URL.
 
 ## 7. Install Mobile Application
 
@@ -137,15 +137,33 @@ Run on the selected device:
 flutter run
 ```
 
-If the mobile app must call the local web API server, run with:
+Run the mobile app with the backend URL:
 
 ```powershell
 flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://<computer-ip>:3000
 ```
 
-Replace `<computer-ip>` with the IPv4 address of the active network adapter.
+For a hosted backend, use the hosted HTTPS URL instead:
 
-## 8. Finding The PC IP Address
+```powershell
+flutter run --dart-define=MAMABALANCE_API_BASE_URL=https://<your-backend-domain>
+```
+
+Use `http://<computer-ip>:3000` only when the backend is running locally on the development PC and the phone can reach that PC through LAN, VPN, or a secure tunnel. Replace `<computer-ip>` with the IPv4 address of the active network adapter for direct LAN testing.
+
+## 8. Mobile Backend URL Options
+
+The mobile app does not need to be on the same Wi-Fi as the development PC when it uses a hosted or tunneled backend URL.
+
+Common options:
+
+| Backend option | Example API base URL | Network requirement |
+|---|---|---|
+| Hosted backend | `https://mamabalance.example.com` | Phone only needs internet access. |
+| Secure tunnel to local PC | `https://<tunnel-domain>` | Phone only needs internet access while the tunnel and local web app are running. |
+| Direct local PC backend | `http://<computer-ip>:3000` | Phone must be able to reach the PC through LAN, VPN, or another private network route. |
+
+### 8.1 Finding The PC IP Address
 
 On Windows PowerShell:
 
@@ -153,7 +171,7 @@ On Windows PowerShell:
 ipconfig
 ```
 
-Use the IPv4 address of the network adapter connected to the same Wi-Fi or LAN as the phone.
+Use the IPv4 address of the network adapter that the phone can reach. This is mainly needed for direct local LAN testing.
 
 Do not use `localhost` for a physical Android phone. `localhost` points to the phone itself, not the PC.
 
@@ -183,7 +201,7 @@ Do not use `localhost` for a physical Android phone. `localhost` points to the p
 1. Start the web application.
 2. Verify the login page opens.
 3. Confirm Firebase connectivity using a valid web account.
-4. Confirm the web backend is reachable from the mobile device.
+4. Confirm the web backend URL is reachable from the mobile device.
 5. Start the mobile application using `MAMABALANCE_API_BASE_URL`.
 6. Log in as a mother or guardian.
 7. Demonstrate web and mobile workflows using the same Firebase dataset.
@@ -232,11 +250,14 @@ Check:
 Check:
 
 - The web app is running.
-- The phone and PC are on the same network.
-- The web app is running with `--hostname 0.0.0.0` if needed.
-- The mobile app uses the PC IP address, not `localhost`.
-- Firewall rules allow local network access.
-- `MAMABALANCE_API_BASE_URL` includes `http://` and port `3000`.
+- `MAMABALANCE_API_BASE_URL` points to the correct backend URL.
+- For a hosted backend, the URL is public or otherwise reachable from the phone's current internet connection.
+- For a tunneled local backend, both the tunnel and the local web app are running.
+- For a direct local PC backend, the phone can reach the PC through LAN, VPN, or another private network route.
+- The web app is running with `--hostname 0.0.0.0` for direct local PC testing.
+- The mobile app uses the hosted URL, tunnel URL, or PC IP address, not `localhost`.
+- Firewall rules allow access when using a direct local PC backend.
+- Local `MAMABALANCE_API_BASE_URL` includes `http://` and port `3000`.
 
 ### 12.3 Firebase Permission Or Account Errors
 

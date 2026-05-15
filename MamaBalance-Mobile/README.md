@@ -91,14 +91,25 @@ cd ../mamabalance-web
 npm run dev
 ```
 
-Then run the mobile app with the backend URL:
+Then run the mobile app with the backend URL.
+
+For a hosted backend:
+
+```bash
+cd ../MamaBalance-Mobile
+flutter run --dart-define=MAMABALANCE_API_BASE_URL=https://<your-backend-domain>
+```
+
+For a local PC backend:
 
 ```bash
 cd ../MamaBalance-Mobile
 flutter run --dart-define=MAMABALANCE_API_BASE_URL=http://<computer-ip>:3000
 ```
 
-For a real Android phone, `localhost` usually will not work. Use the computer's local network IP address.
+The phone does not need to be on the same Wi-Fi when the backend URL is hosted online or exposed through a secure tunnel. For a direct local PC backend, the phone must be able to reach the PC through LAN, VPN, or another private network route.
+
+For a real Android phone, `localhost` usually will not work because it points to the phone itself.
 
 ## Firebase Notes
 
@@ -128,7 +139,7 @@ flutter pub run flutter_launcher_icons
 If API requests fail:
 
 - Confirm `mamabalance-web` is running.
-- Confirm the phone can access the backend IP address.
+- Confirm the phone can access the configured backend URL.
 - Confirm `MAMABALANCE_API_BASE_URL` is set correctly.
 - Confirm Firebase Auth is configured.
 - Confirm the signed-in user exists and is active in the web system.
