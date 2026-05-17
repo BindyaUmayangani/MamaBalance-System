@@ -1,8 +1,7 @@
 "use client";
 
 import { ManagedUserRow } from "@/lib/admin/types";
-import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 type RegionOption = {
   id: string;
@@ -18,21 +17,10 @@ type Props = {
 
 export default function EditAdminModal({
   admin,
-  regionOptions = [],
   onClose,
   onSave,
 }: Props) {
   const [email, setEmail] = useState(admin.personalEmail || admin.email || "");
-
-  const initialRegionId = useMemo(() => {
-    const matchedRegion = regionOptions.find(
-      (item) => item.name === admin.region || item.id === admin.region
-    );
-
-    return matchedRegion?.id || "";
-  }, [admin.region, regionOptions]);
-
-  const [regionId, setRegionId] = useState(initialRegionId);
 
   return (
     <>
@@ -49,34 +37,6 @@ export default function EditAdminModal({
         placeholder="Enter email"
         onChange={(e) => setEmail(e.target.value)}
       />
-
-      <label>Assigned Region</label>
-      <div className="field-control">
-        <select
-          value={regionId}
-          onChange={(e) => setRegionId(e.target.value)}
-        >
-          <option value="" disabled>
-            Select region
-          </option>
-
-          {regionOptions.length > 0 ? (
-            regionOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))
-          ) : (
-            <>
-              <option value="RG001">Kaduwela</option>
-              <option value="RG002">Homagama</option>
-              <option value="RG003">Maharagama</option>
-              <option value="RG004">Kesbewa</option>
-            </>
-          )}
-        </select>
-        <ChevronDown size={18} className="field-icon" />
-      </div>
 
       <div className="modal-actions">
         <button className="btn-outline" onClick={onClose}>
@@ -95,7 +55,6 @@ export default function EditAdminModal({
                 body: JSON.stringify({
                   uid: admin.uid,
                   email,
-                  regionId,
                 }),
               });
 
@@ -108,9 +67,7 @@ export default function EditAdminModal({
               onSave({
                 ...admin,
                 personalEmail: email.trim() || admin.personalEmail,
-                region:
-                  regionOptions.find((item) => item.id === regionId)?.name ||
-                  admin.region,
+                region: admin.region,
               });
             } catch (err) {
               console.error(err);

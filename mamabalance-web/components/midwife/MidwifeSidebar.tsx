@@ -58,7 +58,7 @@ export default function MidwifeSidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <Image
-          src="/images/logo.png"
+          src="/images/new_logo.png"
           alt="MamaBalance"
           width={75}
           height={75}

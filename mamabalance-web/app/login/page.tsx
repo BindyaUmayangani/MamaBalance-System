@@ -15,7 +15,7 @@ export default async function LoginPage() {
         {/* Logo */}
         <div className="logo-wrapper">
           <Image
-            src="/images/logo.png"
+            src="/images/new_logo.png"
             alt="MamaBalance Logo"
             width={100}
             height={100}

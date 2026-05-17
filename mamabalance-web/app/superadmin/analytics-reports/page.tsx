@@ -21,13 +21,13 @@ import {
   AlertTriangle,
   ChevronDown,
   Stethoscope,
-  Activity
+  Activity,
 } from "lucide-react";
 import LoadingState from "@/components/admin/LoadingState";
 import ModalWrapper from "../educational-content/modals/ModalWrapper";
 import "@/app/superadmin/styles/analyticsReports.css";
 
-type ReportType = "full" | "risk" | "activity" | "regions";
+type ReportType = "full" | "risk" | "activity" | "regions" | "referrals";
 
 type RegionalData = {
   name: string;
@@ -49,6 +49,25 @@ type AnalyticsData = {
   epdsTrend: { label: string; value: number }[];
   obsTrend: { label: string; value: number }[];
   regionalBreakdown: RegionalData[];
+  referrals: {
+    total: number;
+    pending: number;
+    accepted: number;
+    rejected: number;
+    byStatus: { name: string; value: number; color: string }[];
+    byType: { name: string; value: number }[];
+    trend: { label: string; value: number }[];
+    byRegion: {
+      id: string;
+      name: string;
+      incoming: number;
+      outgoing: number;
+      pending: number;
+      accepted: number;
+      rejected: number;
+      total: number;
+    }[];
+  };
 };
 
 function niceYAxisMax(dataMax: number) {
@@ -95,6 +114,8 @@ export default function AnalyticsReportsPage() {
         return "System Activity Velocity Report";
       case "regions":
         return "Regional Performance Report";
+      case "referrals":
+        return "System Referral Analytics Report";
       default:
         return "System Analytics Report";
     }
@@ -104,15 +125,6 @@ export default function AnalyticsReportsPage() {
   const MAMA_RED = "#dc2626";
   const MAMA_ORANGE = "#fb923c";
   const MAMA_GREEN = "#22c55e";
-
-  function reportTitle(reportType: ReportType) {
-    switch (reportType) {
-      case "risk": return "System EPDS Risk Distribution Analysis";
-      case "activity": return "System Engagement & Activity Matrix";
-      case "regions": return "Regional Performance Benchmarks";
-      default: return "Full System Executive Analytics Insights";
-    }
-  }
 
   function addHeader(pdf: jsPDF, title: string) {
     // Brand Background Bar
@@ -285,8 +297,6 @@ export default function AnalyticsReportsPage() {
     pdf.setFont("helvetica", "bold");
     pdf.text("Regional Performance Matrix", 14, startY);
 
-    // Derived logic for "Top Regions"
-    const topByMothers = [...analytics.regionalBreakdown].sort((a, b) => b.totalMothers - a.totalMothers).slice(0, 3);
     const topByRisk = [...analytics.regionalBreakdown].sort((a, b) => b.high - a.high).slice(0, 1)[0];
 
     pdf.setFontSize(10);
@@ -314,6 +324,46 @@ export default function AnalyticsReportsPage() {
     });
   }
 
+  function addReferrals(pdf: jsPDF, analytics: AnalyticsData, startY = 55) {
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("System Referral Movement", 14, startY);
+
+    autoTable(pdf, {
+      startY: startY + 8,
+      head: [["Metric", "Count"]],
+      body: [
+        ["Total User Referrals", analytics.referrals.total],
+        ["Pending Referrals", analytics.referrals.pending],
+        ["Accepted Referrals", analytics.referrals.accepted],
+        ["Rejected Referrals", analytics.referrals.rejected],
+      ],
+      headStyles: { fillColor: MAMA_TEAL },
+      alternateRowStyles: { fillColor: [250, 251, 253] },
+    });
+
+    autoTable(pdf, {
+      startY: (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
+        ? (pdf as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12
+        : startY + 56,
+      head: [["Region", "Incoming", "Outgoing", "Pending", "Accepted", "Rejected"]],
+      body:
+        analytics.referrals.byRegion.length > 0
+          ? analytics.referrals.byRegion.map((region) => [
+              region.name,
+              region.incoming,
+              region.outgoing,
+              region.pending,
+              region.accepted,
+              region.rejected,
+            ])
+          : [["No referrals found", "-", "-", "-", "-", "-"]],
+      headStyles: { fillColor: MAMA_TEAL },
+      styles: { fontSize: 9 },
+      alternateRowStyles: { fillColor: [250, 251, 253] },
+    });
+  }
+
   const handleExport = async () => {
     if (!data) return;
     setIsExporting(true);
@@ -333,10 +383,15 @@ export default function AnalyticsReportsPage() {
         pdf.addPage();
         addHeader(pdf, "Regional Performance Breakdown");
         addRegions(pdf, data);
+        pdf.addPage();
+        addHeader(pdf, "System Referral Analytics");
+        addReferrals(pdf, data);
       } else if (selectedReport === "risk") {
         addRisk(pdf, data);
       } else if (selectedReport === "activity") {
         addActivity(pdf, data);
+      } else if (selectedReport === "referrals") {
+        addReferrals(pdf, data);
       } else {
         addRegions(pdf, data);
       }
@@ -579,6 +634,93 @@ export default function AnalyticsReportsPage() {
             </div>
           </div>
 
+          <div className="analytics-grid top-charts analytics-bottom-section">
+            <div className="chart-card">
+              <h3>System Referral Trend</h3>
+              <p className="chart-subtitle">User referrals created across all regions in the selected period</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={data.referrals.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tickMargin={10} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <YAxis allowDecimals={false} domain={[0, niceYAxisMax]} tickCount={6} axisLine={false} tickLine={false} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <Tooltip cursor={{ fill: "#f3f4f6" }} contentStyle={{ borderRadius: "12px", border: "none" }} />
+                  <Bar dataKey="value" name="Referrals" fill="#499d85" radius={[6, 6, 0, 0]} maxBarSize={42} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="chart-card">
+              <h3>Referral Status and User Type</h3>
+              <p className="chart-subtitle">System-wide referral decisions and user categories</p>
+              <div className="risk-summary referral-risk-summary">
+                {data.referrals.byStatus.map((item) => (
+                  <div key={item.name} className="risk-row">
+                    <span className="risk-name">
+                      <span className="risk-dot" style={{ backgroundColor: item.color }} />
+                      {item.name}
+                    </span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+
+              <div className="referral-type-grid">
+                {data.referrals.byType.map((row) => (
+                  <div key={row.name} className="referral-type-item">
+                    <span>{row.name}</span>
+                    <strong>{row.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="analytics-grid">
+            <div className="chart-card card-span-2">
+              <div className="header-with-action">
+                <div>
+                  <h3>Referral Activity by Region</h3>
+                  <p className="chart-subtitle">Incoming, outgoing, and decision totals across all regions</p>
+                </div>
+              </div>
+
+              <div className="table-wrapper">
+                <table className="analytics-table">
+                  <thead>
+                    <tr>
+                      <th>Region</th>
+                      <th>Total</th>
+                      <th>Incoming</th>
+                      <th>Outgoing</th>
+                      <th>Pending</th>
+                      <th>Accepted</th>
+                      <th>Rejected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.referrals.byRegion.length > 0 ? (
+                      data.referrals.byRegion.map((region) => (
+                        <tr key={region.id}>
+                          <td><strong>{region.name}</strong></td>
+                          <td>{region.total}</td>
+                          <td>{region.incoming}</td>
+                          <td>{region.outgoing}</td>
+                          <td>{region.pending}</td>
+                          <td>{region.accepted}</td>
+                          <td>{region.rejected}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7}>No referral activity recorded yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           {showExportModal && data ? (
             <ModalWrapper variant="export" onClose={() => setShowExportModal(false)}>
               <div className="analytics-export-modal">
@@ -602,6 +744,7 @@ export default function AnalyticsReportsPage() {
                         <option value="risk">EPDS Risk Distribution Report</option>
                         <option value="activity">Activity Velocity Report</option>
                         <option value="regions">Regional Performance Report</option>
+                        <option value="referrals">Referral Analytics Report</option>
                       </select>
                       <ChevronDown className="filter-select-icon teal" size={18} />
                     </div>

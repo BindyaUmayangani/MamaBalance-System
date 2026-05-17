@@ -8,6 +8,7 @@ import "@/app/styles/RoleSettingsSupport.css";
 import { doctorConfig } from "@/app/superadmin/user-management/configs/doctor.config";
 import UserTabs from "@/app/superadmin/user-management/components/UserTabs";
 import UserTable from "@/app/superadmin/user-management/components/UserTable";
+import StatusConfirmModal from "@/app/superadmin/user-management/components/StatusConfirmModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 
 import ModalWrapper from "@/app/superadmin/user-management/modals/ModalWrapper";
@@ -29,12 +30,18 @@ type Props = {
 };
 
 type ModalType = "add" | "edit" | "view" | "delete" | null;
+type PendingStatusChange = {
+  user: ManagedUserRow;
+  status: "active" | "inactive";
+};
 
 export default function DoctorManagement({ role, regionId, regionName }: Props) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<ManagedUserRow | null>(null);
+  const [updatingStatusUid, setUpdatingStatusUid] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
   const {
     users: allDoctors,
     regions,
@@ -108,6 +115,39 @@ export default function DoctorManagement({ role, regionId, regionName }: Props) 
   const paginatedData = searchedData.slice(startIndex, startIndex + PAGE_SIZE);
   const hasActiveSearch = searchTerm.trim().length > 0;
 
+  async function updateDoctorStatus(user: ManagedUserRow, nextStatus: "active" | "inactive") {
+    if (user.status === nextStatus) {
+      return;
+    }
+
+    try {
+      setUpdatingStatusUid(user.uid);
+
+      const response = await fetch("/api/admin/users?type=update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          status: nextStatus,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to update account status.");
+      }
+
+      await reload();
+      setPendingStatusChange(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to update account status.");
+    } finally {
+      setUpdatingStatusUid("");
+    }
+  }
+
   const tableContent = isLoading ? (
     <LoadingState label="Loading doctors..." />
   ) : error ? (
@@ -129,6 +169,13 @@ export default function DoctorManagement({ role, regionId, regionName }: Props) 
         setSelectedUser(row);
         setActiveModal("delete");
       }}
+      onStatusChange={(row, nextStatus) => {
+        setPendingStatusChange({
+          user: row,
+          status: nextStatus,
+        });
+      }}
+      isUpdatingStatus={(row) => updatingStatusUid === row.uid}
       emptyStateVariant={hasActiveSearch ? "search" : "default"}
       emptyStateTitle={hasActiveSearch ? "No matching doctors found" : "No doctors found yet"}
       emptyStateMessage={
@@ -203,6 +250,32 @@ export default function DoctorManagement({ role, regionId, regionName }: Props) 
           />
         </ModalWrapper>
       )}
+
+      {pendingStatusChange ? (
+        <ModalWrapper
+          variant="compact"
+          onClose={() => {
+            if (!updatingStatusUid) {
+              setPendingStatusChange(null);
+            }
+          }}
+        >
+          <StatusConfirmModal
+            userName={pendingStatusChange.user.name}
+            userLabel="Doctor"
+            currentStatus={pendingStatusChange.user.status}
+            nextStatus={pendingStatusChange.status}
+            isSaving={Boolean(updatingStatusUid)}
+            onCancel={() => setPendingStatusChange(null)}
+            onConfirm={() =>
+              void updateDoctorStatus(
+                pendingStatusChange.user,
+                pendingStatusChange.status,
+              )
+            }
+          />
+        </ModalWrapper>
+      ) : null}
 
       {activeModal && (
         <ModalWrapper

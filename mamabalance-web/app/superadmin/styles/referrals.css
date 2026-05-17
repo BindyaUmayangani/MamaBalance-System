@@ -1,0 +1,253 @@
+.superadmin-referrals-page {
+  min-height: 100vh;
+}
+
+.referrals-header {
+  align-items: flex-start;
+}
+
+.referrals-stats-grid {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.referrals-stat-card {
+  display: grid;
+  gap: 6px;
+}
+
+.referrals-stat-card span {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.referrals-stat-card strong {
+  color: #111827;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.referrals-stat-card.pending strong {
+  color: #c2410c;
+}
+
+.referrals-stat-card.accepted strong {
+  color: #15803d;
+}
+
+.referrals-stat-card.rejected strong {
+  color: #b91c1c;
+}
+
+.referrals-card {
+  padding: 18px;
+}
+
+.referrals-toolbar {
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.referrals-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.referrals-search svg {
+  color: #111827;
+}
+
+.referrals-select-wrap {
+  min-width: 175px;
+}
+
+.referrals-table-wrap {
+  overflow-x: auto;
+}
+
+.referrals-table th,
+.referrals-table td {
+  min-width: 150px;
+}
+
+.referral-path-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.referral-user-cell strong {
+  display: block;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.referral-user-cell span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.referral-path-cell span {
+  color: #334155;
+  font-weight: 700;
+}
+
+.referral-path-cell svg {
+  color: #499d85;
+}
+
+.referral-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.referral-status.pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.referral-status.accepted {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.referral-status.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.referrals-actions {
+  text-align: right;
+}
+
+.referrals-actions button {
+  border: 1px solid #499d85;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #2f7f6f;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.referrals-actions button:hover {
+  background: #499d85;
+  color: #ffffff;
+}
+
+.referral-details-row td {
+  background: #fbfffd;
+  white-space: normal;
+}
+
+.referral-details-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.referral-details-grid div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #d8ece4;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 12px 14px;
+}
+
+.referral-details-grid span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.referral-details-grid strong {
+  color: #111827;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.referrals-empty-card {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed #bdded3;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfffd 0%, #f6fffb 100%);
+  text-align: center;
+  color: #64748b;
+  padding: 26px;
+}
+
+.referrals-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #eef8f3;
+  color: #499d85;
+}
+
+.referrals-empty-card h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.referrals-empty-card p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 1180px) {
+  .referrals-stats-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .referrals-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .referrals-filter-group {
+    width: 100%;
+  }
+
+  .referrals-search {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .referrals-stats-grid,
+  .referral-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .referrals-filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .referrals-select-wrap {
+    width: 100%;
+  }
+}

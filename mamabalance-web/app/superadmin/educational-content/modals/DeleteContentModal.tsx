@@ -1,3 +1,5 @@
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
+
 type Props = {
   title: string;
   onClose: () => void;
@@ -12,20 +14,18 @@ export default function DeleteContentModal({
   isSubmitting = false,
 }: Props) {
   return (
-    <>
-      <h2 className="modal-title danger">DELETE CONTENT</h2>
-      <p className="delete-text">
-        Are you sure you want to delete <strong>{title}</strong>?
-      </p>
-
-      <div className="modal-actions">
-        <button className="btn-close" onClick={onClose} disabled={isSubmitting}>
-          Cancel
-        </button>
-        <button className="btn-danger" onClick={onDelete} disabled={isSubmitting}>
-          {isSubmitting ? "Deleting..." : "Delete"}
-        </button>
-      </div>
-    </>
+    <DeleteConfirmContent
+      title="Delete content"
+      message={
+        <>
+          Are you sure you want to delete <strong>{title}</strong>? This cannot
+          be undone.
+        </>
+      }
+      details={[{ label: "Content", value: title }]}
+      isPending={isSubmitting}
+      onCancel={onClose}
+      onConfirm={onDelete}
+    />
   );
 }

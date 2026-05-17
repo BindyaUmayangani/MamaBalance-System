@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
 
 type Props = {
   uid: string;
@@ -47,20 +48,24 @@ export default function UserDeleteModal({ uid, role, name, onClose, onDeleted }:
 
   return (
     <>
-      <h2 className="modal-title danger">DELETE {role.toUpperCase()}</h2>
-
-      <p className="delete-text">
-        Are you sure you want to delete {role} <strong>{name}</strong>?
-      </p>
+      <DeleteConfirmContent
+        title={`Delete ${role}`}
+        message={
+          <>
+            Are you sure you want to delete <strong>{name}</strong>? This cannot
+            be undone.
+          </>
+        }
+        details={[
+          { label: "User role", value: role },
+          { label: "User name", value: name },
+        ]}
+        isPending={isDeleting}
+        onCancel={onClose}
+        onConfirm={() => void handleDelete()}
+      />
 
       {error ? <p className="form-message error">{error}</p> : null}
-
-      <div className="modal-actions">
-        <button className="btn-outline" onClick={onClose}>Cancel</button>
-        <button className="btn-danger" onClick={handleDelete} disabled={isDeleting}>
-          {isDeleting ? "Deleting..." : "Delete"}
-        </button>
-      </div>
     </>
   );
 }

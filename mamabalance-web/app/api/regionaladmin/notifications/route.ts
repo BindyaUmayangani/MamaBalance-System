@@ -14,6 +14,8 @@ type NotificationRow = {
   issueCategory: string | null;
   contentId: string | null;
   contentTitle: string | null;
+  transferId: string | null;
+  transferType: string | null;
   priority: "low" | "medium" | "high";
   read: boolean;
   createdAt: string | null;
@@ -49,6 +51,8 @@ async function handleList() {
         issueCategory: (data.issueCategory as string | undefined) || null,
         contentId: (data.contentId as string | undefined) || null,
         contentTitle: (data.contentTitle as string | undefined) || null,
+        transferId: (data.transferId as string | undefined) || null,
+        transferType: (data.transferType as string | undefined) || null,
         priority:
           data.priority === "low" || data.priority === "high" ? data.priority : "medium",
         read: Boolean(data.read),

@@ -136,6 +136,7 @@ export async function GET(request: Request) {
     midwifeObsSnapshot,
     visitsSnapshot,
     midwifeVisitsSnapshot,
+    transfersSnapshot,
   ] = await Promise.all([
     adminDb.collection("users").get(),
     adminDb.collection("mothers").get(),
@@ -145,6 +146,7 @@ export async function GET(request: Request) {
     adminDb.collection("midwifeObservations").get(),
     adminDb.collection("visits").get(),
     adminDb.collection("midwifeVisits").get(),
+    adminDb.collection("regionTransfers").get(),
   ]);
 
   const regionOptions = regionsSnapshot.empty
@@ -261,6 +263,57 @@ export async function GET(request: Request) {
     return status === "overdue" || (!!scheduledAt && scheduledAt.getTime() < Date.now() && status !== "completed");
   }).length;
 
+  const referralDirectionTotals = {
+    incoming: { total: 0, pending: 0, accepted: 0, rejected: 0 },
+    outgoing: { total: 0, pending: 0, accepted: 0, rejected: 0 },
+  };
+  const referralStatusCounts = {
+    pending: { incoming: 0, outgoing: 0 },
+    accepted: { incoming: 0, outgoing: 0 },
+    rejected: { incoming: 0, outgoing: 0 },
+  };
+  const referralTypeCounts = {
+    mother: { incoming: 0, outgoing: 0 },
+    doctor: { incoming: 0, outgoing: 0 },
+    midwife: { incoming: 0, outgoing: 0 },
+  };
+  const referralTrendBuckets = Object.fromEntries(
+    epdsLabels.map((label) => [label, { incoming: 0, outgoing: 0 }]),
+  ) as Record<string, { incoming: number; outgoing: number }>;
+
+  transfersSnapshot.docs.forEach((doc) => {
+    const transfer = doc.data();
+    const status = ["pending", "accepted", "rejected"].includes(String(transfer.status))
+      ? (String(transfer.status) as "pending" | "accepted" | "rejected")
+      : "pending";
+    const type = ["mother", "doctor", "midwife"].includes(String(transfer.type))
+      ? (String(transfer.type) as "mother" | "doctor" | "midwife")
+      : "mother";
+    const directions: Array<"incoming" | "outgoing"> = [];
+
+    if (transfer.targetRegionId === actorRegionId) directions.push("incoming");
+    if (transfer.sourceRegionId === actorRegionId) directions.push("outgoing");
+
+    if (directions.length === 0) return;
+
+    directions.forEach((direction) => {
+      referralDirectionTotals[direction].total += 1;
+      referralDirectionTotals[direction][status] += 1;
+      referralStatusCounts[status][direction] += 1;
+      referralTypeCounts[type][direction] += 1;
+    });
+
+    const createdAt = getActivityDate(transfer);
+    if (!createdAt || !isInRange(createdAt, start, end)) return;
+
+    const key = getBucketKey(createdAt, timeFilter);
+    if (referralTrendBuckets[key]) {
+      directions.forEach((direction) => {
+        referralTrendBuckets[key][direction] += 1;
+      });
+    }
+  });
+
   const staffRows = [...regionalDoctors, ...regionalMidwives].map((doc) => {
     const user = doc.data();
     const role = String(user.role || "");
@@ -303,5 +356,24 @@ export async function GET(request: Request) {
     epdsTrend: epdsLabels.map((label) => ({ label, value: epdsBuckets[label] })),
     obsTrend: obsLabels.map((label) => ({ label, value: obsBuckets[label] })),
     careTeamBreakdown: staffRows,
+    referrals: {
+      incoming: referralDirectionTotals.incoming,
+      outgoing: referralDirectionTotals.outgoing,
+      statusBreakdown: [
+        { name: "Pending", incoming: referralStatusCounts.pending.incoming, outgoing: referralStatusCounts.pending.outgoing },
+        { name: "Accepted", incoming: referralStatusCounts.accepted.incoming, outgoing: referralStatusCounts.accepted.outgoing },
+        { name: "Rejected", incoming: referralStatusCounts.rejected.incoming, outgoing: referralStatusCounts.rejected.outgoing },
+      ],
+      typeBreakdown: [
+        { name: "Mothers", incoming: referralTypeCounts.mother.incoming, outgoing: referralTypeCounts.mother.outgoing },
+        { name: "Doctors", incoming: referralTypeCounts.doctor.incoming, outgoing: referralTypeCounts.doctor.outgoing },
+        { name: "Midwives", incoming: referralTypeCounts.midwife.incoming, outgoing: referralTypeCounts.midwife.outgoing },
+      ],
+      trend: epdsLabels.map((label) => ({
+        label,
+        incoming: referralTrendBuckets[label].incoming,
+        outgoing: referralTrendBuckets[label].outgoing,
+      })),
+    },
   });
 }

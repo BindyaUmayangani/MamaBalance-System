@@ -46,9 +46,6 @@ export default function EditMotherModal({
     mother.noOfChildren ? String(mother.noOfChildren) : ""
   );
   const [address, setAddress] = useState(mother.address || "");
-  const [status, setStatus] = useState<"active" | "inactive">(
-    mother.status === "inactive" ? "inactive" : "active"
-  );
   const guardianAccessAlreadyEnabled = Boolean(mother.guardianAccessEnabled);
   const [enableGuardianMobileAccess, setEnableGuardianMobileAccess] = useState(
     guardianAccessAlreadyEnabled,
@@ -78,7 +75,7 @@ export default function EditMotherModal({
     return matched?.id || "";
   }, [regionOptions, mother.region]);
 
-  const [regionId, setRegionId] = useState(initialRegionId);
+  const regionId = initialRegionId;
 
   const selectedRegionName = useMemo(
     () => regionOptions.find((item) => item.id === regionId)?.name || mother.region,
@@ -299,30 +296,6 @@ export default function EditMotherModal({
         </div>
 
         <div>
-          <label>Region</label>
-          <div className="field-control">
-            <select
-              value={regionId}
-              onChange={(e) => {
-                setRegionId(e.target.value);
-                setAssignedMidwifeUid("");
-                setAssignedDoctorUid("");
-              }}
-            >
-              <option value="" disabled>
-                Select region
-              </option>
-              {regionOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={18} className="field-icon" />
-          </div>
-        </div>
-
-        <div>
           <label>Assigned Midwife</label>
           <div className="field-control">
             <select
@@ -331,7 +304,7 @@ export default function EditMotherModal({
               disabled={!regionId}
             >
               <option value="">
-                {regionId ? "Select Midwife" : "Select region first"}
+                {regionId ? "Select Midwife" : "No region assigned"}
               </option>
               {availableMidwives.map((midwife) => (
                 <option key={midwife.uid} value={midwife.uid}>
@@ -352,7 +325,7 @@ export default function EditMotherModal({
               disabled={!regionId}
             >
               <option value="">
-                {regionId ? "No doctor assigned" : "Select region first"}
+                {regionId ? "No doctor assigned" : "No region assigned"}
               </option>
               {availableDoctors.map((doctor) => (
                 <option key={doctor.uid} value={doctor.uid}>
@@ -420,32 +393,6 @@ export default function EditMotherModal({
           />
         </div>
 
-        <div>
-          <label>Status</label>
-          <div className="radio-group">
-            <label className="radio-option">
-              <input
-                type="radio"
-                name="status"
-                checked={status === "active"}
-                onChange={() => setStatus("active")}
-              />
-              <span className="custom-radio" />
-              <span className="radio-text">Active</span>
-            </label>
-
-            <label className="radio-option">
-              <input
-                type="radio"
-                name="status"
-                checked={status === "inactive"}
-                onChange={() => setStatus("inactive")}
-              />
-              <span className="custom-radio" />
-              <span className="radio-text">Inactive</span>
-            </label>
-          </div>
-        </div>
       </div>
       </div>
 
@@ -474,8 +421,6 @@ export default function EditMotherModal({
                   uid: mother.uid,
                   email,
                   contact,
-                  regionId,
-                  status,
                   guardianName,
                   guardianContact,
                   deliveryDate,
@@ -511,7 +456,7 @@ export default function EditMotherModal({
                 personalEmail: email,
                 contact,
                 region: selectedRegionName,
-                status,
+                status: mother.status,
                 guardianName,
                 guardianContact,
                 guardianAccessEnabled:

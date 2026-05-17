@@ -931,6 +931,123 @@ async function handleResetPassword(request: NextRequest) {
   }
 }
 
+async function handleTransferRegionalAdmin(request: NextRequest) {
+  const actor = await getCurrentSessionUser();
+
+  if (!actor || actor.role !== "superadmin") {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const payload = (await request.json()) as {
+    uid?: string;
+    targetRegionId?: string;
+    reason?: string;
+  };
+  const uid = String(payload.uid || "").trim();
+  const targetRegionId = String(payload.targetRegionId || "").trim();
+  const reason = String(payload.reason || "").trim();
+
+  if (!uid) {
+    return NextResponse.json({ error: "Admin ID is required." }, { status: 400 });
+  }
+
+  if (!targetRegionId) {
+    return NextResponse.json({ error: "Target region is required." }, { status: 400 });
+  }
+
+  if (!reason) {
+    return NextResponse.json({ error: "Transfer reason is required." }, { status: 400 });
+  }
+
+  const [userSnapshot, regions] = await Promise.all([
+    adminDb.collection("users").doc(uid).get(),
+    loadRegions(),
+  ]);
+
+  if (!userSnapshot.exists) {
+    return NextResponse.json({ error: "Regional admin not found." }, { status: 404 });
+  }
+
+  const user = userSnapshot.data();
+
+  if (user?.role !== "regionaladmin") {
+    return NextResponse.json(
+      { error: "Only regional admin accounts can be transferred here." },
+      { status: 400 },
+    );
+  }
+
+  const currentRegionId = String(user.regionId || "");
+
+  if (currentRegionId === targetRegionId) {
+    return NextResponse.json(
+      { error: "Select a different region for the transfer." },
+      { status: 400 },
+    );
+  }
+
+  const targetRegion = regions.find((region) => region.id === targetRegionId);
+
+  if (!targetRegion) {
+    return NextResponse.json({ error: "Target region was not found." }, { status: 404 });
+  }
+
+  const regionMap = getRegionMap(regions);
+  const previousRegionName = normalizeRegionName(regionMap.get(currentRegionId) || currentRegionId);
+  const targetRegionName = normalizeRegionName(targetRegion.name);
+  const adminName = String(user.displayName || user.email || uid);
+  const timestamp = FieldValue.serverTimestamp();
+
+  await adminDb.collection("users").doc(uid).update({
+    regionId: targetRegionId,
+    transferredAt: timestamp,
+    transferredByUid: actor.uid,
+    transferReason: reason,
+    updatedAt: timestamp,
+  });
+
+  await adminDb.collection("notifications").add({
+    recipientUid: uid,
+    recipientRole: "regionaladmin",
+    type: "admin-region-transfer",
+    title: "Regional Assignment Updated",
+    message: `Super Admin transferred your regional admin assignment from ${previousRegionName} to ${targetRegionName}.`,
+    priority: "medium",
+    regionId: targetRegionId,
+    targetPath: "/regionaladmin/dashboard",
+    read: false,
+    dismissed: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+
+  await logAuditEvent({
+    actor,
+    module: "Users",
+    actionType: "Update",
+    action: "Transferred regional admin to another region",
+    target: adminName,
+    regionId: targetRegionId,
+    metadata: {
+      adminUid: uid,
+      previousRegionId: currentRegionId || null,
+      previousRegionName,
+      targetRegionId,
+      targetRegionName,
+      reason,
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    admin: {
+      uid,
+      regionId: targetRegionId,
+      regionName: targetRegionName,
+    },
+  });
+}
+
 async function handleProvisionMotherPhoneAuth(request: NextRequest) {
   const actor = await getCurrentSessionUser();
 
@@ -1053,6 +1170,10 @@ export async function PATCH(request: NextRequest) {
 
   if (type === "reset-password") {
     return handleResetPassword(request);
+  }
+
+  if (type === "transfer-admin") {
+    return handleTransferRegionalAdmin(request);
   }
 
   if (type === "provision-phone-auth") {

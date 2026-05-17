@@ -19,6 +19,8 @@ type NotificationItem = {
   issueCategory: string | null;
   contentId: string | null;
   contentTitle: string | null;
+  transferId: string | null;
+  transferType: string | null;
   priority: "low" | "medium" | "high";
   read: boolean;
   createdAt: string | null;
@@ -211,6 +213,23 @@ export default function RegionalAdminNotificationsPage() {
       ];
     }
 
+    if (item.type === "regional-transfer") {
+      return [
+        item.transferId || "Regional transfer",
+        `Type: ${item.transferType || "Transfer"}`,
+        `Priority: ${item.priority}`,
+        formatDate(item.createdAt),
+      ];
+    }
+
+    if (item.type === "admin-region-transfer") {
+      return [
+        "Regional assignment",
+        `Priority: ${item.priority}`,
+        formatDate(item.createdAt),
+      ];
+    }
+
     return [
       item.ticketNumber || "Support ticket",
       `Requester: ${item.requesterName || "Unknown User"}`,
@@ -221,9 +240,19 @@ export default function RegionalAdminNotificationsPage() {
   }
 
   function openLabel(item: NotificationItem) {
-    return item.type === "educational-content"
-      ? "Open Educational Content"
-      : "Open Help & Support";
+    if (item.type === "educational-content") {
+      return "Open Educational Content";
+    }
+
+    if (item.type === "regional-transfer") {
+      return "Open Transfers";
+    }
+
+    if (item.type === "admin-region-transfer") {
+      return "Open Dashboard";
+    }
+
+    return "Open Help & Support";
   }
 
   return (
@@ -231,7 +260,7 @@ export default function RegionalAdminNotificationsPage() {
       <div className="doctor-page-header">
         <div className="role-header">
           <h1>Notification Inbox</h1>
-          <p>Review support-ticket alerts and educational resource updates sent to your regional admin account.</p>
+          <p>Review transfer referrals, support-ticket alerts, and educational resource updates sent to your regional admin account.</p>
         </div>
 
         <div className="doctor-page-header-actions regional-notifications-actions">
@@ -258,7 +287,7 @@ export default function RegionalAdminNotificationsPage() {
         <div className="notifications-empty-card">
           <AlertTriangle size={28} />
           <h3>No notifications yet</h3>
-          <p>Support-ticket alerts and educational resource updates will appear here when they are available.</p>
+          <p>Transfer referrals, support-ticket alerts, and educational resource updates will appear here when they are available.</p>
         </div>
       ) : (
         <div className="notifications-list">

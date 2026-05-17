@@ -8,6 +8,7 @@ import "@/app/styles/RoleSettingsSupport.css";
 
 import UserTabs from "@/app/superadmin/user-management/components/UserTabs";
 import UserTable from "@/app/superadmin/user-management/components/UserTable";
+import StatusConfirmModal from "@/app/superadmin/user-management/components/StatusConfirmModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 import ModalWrapper from "@/app/superadmin/user-management/modals/ModalWrapper";
 
@@ -31,6 +32,10 @@ type Props = {
 };
 
 type ModalType = "add" | "edit" | "view" | "observations" | "delete" | "filter" | null;
+type PendingStatusChange = {
+  mother: ManagedMotherRow;
+  status: "active" | "inactive";
+};
 
 export default function MotherManagement({ role, regionId, regionName }: Props) {
   const searchParams = useSearchParams();
@@ -46,6 +51,8 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
   const [selectedUser, setSelectedUser] = useState<ManagedMotherRow | null>(null);
   const [isProvisioningSmsLogin, setIsProvisioningSmsLogin] = useState(false);
   const [downloadingMotherUid, setDownloadingMotherUid] = useState("");
+  const [updatingStatusUid, setUpdatingStatusUid] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
   const { users: allMothers, regions, isLoading, error, reload } =
     useManagedUsers<ManagedMotherRow>("mother");
   const { users: allMidwives } = useManagedUsers<ManagedUserRow>("midwife");
@@ -230,6 +237,39 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
     }
   }
 
+  async function updateMotherStatus(mother: ManagedMotherRow, nextStatus: "active" | "inactive") {
+    if (mother.status === nextStatus) {
+      return;
+    }
+
+    try {
+      setUpdatingStatusUid(mother.uid);
+
+      const response = await fetch("/api/admin/users?type=update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: mother.uid,
+          status: nextStatus,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to update account status.");
+      }
+
+      await reload();
+      setPendingStatusChange(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to update account status.");
+    } finally {
+      setUpdatingStatusUid("");
+    }
+  }
+
   const tableContent = isLoading ? (
     <LoadingState label="Loading mothers..." />
   ) : error ? (
@@ -254,6 +294,14 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
         void downloadPatientSummary(row);
       }}
       isDownloadingSummary={(row) => downloadingMotherUid === row.uid}
+      actionLayout="menu"
+      onStatusChange={(row, nextStatus) => {
+        setPendingStatusChange({
+          mother: row,
+          status: nextStatus,
+        });
+      }}
+      isUpdatingStatus={(row) => updatingStatusUid === row.uid}
       onEdit={(row) => {
         setSelectedUser(row);
         setActiveModal("edit");
@@ -437,6 +485,32 @@ export default function MotherManagement({ role, regionId, regionName }: Props) 
           />
         </ModalWrapper>
       )}
+
+      {pendingStatusChange ? (
+        <ModalWrapper
+          variant="compact"
+          onClose={() => {
+            if (!updatingStatusUid) {
+              setPendingStatusChange(null);
+            }
+          }}
+        >
+          <StatusConfirmModal
+            userName={pendingStatusChange.mother.name}
+            userLabel="Mother"
+            currentStatus={pendingStatusChange.mother.status}
+            nextStatus={pendingStatusChange.status}
+            isSaving={Boolean(updatingStatusUid)}
+            onCancel={() => setPendingStatusChange(null)}
+            onConfirm={() =>
+              void updateMotherStatus(
+                pendingStatusChange.mother,
+                pendingStatusChange.status,
+              )
+            }
+          />
+        </ModalWrapper>
+      ) : null}
 
       {activeModal === "delete" && selectedUser && (
         <ModalWrapper onClose={() => setActiveModal(null)}>

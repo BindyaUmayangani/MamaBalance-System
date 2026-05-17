@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-05-17T18:39:06.927Z",
+  "dryRun": false,
+  "demoSeed": "demo-2026-05",
+  "protectedMotherRule": "Kaveesha Gimhani was not updated, overwritten, or deleted.",
+  "counts": {
+    "regions": 5,
+    "mothers": 12,
+    "transfers": 6,
+    "removedOldRows": 0
+  },
+  "kaduwelaMothers": [
+    "Anjali Perera",
+    "Sanduni Fernando",
+    "Hiruni Jayawardena",
+    "Nethmi Rathnayake",
+    "Ishara Madushani"
+  ]
+}

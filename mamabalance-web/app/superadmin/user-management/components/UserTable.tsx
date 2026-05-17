@@ -1,9 +1,20 @@
 "use client";
 
-import { Eye, FileDown, FileText, Pencil, Search, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  Eye,
+  FileDown,
+  FileText,
+  Pencil,
+  Search,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 
 type Column = { key: string; label: string };
 type TableRow = Record<string, string | number | null | undefined>;
+type RowAction = "observe" | "download" | "edit" | "delete";
+type UserStatus = "active" | "inactive";
 
 type Props<T extends TableRow> = {
   columns: readonly Column[];
@@ -15,6 +26,9 @@ type Props<T extends TableRow> = {
   isDownloadingSummary?: (row: T) => boolean;
   onEdit: (row: T) => void;
   onDelete: (row: T) => void;
+  actionLayout?: "icons" | "menu";
+  onStatusChange?: (row: T, status: UserStatus) => void;
+  isUpdatingStatus?: (row: T) => boolean;
   highlightedKey?: string;
   getHighlightKeys?: (row: T) => string[];
   emptyStateVariant?: "default" | "search";
@@ -33,6 +47,9 @@ export default function UserTable<T extends TableRow>({
   isDownloadingSummary,
   onEdit,
   onDelete,
+  actionLayout = "icons",
+  onStatusChange,
+  isUpdatingStatus,
   highlightedKey = "",
   getHighlightKeys,
   emptyStateVariant = "search",
@@ -44,6 +61,25 @@ export default function UserTable<T extends TableRow>({
     const normalized = String(value || "").trim().toLowerCase();
     if (!normalized) return "-";
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  function handleRowAction(row: T, action: RowAction) {
+    if (action === "observe") {
+      onObserve?.(row);
+      return;
+    }
+
+    if (action === "download") {
+      onDownloadSummary?.(row);
+      return;
+    }
+
+    if (action === "edit") {
+      onEdit(row);
+      return;
+    }
+
+    onDelete(row);
   }
 
   return (
@@ -96,10 +132,30 @@ export default function UserTable<T extends TableRow>({
                       visibleColumns?.[col.key] !== false && (
                         <td key={col.key}>
                           {col.key === "status" ? (
-                            <span className={`status ${row.status}`}>
-                              <span className="status-dot" aria-hidden="true" />
-                              {row.status === "active" ? "Active" : "Inactive"}
-                            </span>
+                            onStatusChange ? (
+                              <button
+                                type="button"
+                                className={`status-toggle-button ${row.status}`}
+                                disabled={isUpdatingStatus?.(row)}
+                                onClick={() =>
+                                  onStatusChange(
+                                    row,
+                                    row.status === "active" ? "inactive" : "active",
+                                  )
+                                }
+                              >
+                                <span className="status-dot" aria-hidden="true" />
+                                <span>{row.status === "active" ? "Active" : "Inactive"}</span>
+                                <span className="status-toggle-hint">
+                                  {row.status === "active" ? "Deactivate" : "Activate"}
+                                </span>
+                              </button>
+                            ) : (
+                              <span className={`status ${row.status}`}>
+                                <span className="status-dot" aria-hidden="true" />
+                                {row.status === "active" ? "Active" : "Inactive"}
+                              </span>
+                            )
                           ) : col.key === "riskStatus" ? (
                             <span className={`risk-pill ${String(row.riskStatus || "").toLowerCase()}`}>
                               {formatRisk(row.riskStatus)}
@@ -110,22 +166,58 @@ export default function UserTable<T extends TableRow>({
                         </td>
                       ),
                   )}
-                  <td className="actions">
-                    <Eye className="view-icon" onClick={() => onView(row)} />
-                    {onObserve ? (
-                      <FileText
-                        className="observation-icon"
-                        onClick={() => onObserve(row)}
-                      />
-                    ) : null}
-                    {onDownloadSummary ? (
-                      <FileDown
-                        className={isDownloadingSummary?.(row) ? "report-icon loading" : "report-icon"}
-                        onClick={() => onDownloadSummary(row)}
-                      />
-                    ) : null}
-                    <Pencil className="edit-icon" onClick={() => onEdit(row)} />
-                    <Trash2 className="delete-icon" onClick={() => onDelete(row)} />
+                  <td className={actionLayout === "menu" ? "actions actions-menu" : "actions"}>
+                    <div className="row-actions-inner">
+                      {actionLayout === "menu" ? (
+                        <>
+                          <Eye className="view-icon" onClick={() => onView(row)} />
+                          <Pencil className="edit-icon" onClick={() => onEdit(row)} />
+                          <Trash2 className="delete-icon" onClick={() => onDelete(row)} />
+                          {onObserve || onDownloadSummary ? (
+                            <div className="row-action-select-wrap">
+                              <select
+                                aria-label="More row actions"
+                                value=""
+                                onChange={(event) => {
+                                  const action = event.target.value as RowAction;
+
+                                  if (action) {
+                                    handleRowAction(row, action);
+                                  }
+                                }}
+                              >
+                                <option value="">More</option>
+                                {onObserve ? <option value="observe">Observations</option> : null}
+                                {onDownloadSummary ? (
+                                  <option value="download" disabled={isDownloadingSummary?.(row)}>
+                                    {isDownloadingSummary?.(row) ? "Preparing summary" : "Download summary"}
+                                  </option>
+                                ) : null}
+                              </select>
+                              <ChevronDown size={18} className="row-action-select-icon" />
+                            </div>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="view-icon" onClick={() => onView(row)} />
+                          {onObserve ? (
+                            <FileText
+                              className="observation-icon"
+                              onClick={() => onObserve(row)}
+                            />
+                          ) : null}
+                          {onDownloadSummary ? (
+                            <FileDown
+                              className={isDownloadingSummary?.(row) ? "report-icon loading" : "report-icon"}
+                              onClick={() => onDownloadSummary(row)}
+                            />
+                          ) : null}
+                          <Pencil className="edit-icon" onClick={() => onEdit(row)} />
+                          <Trash2 className="delete-icon" onClick={() => onDelete(row)} />
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

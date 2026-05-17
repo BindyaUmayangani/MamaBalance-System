@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Pencil, Trash2, RotateCcw } from "lucide-react";
+import { ArrowRightLeft, Search, Pencil, Trash2, RotateCcw } from "lucide-react";
 
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/superadmin/styles/adminManagement.css";
@@ -12,17 +12,25 @@ import AddAdminModal from "./modals/AddAdminModal";
 import DeleteAdminModal from "./modals/DeleteAdminModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
 import EditAdminModal from "./modals/EditAdminModal";
+import TransferAdminModal from "./modals/TransferAdminModal";
 import LoadingState from "@/components/admin/LoadingState";
 import { useManagedUsers } from "@/components/admin/useManagedUsers";
 import { ManagedUserRow } from "@/lib/admin/types";
+import StatusConfirmModal from "../user-management/components/StatusConfirmModal";
 
-type ModalType = "add" | "edit" | "delete" | "reset" | null;
+type ModalType = "add" | "edit" | "delete" | "reset" | "transfer" | null;
+type PendingStatusChange = {
+  admin: ManagedUserRow;
+  status: "active" | "inactive";
+};
 
 export default function AdminManagementPage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAdmin, setSelectedAdmin] = useState<ManagedUserRow | null>(null);
+  const [updatingStatusUid, setUpdatingStatusUid] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
   const { users: admins, setUsers: setAdmins, regions, isLoading, error, reload } =
     useManagedUsers<ManagedUserRow>("regionaladmin");
 
@@ -61,6 +69,39 @@ export default function AdminManagementPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
+
+  async function updateAdminStatus(admin: ManagedUserRow, nextStatus: "active" | "inactive") {
+    if (admin.status === nextStatus) {
+      return;
+    }
+
+    try {
+      setUpdatingStatusUid(admin.uid);
+
+      const response = await fetch("/api/admin/users?type=update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: admin.uid,
+          status: nextStatus,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to update account status.");
+      }
+
+      await reload();
+      setPendingStatusChange(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to update account status.");
+    } finally {
+      setUpdatingStatusUid("");
+    }
+  }
 
   return (
     <div className="user-page">
@@ -128,29 +169,58 @@ export default function AdminManagementPage() {
                   <td>{admin.email}</td>
                   <td>{admin.region}</td>
                   <td>
-                    <span className={`status ${admin.status}`}>
+                    <button
+                      type="button"
+                      className={`status-toggle-button ${admin.status}`}
+                      disabled={updatingStatusUid === admin.uid}
+                      onClick={() =>
+                        setPendingStatusChange({
+                          admin,
+                          status: admin.status === "active" ? "inactive" : "active",
+                        })
+                      }
+                    >
                       <span className="status-dot" aria-hidden="true" />
-                      {admin.status === "active" ? "Active" : "Inactive"}
-                    </span>
+                      <span>{admin.status === "active" ? "Active" : "Inactive"}</span>
+                      <span className="status-toggle-hint">
+                        {admin.status === "active" ? "Deactivate" : "Activate"}
+                      </span>
+                    </button>
                   </td>
                   <td className="actions">
-                    <RotateCcw
-                      title="Reset Password"
-                      onClick={() => {
-                        setSearch("");
-                        setCurrentPage(1);
-                        setSelectedAdmin(admin);
-                        setActiveModal("reset");
-                      }}
-                    />
-                    <Pencil onClick={() => {
-                      setSelectedAdmin(admin);
-                      setActiveModal("edit");
-                    }} />
-                    <Trash2 onClick={() => {
-                      setSelectedAdmin(admin);
-                      setActiveModal("delete");
-                    }} />
+                    <div className="row-actions-inner">
+                      <RotateCcw
+                        className="reset-icon"
+                        title="Reset Password"
+                        onClick={() => {
+                          setSearch("");
+                          setCurrentPage(1);
+                          setSelectedAdmin(admin);
+                          setActiveModal("reset");
+                        }}
+                      />
+                      <ArrowRightLeft
+                        className="transfer-icon"
+                        onClick={() => {
+                          setSelectedAdmin(admin);
+                          setActiveModal("transfer");
+                        }}
+                      />
+                      <Pencil
+                        className="edit-icon"
+                        onClick={() => {
+                          setSelectedAdmin(admin);
+                          setActiveModal("edit");
+                        }}
+                      />
+                      <Trash2
+                        className="delete-icon"
+                        onClick={() => {
+                          setSelectedAdmin(admin);
+                          setActiveModal("delete");
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -166,6 +236,31 @@ export default function AdminManagementPage() {
         pageSize={pageSize}
         onPageChange={setCurrentPage}
       />
+
+      {pendingStatusChange ? (
+        <ModalWrapper
+          onClose={() => {
+            if (!updatingStatusUid) {
+              setPendingStatusChange(null);
+            }
+          }}
+        >
+          <StatusConfirmModal
+            userName={pendingStatusChange.admin.name}
+            userLabel="Admin"
+            currentStatus={pendingStatusChange.admin.status}
+            nextStatus={pendingStatusChange.status}
+            isSaving={Boolean(updatingStatusUid)}
+            onCancel={() => setPendingStatusChange(null)}
+            onConfirm={() =>
+              void updateAdminStatus(
+                pendingStatusChange.admin,
+                pendingStatusChange.status,
+              )
+            }
+          />
+        </ModalWrapper>
+      ) : null}
 
       {/* ================= MODALS ================= */}
       {activeModal && (
@@ -219,6 +314,18 @@ export default function AdminManagementPage() {
               onClose={() => setActiveModal(null)}
               onReset={async () => {
                 await reload();
+              }}
+            />
+          )}
+
+          {activeModal === "transfer" && selectedAdmin && (
+            <TransferAdminModal
+              admin={selectedAdmin}
+              regionOptions={regions}
+              onClose={() => setActiveModal(null)}
+              onTransferred={async () => {
+                await reload();
+                setSelectedAdmin(null);
               }}
             />
           )}

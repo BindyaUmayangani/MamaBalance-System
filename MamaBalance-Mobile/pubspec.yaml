@@ -50,5 +50,7 @@ flutter:
 # 🔹 Flutter Launcher Icons Configuration
 flutter_launcher_icons:
   android: "launcher_icon"
-  image_path: "assets/images/MamaBalance_icon.png"
+  ios: true
+  image_path: "assets/images/New_Mamabalance_icon.png"
   min_sdk_android: 21
+  remove_alpha_ios: true

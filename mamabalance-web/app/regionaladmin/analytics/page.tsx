@@ -29,7 +29,7 @@ import ModalWrapper from "@/app/superadmin/educational-content/modals/ModalWrapp
 import "@/app/styles/RoleSettingsSupport.css";
 import "@/app/superadmin/styles/analyticsReports.css";
 
-type ReportType = "full" | "risk" | "activity" | "careTeam" | "operations";
+type ReportType = "full" | "risk" | "activity" | "careTeam" | "operations" | "referrals";
 
 type CareTeamRow = {
   uid: string;
@@ -55,6 +55,13 @@ type AnalyticsData = {
   epdsTrend: { label: string; value: number }[];
   obsTrend: { label: string; value: number }[];
   careTeamBreakdown: CareTeamRow[];
+  referrals: {
+    incoming: { total: number; pending: number; accepted: number; rejected: number };
+    outgoing: { total: number; pending: number; accepted: number; rejected: number };
+    statusBreakdown: { name: string; incoming: number; outgoing: number }[];
+    typeBreakdown: { name: string; incoming: number; outgoing: number }[];
+    trend: { label: string; incoming: number; outgoing: number }[];
+  };
 };
 
 function niceYAxisMax(dataMax: number) {
@@ -138,15 +145,14 @@ export default function RegionalAnalyticsPage() {
         return "Regional Care Team Workload Report";
       case "operations":
         return "Regional Operational Snapshot Report";
+      case "referrals":
+        return "Regional Referral Flow Report";
       default:
         return "Regional Analytics Report";
     }
   }
 
   const MAMA_TEAL = "#499d85";
-  const MAMA_RED = "#dc2626";
-  const MAMA_ORANGE = "#fb923c";
-  const MAMA_GREEN = "#22c55e";
 
   function addHeader(pdf: jsPDF, title: string, regionName: string) {
     // Brand Background Bar
@@ -198,6 +204,8 @@ export default function RegionalAnalyticsPage() {
         return "Velocity report tracking clinical engagement, monitoring the frequency of EPDS submissions and care team observations.";
       case "careTeam":
         return "Operational workload assessment tracking assigned mother counts, high-risk cases, and clinical documentation activity per staff member.";
+      case "referrals":
+        return "Incoming and outgoing regional referral movement, including pending approvals and completed transfer decisions.";
       default:
         return "Regional operational snapshot highlighting key performance indicators and active clinical engagement metrics.";
     }
@@ -228,29 +236,6 @@ export default function RegionalAnalyticsPage() {
     drawKPIBox(pdf, "High Risk", analytics.stats.highRiskMothers, 14 + boxW + gap, startY, boxW, boxH, [220, 38, 38]);
     drawKPIBox(pdf, "Care Team", analytics.stats.totalDoctors + analytics.stats.totalMidwives, 14 + (boxW + gap) * 2, startY, boxW, boxH, [59, 130, 246]);
     drawKPIBox(pdf, "Submissions", analytics.stats.epdsSubmissions, 14 + (boxW + gap) * 3, startY, boxW, boxH, [16, 185, 129]);
-  }
-
-  function addMetricsTable(pdf: jsPDF, analytics: AnalyticsData, startY = 48) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(13);
-    pdf.setTextColor(31, 41, 55);
-    pdf.text("Regional Operational Performance Metrics", 14, startY);
-
-    autoTable(pdf, {
-      startY: startY + 8,
-      head: [["Metric", "Value"]],
-      body: [
-        ["Mothers in Region", analytics.stats.totalMothers],
-        ["High Risk Mothers", analytics.stats.highRiskMothers],
-        ["Regional Doctors", analytics.stats.totalDoctors],
-        ["Regional Midwives", analytics.stats.totalMidwives],
-        ["EPDS Submissions", analytics.stats.epdsSubmissions],
-        ["Clinical Observations", analytics.stats.observations],
-        ["Overdue Follow-ups", analytics.stats.overdueFollowups],
-      ],
-      headStyles: { fillColor: [73, 157, 133], fontStyle: "bold" },
-      styles: { fontSize: 10, cellPadding: 5 },
-    });
   }
 
   function addRiskReport(pdf: jsPDF, analytics: AnalyticsData, startY = 48) {
@@ -346,6 +331,46 @@ export default function RegionalAnalyticsPage() {
     });
   }
 
+  function addReferralReport(pdf: jsPDF, analytics: AnalyticsData, startY = 48) {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.setTextColor(31, 41, 55);
+    pdf.text("Regional Referral Flow Summary", 14, startY);
+
+    autoTable(pdf, {
+      startY: startY + 8,
+      head: [["Direction", "Total", "Pending", "Accepted", "Rejected"]],
+      body: [
+        [
+          "Incoming Referrals",
+          analytics.referrals.incoming.total,
+          analytics.referrals.incoming.pending,
+          analytics.referrals.incoming.accepted,
+          analytics.referrals.incoming.rejected,
+        ],
+        [
+          "Outgoing Referrals",
+          analytics.referrals.outgoing.total,
+          analytics.referrals.outgoing.pending,
+          analytics.referrals.outgoing.accepted,
+          analytics.referrals.outgoing.rejected,
+        ],
+      ],
+      headStyles: { fillColor: [73, 157, 133], fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 5 },
+    });
+
+    autoTable(pdf, {
+      startY: (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
+        ? (pdf as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12
+        : startY + 48,
+      head: [["User Type", "Incoming", "Outgoing"]],
+      body: analytics.referrals.typeBreakdown.map((row) => [row.name, row.incoming, row.outgoing]),
+      headStyles: { fillColor: [73, 157, 133], fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 5 },
+    });
+  }
+
   const handleExport = async () => {
     if (!data) return;
     setIsExporting(true);
@@ -374,12 +399,17 @@ export default function RegionalAnalyticsPage() {
         pdf.addPage();
         addHeader(pdf, "Regional Operational Snapshot", data.regionName);
         addOperationsReport(pdf, data, 54);
+        pdf.addPage();
+        addHeader(pdf, "Regional Referral Flow", data.regionName);
+        addReferralReport(pdf, data, 54);
       } else if (selectedReport === "risk") {
         addRiskReport(pdf, data, 54);
       } else if (selectedReport === "activity") {
         addActivityReport(pdf, data, 54);
       } else if (selectedReport === "careTeam") {
         addCareTeamReport(pdf, data, 54);
+      } else if (selectedReport === "referrals") {
+        addReferralReport(pdf, data, 54);
       } else {
         addOperationsReport(pdf, data, 54);
       }
@@ -675,6 +705,57 @@ export default function RegionalAnalyticsPage() {
               </div>
             </div>
           </div>
+
+          <div className="analytics-grid top-charts analytics-bottom-section">
+            <div className="chart-card">
+              <h3>Incoming and Outgoing Referrals</h3>
+              <p className="chart-subtitle">Referral flow for {data.regionName} in the selected period</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={data.referrals.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tickMargin={10} tick={{ fill: "#6b7280", fontSize: 13 }} />
+                  <YAxis axisLine={false} tickLine={false} domain={[0, niceYAxisMax]} tickCount={6} tick={{ fill: "#6b7280", fontSize: 13 }} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: "#f3f4f6" }} contentStyle={{ borderRadius: "12px", border: "none" }} />
+                  <Bar dataKey="incoming" name="Incoming" fill="#499d85" radius={[6, 6, 0, 0]} maxBarSize={34} />
+                  <Bar dataKey="outgoing" name="Outgoing" fill="#60a5fa" radius={[6, 6, 0, 0]} maxBarSize={34} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="chart-card">
+              <h3>Referral Decisions</h3>
+              <p className="chart-subtitle">Pending, accepted, and rejected transfer requests by direction</p>
+              <div className="table-wrapper">
+                <table className="analytics-table compact">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Incoming</th>
+                      <th>Outgoing</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.referrals.statusBreakdown.map((row) => (
+                      <tr key={row.name}>
+                        <td><strong>{row.name}</strong></td>
+                        <td>{row.incoming}</td>
+                        <td>{row.outgoing}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="referral-type-grid">
+                {data.referrals.typeBreakdown.map((row) => (
+                  <div key={row.name} className="referral-type-item">
+                    <span>{row.name}</span>
+                    <strong>{row.incoming + row.outgoing}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -704,6 +785,7 @@ export default function RegionalAnalyticsPage() {
                     <option value="activity">Activity Velocity Report</option>
                     <option value="careTeam">Care Team Workload Report</option>
                     <option value="operations">Operational Snapshot Report</option>
+                    <option value="referrals">Referral Flow Report</option>
                   </select>
                   <ChevronDown className="filter-select-icon teal" size={18} />
                 </div>

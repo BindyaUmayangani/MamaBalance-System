@@ -144,3 +144,133 @@
 .password-regenerate:active {
   transform: translateY(-50%) rotate(180deg) scale(0.95);
 }
+
+.actions .reset-icon {
+  color: #9ca3af;
+}
+
+.actions .reset-icon:hover {
+  color: #6b7280;
+}
+
+.actions svg.transfer-icon,
+.actions .transfer-icon {
+  color: #60a5fa !important;
+}
+
+.actions-col,
+td.actions {
+  vertical-align: middle;
+}
+
+.actions svg.transfer-icon:hover,
+.actions .transfer-icon:hover {
+  color: #3b82f6 !important;
+}
+
+.transfer-admin-modal {
+  width: 100%;
+  max-height: min(74vh, 620px);
+  gap: 14px;
+  overflow: hidden;
+}
+
+.transfer-admin-scroll {
+  display: grid;
+  gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 8px;
+}
+
+.transfer-admin-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d7eae3;
+  border-radius: 16px;
+  background: #f8fcfa;
+}
+
+.transfer-admin-hero .modal-title {
+  margin: 0 0 4px;
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.transfer-admin-hero p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.transfer-admin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  color: #ffffff;
+  background: #499d85;
+}
+
+.transfer-admin-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.transfer-admin-summary div {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid #d8ece4;
+  border-radius: 14px;
+  background: #f8fcfa;
+}
+
+.transfer-admin-summary span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.transfer-admin-summary strong {
+  color: #111827;
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.transfer-admin-reason {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.transfer-admin-reason:focus {
+  border-color: #499d85;
+  box-shadow: 0 0 0 4px rgba(73, 157, 133, 0.12);
+}
+
+.transfer-admin-modal .modal-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding-top: 14px;
+  border-top: 1px solid #e5eee9;
+}
+
+@media (max-width: 640px) {
+  .transfer-admin-summary {
+    grid-template-columns: 1fr;
+  }
+}

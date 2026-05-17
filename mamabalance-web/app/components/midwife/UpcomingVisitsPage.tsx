@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CalendarDays, ChevronDown, Search, Trash2 } from "lucide-react";
 
 import LoadingState from "@/components/admin/LoadingState";
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/midwife/styles/UpcomingVisits.css";
 
@@ -561,12 +562,22 @@ export default function UpcomingVisitsPage() {
       {showDelete && (
         <div className="modal-overlay">
           <div className="modal-card visit-modal">
-            <h2 className="modal-title danger">DELETE VISIT</h2>
-            <p className="modal-name-text">Are you sure you want to delete the visit for <strong>{showDelete.motherName}</strong>?</p>
-            <div className="modal-actions">
-              <button className="btn-outline" onClick={() => setShowDelete(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleDeleteVisit} disabled={isSaving}>{isSaving ? "Deleting..." : "Delete"}</button>
-            </div>
+            <DeleteConfirmContent
+              title="Delete visit"
+              message={
+                <>
+                  Are you sure you want to delete the visit for{" "}
+                  <strong>{showDelete.motherName}</strong>? This cannot be undone.
+                </>
+              }
+              details={[
+                { label: "Mother", value: showDelete.motherName },
+                { label: "Visit date", value: showDelete.date },
+              ]}
+              isPending={isSaving}
+              onCancel={() => setShowDelete(null)}
+              onConfirm={() => void handleDeleteVisit()}
+            />
           </div>
         </div>
       )}

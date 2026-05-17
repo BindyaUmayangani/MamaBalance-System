@@ -92,6 +92,7 @@ export default function ContentFormModal({
   const resourceAccept = type === "video" ? "video/*" : "application/pdf";
   const resourcePreviewLabel =
     type === "video" ? "Open uploaded video" : "Open uploaded PDF";
+  const showVisibilityField = mode === "create";
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -241,6 +242,45 @@ export default function ContentFormModal({
     }
   }
 
+  function renderContentTypeField() {
+    return (
+      <>
+        <label>Content Type</label>
+        <div className="field-control">
+          <select
+            value={type}
+            onChange={(event) => {
+              const nextType = event.target.value as EducationalContentType;
+              const wasFileType = type === "video" || type === "pdf";
+              const nextIsFileType = nextType === "video" || nextType === "pdf";
+
+              setType(nextType);
+
+              if (wasFileType !== nextIsFileType) {
+                setResourceUrl("");
+                setResourcePath("");
+                setResourceFile(null);
+              }
+            }}
+          >
+            {EDUCATIONAL_CONTENT_TYPES.map((item) => (
+              <option key={item} value={item}>
+                {item === "youtube"
+                  ? "YouTube Video"
+                  : item === "pdf"
+                    ? "PDF"
+                    : item.charAt(0).toUpperCase() + item.slice(1)}
+              </option>
+            ))}
+          </select>
+          <span className="field-icon" aria-hidden="true">
+            <ChevronDown size={18} />
+          </span>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <h2 className="modal-title">{modalTitle}</h2>
@@ -248,6 +288,8 @@ export default function ContentFormModal({
       <div className="content-modal-scroll">
         <div className="modal-form-grid">
           <div>
+            {mode === "create" ? renderContentTypeField() : null}
+
             <label>Title</label>
             <input
               type="text"
@@ -281,43 +323,11 @@ export default function ContentFormModal({
                 </label>
               ))}
             </div>
-
-            <label>Content Type</label>
-            <div className="field-control">
-              <select
-                value={type}
-                onChange={(event) => {
-                  const nextType = event.target.value as EducationalContentType;
-                  const wasFileType = type === "video" || type === "pdf";
-                  const nextIsFileType =
-                    nextType === "video" || nextType === "pdf";
-
-                  setType(nextType);
-
-                  if (wasFileType !== nextIsFileType) {
-                    setResourceUrl("");
-                    setResourcePath("");
-                    setResourceFile(null);
-                  }
-                }}
-              >
-                {EDUCATIONAL_CONTENT_TYPES.map((item) => (
-                  <option key={item} value={item}>
-                    {item === "youtube"
-                      ? "YouTube Video"
-                      : item === "pdf"
-                        ? "PDF"
-                        : item.charAt(0).toUpperCase() + item.slice(1)}
-                  </option>
-                ))}
-              </select>
-              <span className="field-icon" aria-hidden="true">
-                <ChevronDown size={18} />
-              </span>
-            </div>
           </div>
 
           <div>
+            {mode === "edit" ? renderContentTypeField() : null}
+
             <label>Poster (Image) - Optional</label>
             <div className="content-upload-box">
               <input type="file" accept="image/*" onChange={handlePosterChange} />
@@ -382,30 +392,34 @@ export default function ContentFormModal({
               </div>
             )}
 
-            <label>Visibility</label>
-            <div className="radio-group">
-              <label className="radio-option">
-                <input
-                  type="radio"
-                  name="visibility"
-                  checked={visibility === "visible"}
-                  onChange={() => setVisibility("visible")}
-                />
-                <span className="custom-radio"></span>
-                <span className="radio-text">Visible</span>
-              </label>
+            {showVisibilityField ? (
+              <>
+                <label>Visibility</label>
+                <div className="radio-group">
+                  <label className="radio-option">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      checked={visibility === "visible"}
+                      onChange={() => setVisibility("visible")}
+                    />
+                    <span className="custom-radio"></span>
+                    <span className="radio-text">Visible</span>
+                  </label>
 
-              <label className="radio-option">
-                <input
-                  type="radio"
-                  name="visibility"
-                  checked={visibility === "hidden"}
-                  onChange={() => setVisibility("hidden")}
-                />
-                <span className="custom-radio"></span>
-                <span className="radio-text">Hide</span>
-              </label>
-            </div>
+                  <label className="radio-option">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      checked={visibility === "hidden"}
+                      onChange={() => setVisibility("hidden")}
+                    />
+                    <span className="custom-radio"></span>
+                    <span className="radio-text">Hide</span>
+                  </label>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
 

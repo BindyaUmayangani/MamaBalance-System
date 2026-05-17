@@ -8,6 +8,7 @@ import "@/app/superadmin/styles/userManagement.css";
 import "@/app/styles/RoleSettingsSupport.css";
 
 import ContentTable from "@/app/superadmin/educational-content/components/ContentTable";
+import StatusConfirmModal from "@/app/superadmin/user-management/components/StatusConfirmModal";
 import Pagination from "@/app/superadmin/components/Pagination";
 import LoadingState from "@/components/admin/LoadingState";
 
@@ -22,6 +23,10 @@ import {
 } from "@/lib/education/types";
 
 type ModalType = "add" | "edit" | "view" | "delete" | null;
+type PendingVisibilityChange = {
+  content: EducationalContentRecord;
+  visibility: "visible" | "hidden";
+};
 
 type Props = {
   role: "superadmin" | "regionaladmin";
@@ -36,6 +41,9 @@ export default function EducationalContentPage({ role }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [updatingVisibilityId, setUpdatingVisibilityId] = useState("");
+  const [pendingVisibilityChange, setPendingVisibilityChange] =
+    useState<PendingVisibilityChange | null>(null);
   const [activeAudience, setActiveAudience] =
     useState<EducationalContentAudience>("mother");
 
@@ -144,6 +152,62 @@ export default function EducationalContentPage({ role }: Props) {
     }
   }
 
+  async function updateContentVisibility(
+    content: EducationalContentRecord,
+    visibility: "visible" | "hidden",
+  ) {
+    if (content.visibility === visibility) {
+      return;
+    }
+
+    setUpdatingVisibilityId(content.id);
+
+    try {
+      const response = await fetch("/api/admin/content", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: content.id,
+          title: content.title,
+          description: content.description,
+          audience: content.audience,
+          type: content.type,
+          visibility,
+          posterUrl: content.posterUrl,
+          posterPath: content.posterPath,
+          resourceUrl: content.resourceUrl,
+          resourcePath: content.resourcePath,
+        }),
+      });
+      const data = (await response.json()) as {
+        content?: EducationalContentRecord;
+        error?: string;
+      };
+
+      if (!response.ok || !data.content) {
+        throw new Error(data.error || "Unable to update content visibility.");
+      }
+
+      setContents((prev) =>
+        prev.map((item) => (item.id === data.content?.id ? data.content : item)),
+      );
+      setSelectedContent((current) =>
+        current?.id === data.content?.id ? data.content : current,
+      );
+      setPendingVisibilityChange(null);
+    } catch (caughtError) {
+      alert(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to update content visibility.",
+      );
+    } finally {
+      setUpdatingVisibilityId("");
+    }
+  }
+
   const tableContent = isLoading ? (
     <LoadingState label="Loading educational content..." />
   ) : error ? (
@@ -189,6 +253,14 @@ export default function EducationalContentPage({ role }: Props) {
             }
           : undefined
       }
+      onVisibilityChange={
+        isSuperAdmin
+          ? (item, visibility) => {
+              setPendingVisibilityChange({ content: item, visibility });
+            }
+          : undefined
+      }
+      isUpdatingVisibility={(item) => updatingVisibilityId === item.id}
     />
   );
 
@@ -298,6 +370,55 @@ export default function EducationalContentPage({ role }: Props) {
         pageSize={pageSize}
         onPageChange={setCurrentPage}
       />
+
+      {pendingVisibilityChange ? (
+        <ModalWrapper
+          variant="compact"
+          onClose={() => {
+            if (!updatingVisibilityId) {
+              setPendingVisibilityChange(null);
+            }
+          }}
+        >
+          <StatusConfirmModal
+            userName={pendingVisibilityChange.content.title}
+            userLabel="Content"
+            currentStatus={
+              pendingVisibilityChange.content.visibility === "visible"
+                ? "active"
+                : "inactive"
+            }
+            nextStatus={
+              pendingVisibilityChange.visibility === "visible" ? "active" : "inactive"
+            }
+            title={
+              pendingVisibilityChange.visibility === "visible"
+                ? "Make content visible?"
+                : "Hide this content?"
+            }
+            description={
+              pendingVisibilityChange.visibility === "visible"
+                ? `${pendingVisibilityChange.content.title} will be visible in educational resources.`
+                : `${pendingVisibilityChange.content.title} will be hidden from educational resources.`
+            }
+            currentStatusLabel={pendingVisibilityChange.content.visibilityLabel}
+            nextStatusLabel={
+              pendingVisibilityChange.visibility === "visible" ? "Visible" : "Hidden"
+            }
+            confirmLabel={
+              pendingVisibilityChange.visibility === "visible" ? "Show content" : "Hide content"
+            }
+            isSaving={Boolean(updatingVisibilityId)}
+            onCancel={() => setPendingVisibilityChange(null)}
+            onConfirm={() =>
+              void updateContentVisibility(
+                pendingVisibilityChange.content,
+                pendingVisibilityChange.visibility,
+              )
+            }
+          />
+        </ModalWrapper>
+      ) : null}
 
       {activeModal && (
         <ModalWrapper

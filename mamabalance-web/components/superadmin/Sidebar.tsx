@@ -11,6 +11,7 @@ import {
   BookOpen,
   Pill,
   BarChart3,
+  ArrowRightLeft,
   ClipboardList,
   Settings,
   CircleHelp,
@@ -30,7 +31,7 @@ export default function Sidebar() {
       {/* ================= LOGO ================= */}
       <div className="sidebar-logo">
         <Image
-          src="/images/logo.png"
+          src="/images/new_logo.png"
           alt="MamaBalance"
           width={75}
           height={75}
@@ -97,6 +98,14 @@ export default function Sidebar() {
         >
           <BarChart3 size={20} />
           Analytics & Reports
+        </Link>
+
+        <Link
+          href="/superadmin/referrals"
+          className={isActive("/superadmin/referrals")}
+        >
+          <ArrowRightLeft size={20} />
+          User Referrals
         </Link>
 
         <Link

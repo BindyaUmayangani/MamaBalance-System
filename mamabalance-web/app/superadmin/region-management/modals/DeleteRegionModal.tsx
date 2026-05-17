@@ -1,5 +1,7 @@
 "use client";
 
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
+
 export default function DeleteRegionModal({
   regionName,
   onClose,
@@ -10,23 +12,17 @@ export default function DeleteRegionModal({
   onDelete: () => void;
 }) {
   return (
-    <>
-      <h2 className="modal-title danger">DELETE REGION</h2>
-
-      <p style={{ marginTop: "12px", fontSize: "0.9rem" }}>
-        Are you sure you want to delete the region
-        <strong> “{regionName}”</strong>?
-      </p>
-
-      <div className="modal-actions">
-        <button className="btn-close" onClick={onClose}>
-          Cancel
-        </button>
-
-        <button className="btn-danger" onClick={onDelete}>
-          Delete
-        </button>
-      </div>
-    </>
+    <DeleteConfirmContent
+      title="Delete region"
+      message={
+        <>
+          Are you sure you want to delete <strong>{regionName}</strong>? This
+          cannot be undone.
+        </>
+      }
+      details={[{ label: "Region", value: regionName }]}
+      onCancel={onClose}
+      onConfirm={onDelete}
+    />
   );
 }

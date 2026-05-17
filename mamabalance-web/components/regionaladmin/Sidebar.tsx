@@ -10,6 +10,7 @@ import {
   Pill,
   BarChart3,
   ClipboardList,
+  ArrowRightLeft,
   Settings,
   CircleHelp,
 } from "lucide-react";
@@ -28,7 +29,7 @@ export default function RegionalAdminSidebar() {
       {/* ================= LOGO ================= */}
       <div className="sidebar-logo">
         <Image
-          src="/images/logo.png"
+          src="/images/new_logo.png"
           alt="MamaBalance"
           width={75}
           height={75}
@@ -80,6 +81,14 @@ export default function RegionalAdminSidebar() {
         >
           <BarChart3 size={20} />
           Regional Analytics
+        </Link>
+
+        <Link
+          href="/regionaladmin/transfers"
+          className={isActive("/regionaladmin/transfers")}
+        >
+          <ArrowRightLeft size={20} />
+          Transfers
         </Link>
 
         <Link

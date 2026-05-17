@@ -81,6 +81,10 @@
 .medicine-modal {
   width: 780px;
   max-width: 94vw;
+  max-height: min(86vh, 780px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .medicine-form-grid {
@@ -122,19 +126,79 @@
   margin-top: 4px;
 }
 
+.medicine-view-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  margin-right: -8px;
+}
+
+.medicine-modal .modal-actions {
+  flex-shrink: 0;
+}
+
+.medicine-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border: 1px solid #d8ece4;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e8faf3 0%, #f8fffb 100%);
+}
+
+.medicine-view-eyebrow {
+  margin: 0 0 8px;
+  color: #499d85;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.medicine-view-title {
+  margin: 0;
+  color: #06152b;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.medicine-view-subtitle {
+  margin: 8px 0 0;
+  color: #60756d;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.medicine-view-status {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .medicine-view-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 0;
 }
 
 .medicine-view-grid > div {
-  padding: 14px;
+  min-height: 86px;
+  padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid #d8ece4;
   background: #f8fcfa;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
   gap: 6px;
 }
 
@@ -154,6 +218,23 @@
 .medicine-view-grid p {
   margin: 0;
   color: #1f2937;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.medicine-view-grid strong {
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.medicine-view-grid p {
+  color: #344054;
+  font-size: 0.95rem;
+}
+
+.medicine-readonly-actions {
+  justify-content: flex-start;
+  padding-left: 24px;
 }
 
 .actions .icon-view {
@@ -183,6 +264,10 @@
 
   .medicine-view-grid {
     grid-template-columns: 1fr;
+  }
+
+  .medicine-view-header {
+    flex-direction: column;
   }
 
   .medicine-view-grid > div.full {

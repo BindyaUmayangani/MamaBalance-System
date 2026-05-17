@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { CalendarDays, ChevronDown, Eye, History, Pencil, Plus, RotateCcw, Search, SquareX, Trash2 } from "lucide-react";
 import LoadingState from "@/components/admin/LoadingState";
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
 import Pagination from "@/app/superadmin/components/Pagination";
 import "@/app/doctor/styles/MedicationManagement.css";
 import "@/app/doctor/styles/AssignedMothers.css";
@@ -1358,31 +1359,26 @@ export default function MedicationManagementWorkspace() {
       {deleteRecord && (
         <div className="modal-overlay">
           <div className="modal-card medication-modal medication-modal-small">
-            <h2 className="modal-title danger">DELETE MEDICATION</h2>
-            <p className="stop-copy">
-              Delete{" "}
-              <strong>{formatMedicationDisplay(deleteRecord)}</strong> for{" "}
-              <strong>{deleteRecord.motherName}</strong>?
-            </p>
-            <p className="stop-copy">
-              This will permanently remove the medication record from the doctor medication list.
-            </p>
-            <div className="modal-actions">
-              <button
-                className="btn-outline"
-                onClick={() => setDeleteRecord(null)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={deleteMedication}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Deleting..." : "Delete"}
-              </button>
-            </div>
+            <DeleteConfirmContent
+              title="Delete medication"
+              message={
+                <>
+                  Delete <strong>{formatMedicationDisplay(deleteRecord)}</strong>{" "}
+                  for <strong>{deleteRecord.motherName}</strong>? This cannot be
+                  undone.
+                </>
+              }
+              details={[
+                {
+                  label: "Medication",
+                  value: formatMedicationDisplay(deleteRecord),
+                },
+                { label: "Mother", value: deleteRecord.motherName },
+              ]}
+              isPending={isSubmitting}
+              onCancel={() => setDeleteRecord(null)}
+              onConfirm={() => void deleteMedication()}
+            />
           </div>
         </div>
       )}

@@ -7,6 +7,11 @@ type Props = {
   onView: (item: EducationalContentRecord) => void;
   onEdit?: (item: EducationalContentRecord) => void;
   onDelete?: (item: EducationalContentRecord) => void;
+  onVisibilityChange?: (
+    item: EducationalContentRecord,
+    visibility: "visible" | "hidden",
+  ) => void;
+  isUpdatingVisibility?: (item: EducationalContentRecord) => boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   emptyStateVariant?: "default" | "search";
@@ -20,6 +25,8 @@ export default function ContentTable({
   onView,
   onEdit,
   onDelete,
+  onVisibilityChange,
+  isUpdatingVisibility,
   canEdit = false,
   canDelete = false,
   emptyStateVariant = "search",
@@ -64,20 +71,46 @@ export default function ContentTable({
             {data.map((item) => (
               <tr key={item.id}>
                 <td className="content-id-col">{item.contentId}</td>
-                <td className="content-title-col">{item.title}</td>
+                <td className="content-title-col">
+                  <span className="content-title-text" title={item.title}>
+                    {item.title}
+                  </span>
+                </td>
                 <td className="content-type-col">{item.audienceLabel}</td>
                 <td className="content-type-col">{item.typeLabel}</td>
                 <td className="content-date-col">{item.dateAdded}</td>
 
                 <td>
-                  <span
-                    className={`status ${
-                      item.visibility === "visible" ? "active" : "inactive"
-                    }`}
-                  >
-                    <span className="status-dot" aria-hidden="true" />
-                    {item.visibilityLabel}
-                  </span>
+                  {onVisibilityChange ? (
+                    <button
+                      type="button"
+                      className={`status-toggle-button ${
+                        item.visibility === "visible" ? "active" : "inactive"
+                      }`}
+                      disabled={isUpdatingVisibility?.(item)}
+                      onClick={() =>
+                        onVisibilityChange(
+                          item,
+                          item.visibility === "visible" ? "hidden" : "visible",
+                        )
+                      }
+                    >
+                      <span className="status-dot" aria-hidden="true" />
+                      <span>{item.visibilityLabel}</span>
+                      <span className="status-toggle-hint">
+                        {item.visibility === "visible" ? "Hide" : "Show"}
+                      </span>
+                    </button>
+                  ) : (
+                    <span
+                      className={`status-display-pill ${
+                        item.visibility === "visible" ? "active" : "inactive"
+                      }`}
+                    >
+                      <span className="status-dot" aria-hidden="true" />
+                      {item.visibilityLabel}
+                    </span>
+                  )}
                 </td>
 
                 <td className="actions-col actions-cell">

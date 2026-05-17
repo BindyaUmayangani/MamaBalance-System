@@ -109,13 +109,14 @@ export async function GET(request: Request) {
   const timeFilter = normalizeTimeFilter(searchParams.get("filter"));
 
   try {
-    const [usersSnapshot, mothersSnapshot, epdsSnapshot, regionsSnapshot, careObsSnapshot, midwifeObsSnapshot] = await Promise.all([
+    const [usersSnapshot, mothersSnapshot, epdsSnapshot, regionsSnapshot, careObsSnapshot, midwifeObsSnapshot, transfersSnapshot] = await Promise.all([
       adminDb.collection("users").get(),
       adminDb.collection("mothers").get(),
       adminDb.collection("epdsAssessments").get(),
       adminDb.collection("regions").get(),
       adminDb.collection("careObservations").get(),
       adminDb.collection("midwifeObservations").get(),
+      adminDb.collection("regionTransfers").get(),
     ]);
 
     const regionOptions = regionsSnapshot.empty
@@ -163,6 +164,42 @@ export async function GET(request: Request) {
         submissions: 0,
       };
     });
+    const regionNameById = new Map(regionOptions.map((region) => [region.id, region.name]));
+    const { labels: labelOrder, buckets: epdsBuckets, start, end } = buildBuckets(timeFilter);
+    const { buckets: obsBuckets } = buildBuckets(timeFilter);
+    let hasAssessmentDocs = false;
+    const referralStatusCounts = { pending: 0, accepted: 0, rejected: 0 };
+    const referralTypeCounts = { mother: 0, doctor: 0, midwife: 0 };
+    const referralTrendBuckets = Object.fromEntries(labelOrder.map((label) => [label, 0])) as Record<string, number>;
+    const referralRegionalBreakdown: Record<string, {
+      id: string;
+      name: string;
+      incoming: number;
+      outgoing: number;
+      pending: number;
+      accepted: number;
+      rejected: number;
+      total: number;
+    }> = {};
+
+    function ensureReferralRegion(regionId: string, fallbackName: string) {
+      const id = regionId || fallbackName || "unknown";
+
+      if (!referralRegionalBreakdown[id]) {
+        referralRegionalBreakdown[id] = {
+          id,
+          name: normalizeRegionName(regionNameById.get(id) || fallbackName || id || "Unknown region"),
+          incoming: 0,
+          outgoing: 0,
+          pending: 0,
+          accepted: 0,
+          rejected: 0,
+          total: 0,
+        };
+      }
+
+      return referralRegionalBreakdown[id];
+    }
 
     // Populate stats and breakdown.
     usersSnapshot.docs.forEach(doc => {
@@ -188,10 +225,6 @@ export async function GET(request: Request) {
     });
 
     // Generate trend data based on time filter
-    const { labels: labelOrder, buckets: epdsBuckets, start, end } = buildBuckets(timeFilter);
-    const { buckets: obsBuckets } = buildBuckets(timeFilter);
-    let hasAssessmentDocs = false;
-
     // EPDS Activity
     epdsSnapshot.docs.forEach(doc => {
       const assessment = doc.data();
@@ -241,6 +274,39 @@ export async function GET(request: Request) {
       }
     });
 
+    transfersSnapshot.docs.forEach((doc) => {
+      const transfer = doc.data();
+      const status = ["pending", "accepted", "rejected"].includes(String(transfer.status))
+        ? (String(transfer.status) as "pending" | "accepted" | "rejected")
+        : "pending";
+      const type = ["mother", "doctor", "midwife"].includes(String(transfer.type))
+        ? (String(transfer.type) as "mother" | "doctor" | "midwife")
+        : "mother";
+      const sourceRegion = ensureReferralRegion(
+        String(transfer.sourceRegionId || ""),
+        String(transfer.sourceRegionName || "Source region"),
+      );
+      const targetRegion = ensureReferralRegion(
+        String(transfer.targetRegionId || ""),
+        String(transfer.targetRegionName || "Target region"),
+      );
+
+      referralStatusCounts[status] += 1;
+      referralTypeCounts[type] += 1;
+      sourceRegion.outgoing += 1;
+      sourceRegion.total += 1;
+      sourceRegion[status] += 1;
+      targetRegion.incoming += 1;
+      targetRegion.total += 1;
+      targetRegion[status] += 1;
+
+      const createdAt = getActivityDate(transfer);
+      if (!createdAt || !isInRange(createdAt, start, end)) return;
+
+      const key = getBucketKey(createdAt, timeFilter);
+      if (referralTrendBuckets[key] !== undefined) referralTrendBuckets[key] += 1;
+    });
+
     return NextResponse.json({
       stats,
       riskDistribution: [
@@ -251,6 +317,24 @@ export async function GET(request: Request) {
       epdsTrend: labelOrder.map(label => ({ label, value: epdsBuckets[label] })),
       obsTrend: labelOrder.map(label => ({ label, value: obsBuckets[label] })),
       regionalBreakdown: Object.values(regionalBreakdown),
+      referrals: {
+        total: transfersSnapshot.size,
+        pending: referralStatusCounts.pending,
+        accepted: referralStatusCounts.accepted,
+        rejected: referralStatusCounts.rejected,
+        byStatus: [
+          { name: "Pending", value: referralStatusCounts.pending, color: "#f59e0b" },
+          { name: "Accepted", value: referralStatusCounts.accepted, color: "#22c55e" },
+          { name: "Rejected", value: referralStatusCounts.rejected, color: "#dc2626" },
+        ],
+        byType: [
+          { name: "Mothers", value: referralTypeCounts.mother },
+          { name: "Doctors", value: referralTypeCounts.doctor },
+          { name: "Midwives", value: referralTypeCounts.midwife },
+        ],
+        trend: labelOrder.map((label) => ({ label, value: referralTrendBuckets[label] })),
+        byRegion: Object.values(referralRegionalBreakdown).sort((left, right) => right.total - left.total),
+      },
     });
 
   } catch (error) {

@@ -6,12 +6,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Pencil,
-  RotateCw,
   Search,
   Trash2,
 } from "lucide-react";
 import LoadingState from "@/components/admin/LoadingState";
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
 import "@/app/doctor/styles/UpcomingCheckup.css";
 import "@/app/midwife/styles/UpcomingVisits.css";
 import "react-calendar/dist/Calendar.css";
@@ -86,7 +85,6 @@ export default function UpcomingCheckupsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const addDateInputRef = useRef<HTMLInputElement>(null);
-  const editDateInputRef = useRef<HTMLInputElement>(null);
   const rescheduleDateInputRef = useRef<HTMLInputElement>(null);
 
   const [addForm, setAddForm] = useState({
@@ -779,21 +777,22 @@ export default function UpcomingCheckupsPage() {
       {showDelete && (
         <div className="modal-overlay">
           <div className="modal-card checkup-modal delete-modal">
-            <h2 className="modal-title danger">DELETE CONFIRMATION</h2>
-
-            <p className="delete-copy">
-              Are you sure you want to delete the upcoming checkup
-              {showDelete ? ` for ${showDelete.motherName}` : ""}?
-            </p>
-
-            <div className="modal-actions">
-              <button className="btn-outline" onClick={() => setShowDelete(null)}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={handleDelete} disabled={isSaving}>
-                {isSaving ? "Deleting..." : "Delete"}
-              </button>
-            </div>
+            <DeleteConfirmContent
+              title="Delete checkup"
+              message={
+                <>
+                  Are you sure you want to delete the upcoming checkup for{" "}
+                  <strong>{showDelete.motherName}</strong>? This cannot be undone.
+                </>
+              }
+              details={[
+                { label: "Mother", value: showDelete.motherName },
+                { label: "Checkup date", value: showDelete.date },
+              ]}
+              isPending={isSaving}
+              onCancel={() => setShowDelete(null)}
+              onConfirm={() => void handleDelete()}
+            />
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import ModalBase from "./ModalBase";
 import styles from "./LogoutModal.module.css";
 
@@ -16,9 +17,20 @@ export default function LogoutModal({
 }: Props) {
   return (
     <ModalBase onClose={onClose} contentClassName={styles.logoutModal}>
-      <h2 className={styles.title}>LOG OUT</h2>
+      <div className={styles.header}>
+        <span className={styles.icon} aria-hidden="true">
+          <LogOut size={24} strokeWidth={2.2} />
+        </span>
 
-      <p className={styles.message}>Are you sure you want to log out?</p>
+        <div>
+          <p className={styles.eyebrow}>End session</p>
+          <h2 className={styles.title}>Log out?</h2>
+        </div>
+      </div>
+
+      <p className={styles.message}>
+        You will be signed out of MamaBalance and returned to the login page.
+      </p>
 
       <div className={styles.actions}>
         <button className={styles.cancelButton} onClick={onClose} disabled={isSubmitting}>

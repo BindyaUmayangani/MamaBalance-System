@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { ManagedUserRow } from "@/lib/admin/types";
 
 type RegionOption = {
@@ -23,26 +23,13 @@ type Props = {
 export default function EditUserModal({
   config,
   user,
-  regionOptions,
   onClose,
   onSave,
 }: Props) {
   const [email, setEmail] = useState(user.personalEmail || "");
   const [contact, setContact] = useState(user.contact || "");
-  const [status, setStatus] = useState<"active" | "inactive">(
-    user.status === "inactive" ? "inactive" : "active"
-  );
   const [saving, setSaving] = useState(false);
   const [saveOutcome, setSaveOutcome] = useState<ManagedUserRow | null>(null);
-
-  const initialRegionId = useMemo(() => {
-    const matched = regionOptions.find(
-      (item) => item.name === user.region || item.id === user.region
-    );
-    return matched?.id || "";
-  }, [regionOptions, user.region]);
-
-  const [regionId, setRegionId] = useState(initialRegionId);
 
   if (saveOutcome) {
     return (
@@ -69,16 +56,6 @@ export default function EditUserModal({
           <div className="success-summary-row">
             <span className="success-summary-label">Email</span>
             <span className="success-summary-value">{saveOutcome.personalEmail}</span>
-          </div>
-          {config.showRegion ? (
-            <div className="success-summary-row">
-              <span className="success-summary-label">Region</span>
-              <span className="success-summary-value">{saveOutcome.region}</span>
-            </div>
-          ) : null}
-          <div className="success-summary-row">
-            <span className="success-summary-label">Status</span>
-            <span className="success-summary-value">{saveOutcome.status}</span>
           </div>
         </div>
 
@@ -118,53 +95,6 @@ export default function EditUserModal({
         placeholder="Enter contact number"
       />
 
-      {config.showRegion && (
-        <>
-          <label>Assigned Region</label>
-          <div className="field-control">
-            <select
-              value={regionId}
-              onChange={(e) => setRegionId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select region
-              </option>
-              {regionOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={18} className="field-icon" />
-          </div>
-        </>
-      )}
-
-      <label>Status</label>
-      <div className="radio-group">
-        <label className="radio-option">
-          <input
-            type="radio"
-            name="status"
-            checked={status === "active"}
-            onChange={() => setStatus("active")}
-          />
-          <span className="custom-radio" />
-          <span className="radio-text">Active</span>
-        </label>
-
-        <label className="radio-option">
-          <input
-            type="radio"
-            name="status"
-            checked={status === "inactive"}
-            onChange={() => setStatus("inactive")}
-          />
-          <span className="custom-radio" />
-          <span className="radio-text">Inactive</span>
-        </label>
-      </div>
-
       <div className="modal-actions">
         <button className="btn-outline" onClick={onClose} disabled={saving}>
           Cancel
@@ -186,8 +116,6 @@ export default function EditUserModal({
                   uid: user.uid,
                   email,
                   contact,
-                  regionId: config.showRegion ? regionId : undefined,
-                  status,
                 }),
               });
 
@@ -197,16 +125,12 @@ export default function EditUserModal({
                 throw new Error(data.error || "Failed to update user");
               }
 
-              const selectedRegionName =
-                regionOptions.find((item) => item.id === regionId)?.name ||
-                user.region;
-
               setSaveOutcome({
                 ...user,
                 personalEmail: email,
                 contact,
-                region: config.showRegion ? selectedRegionName : user.region,
-                status,
+                region: user.region,
+                status: user.status,
               });
             } catch (error) {
               console.error(error);

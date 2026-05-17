@@ -25,6 +25,181 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/*
+  Shared role pages use a fixed account bar above the content. Keep every modal
+  layer above that bar, regardless of which role-specific stylesheet defined it.
+*/
+.modal-overlay {
+  z-index: 2147483600 !important;
+}
+
+.modal,
+.modal-card {
+  z-index: 2147483601 !important;
+}
+
+body:has(.modal-overlay) .role-account-bar {
+  z-index: 0 !important;
+  pointer-events: none;
+}
+
+.delete-confirm-content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.delete-confirm-icon {
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: #ffe7e7;
+  color: #dc2626;
+}
+
+.delete-confirm-eyebrow {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.delete-confirm-title {
+  margin: -4px 0 0;
+  color: #111827;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.delete-confirm-message {
+  max-width: 520px;
+  margin: 0;
+  color: #66738a;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.delete-confirm-message strong {
+  color: #111827;
+  font-weight: 800;
+}
+
+.delete-confirm-details {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 16px;
+  border: 1px solid #f3caca;
+  border-radius: 16px;
+  background: #fffafa;
+  text-align: left;
+}
+
+.delete-confirm-detail-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.42fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.delete-confirm-detail-row span {
+  color: #7a8495;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.delete-confirm-detail-row strong {
+  min-width: 0;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0e0e0;
+}
+
+.delete-confirm-cancel,
+.delete-confirm-danger {
+  min-width: 150px;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 24px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.delete-confirm-cancel {
+  border: 1.5px solid #499d85;
+  background: #ffffff;
+  color: #499d85;
+}
+
+.delete-confirm-danger {
+  background: #e8242d;
+  color: #ffffff;
+  box-shadow: 0 14px 24px rgba(232, 36, 45, 0.2);
+}
+
+.delete-confirm-cancel:hover:not(:disabled),
+.delete-confirm-danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.delete-confirm-cancel:hover:not(:disabled) {
+  background: #f1fff9;
+}
+
+.delete-confirm-danger:hover:not(:disabled) {
+  background: #cf1f27;
+}
+
+.delete-confirm-cancel:disabled,
+.delete-confirm-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .delete-confirm-detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .delete-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .delete-confirm-cancel,
+  .delete-confirm-danger {
+    width: 100%;
+  }
+}
+
 .toast-region {
   position: fixed;
   top: 20px;

@@ -13,26 +13,12 @@ type Props = {
 export default function ViewContentModal({ content, onClose }: Props) {
   return (
     <>
-      <div className="content-view-hero">
-        <div>
-          <p className="content-view-eyebrow">Educational resource</p>
-          <h2 className="modal-title content-view-title">{content.title}</h2>
-          <p className="content-view-subtitle">
-            Review audience targeting, publishing status, and resource links before sharing.
-          </p>
-        </div>
-
-        <div className="content-view-status-card">
-          <span className="content-view-status-label">Visibility</span>
-          <span
-            className={`status ${
-              content.visibility === "visible" ? "active" : "inactive"
-            }`}
-          >
-            <span className="status-dot" aria-hidden="true" />
-            {content.visibilityLabel}
-          </span>
-        </div>
+      <div className="content-view-header">
+        <p className="content-view-header-eyebrow">Educational resource</p>
+        <h2 className="content-view-header-title">{content.title}</h2>
+        <p className="content-view-header-subtitle">
+          Review audience targeting, publishing status, and resource links before sharing.
+        </p>
       </div>
 
       <div className="content-view-highlights">

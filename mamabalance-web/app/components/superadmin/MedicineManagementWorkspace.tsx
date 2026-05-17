@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 
 import LoadingState from "@/components/admin/LoadingState";
+import DeleteConfirmContent from "@/components/common/DeleteConfirmContent";
 import Pagination from "@/app/superadmin/components/Pagination";
+import StatusConfirmModal from "@/app/superadmin/user-management/components/StatusConfirmModal";
 import "@/app/superadmin/styles/medicineManagement.css";
 import "@/app/superadmin/styles/userManagement.css";
 import "@/app/styles/RoleSettingsSupport.css";
@@ -26,6 +28,10 @@ import {
 } from "@/lib/medicine/types";
 
 type ModalMode = "create" | "edit" | "view" | "delete" | null;
+type PendingStatusChange = {
+  medicine: MedicineRecord;
+  status: MedicineStatus;
+};
 
 type Props = {
   readOnly?: boolean;
@@ -58,6 +64,9 @@ export default function MedicineManagementWorkspace({
   const [selectedMedicine, setSelectedMedicine] = useState<MedicineRecord | null>(null);
   const [form, setForm] = useState<MedicinePayload>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] =
+    useState<PendingStatusChange | null>(null);
 
   const pageSize = 6;
 
@@ -213,6 +222,57 @@ export default function MedicineManagementWorkspace({
     }
   }
 
+  async function updateMedicineStatus(medicine: MedicineRecord, status: MedicineStatus) {
+    if (medicine.status === status || updatingStatusId) {
+      return;
+    }
+
+    setUpdatingStatusId(medicine.id);
+
+    try {
+      const response = await fetch("/api/admin/medicines", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: medicine.id,
+          brandName: medicine.brandName,
+          genericName: medicine.genericName,
+          form: medicine.form,
+          category: medicine.category,
+          defaultNotes: medicine.defaultNotes,
+          status,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to update medicine status.");
+      }
+
+      await loadData();
+      setPendingStatusChange(null);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to update medicine status.",
+      );
+    } finally {
+      setUpdatingStatusId("");
+    }
+  }
+
+  function formatMedicineStatusName(medicine: MedicineRecord) {
+    const genericName = medicine.genericName.trim();
+    const brandName = medicine.brandName.trim();
+
+    if (genericName && brandName && brandName !== "-") {
+      return `${genericName} (${brandName})`;
+    }
+
+    return genericName || brandName || medicine.displayName;
+  }
+
   return (
     <div className="medicine-page">
       <div className="medicine-header">
@@ -327,14 +387,38 @@ export default function MedicineManagementWorkspace({
                       <td>{item.formLabel}</td>
                       <td>{item.category}</td>
                       <td>
-                        <span className={`status ${item.status}`}>
-                          <span className="status-dot" aria-hidden="true" />
-                          {item.statusLabel}
-                        </span>
+                        {!readOnly ? (
+                          <button
+                            type="button"
+                            className={`status-toggle-button ${item.status}`}
+                            disabled={updatingStatusId === item.id}
+                            onClick={() =>
+                              setPendingStatusChange({
+                                medicine: item,
+                                status: item.status === "active" ? "inactive" : "active",
+                              })
+                            }
+                          >
+                            <span className="status-dot" aria-hidden="true" />
+                            <span>{item.statusLabel}</span>
+                            <span className="status-toggle-hint">
+                              {item.status === "active" ? "Deactivate" : "Activate"}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className={`status-display-pill ${item.status}`}>
+                            <span className="status-dot" aria-hidden="true" />
+                            {item.statusLabel}
+                          </span>
+                        )}
                       </td>
                       <td>{item.updatedAt}</td>
                       <td className="actions-col actions-cell">
-                        <div className="actions">
+                        <div
+                          className={`actions ${
+                            readOnly ? "medicine-readonly-actions" : ""
+                          }`}
+                        >
                           <Eye
                             className="icon-view"
                             title="View medicine"
@@ -382,55 +466,85 @@ export default function MedicineManagementWorkspace({
         <div className="modal-overlay">
           <div className="modal-card medicine-modal">
             {modalMode === "delete" && selectedMedicine ? (
-              <>
-                <h2 className="modal-title danger">DELETE MEDICINE</h2>
-
-                <p style={{ marginTop: "12px", fontSize: "0.9rem" }}>
-                  Are you sure you want to delete the medicine{" "}
-                  <strong>{selectedMedicine.brandName}</strong>?
-                </p>
-
-                <div className="modal-actions">
-                  <button className="btn-close" onClick={closeModal} disabled={submitting}>
-                    Cancel
-                  </button>
-
-                  <button className="btn-danger" onClick={() => void deleteMedicine()} disabled={submitting}>
-                    {submitting ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </>
+              <DeleteConfirmContent
+                title="Delete medicine"
+                message={
+                  <>
+                    Are you sure you want to delete{" "}
+                    <strong>
+                      {selectedMedicine.genericName || selectedMedicine.brandName}
+                    </strong>
+                    ? This cannot be undone.
+                  </>
+                }
+                details={[
+                  {
+                    label: "Generic name",
+                    value: selectedMedicine.genericName || "-",
+                  },
+                  {
+                    label: "Brand name",
+                    value: selectedMedicine.brandName || "-",
+                  },
+                ]}
+                isPending={submitting}
+                onCancel={closeModal}
+                onConfirm={() => void deleteMedicine()}
+              />
             ) : modalMode === "view" && selectedMedicine ? (
               <>
-                <h2 className="modal-title">Medicine Details</h2>
-                <div className="medicine-view-grid">
-                  <div>
-                    <span className="medicine-view-label">Medicine ID</span>
-                    <strong>{selectedMedicine.medicineId}</strong>
+                <div className="medicine-view-scroll">
+                  <div className="medicine-view-header">
+                    <div>
+                      <p className="medicine-view-eyebrow">Medicine record</p>
+                      <h2 className="medicine-view-title">
+                        {selectedMedicine.genericName}
+                      </h2>
+                      <p className="medicine-view-subtitle">
+                        {selectedMedicine.brandName
+                          ? `Brand name: ${selectedMedicine.brandName}`
+                          : "No brand name recorded"}
+                      </p>
+                    </div>
+                    <span
+                      className={`status ${
+                        selectedMedicine.status === "active" ? "active" : "inactive"
+                      } medicine-view-status`}
+                    >
+                      <span className="status-dot" aria-hidden="true" />
+                      {selectedMedicine.statusLabel}
+                    </span>
                   </div>
-                  <div>
-                    <span className="medicine-view-label">Status</span>
-                    <strong>{selectedMedicine.statusLabel}</strong>
-                  </div>
-                  <div>
-                    <span className="medicine-view-label">Generic Name</span>
-                    <strong>{selectedMedicine.genericName}</strong>
-                  </div>
-                  <div>
-                    <span className="medicine-view-label">Brand Name</span>
-                    <strong>{selectedMedicine.brandName}</strong>
-                  </div>
-                  <div>
-                    <span className="medicine-view-label">Category</span>
-                    <strong>{selectedMedicine.category}</strong>
-                  </div>
-                  <div>
-                    <span className="medicine-view-label">Form</span>
-                    <strong>{selectedMedicine.formLabel}</strong>
-                  </div>
-                  <div className="full">
-                    <span className="medicine-view-label">Default Note</span>
-                    <p>{selectedMedicine.defaultNotes || "-"}</p>
+
+                  <div className="medicine-view-grid">
+                    <div>
+                      <span className="medicine-view-label">Medicine ID</span>
+                      <strong>{selectedMedicine.medicineId}</strong>
+                    </div>
+                    <div>
+                      <span className="medicine-view-label">Category</span>
+                      <strong>{selectedMedicine.category}</strong>
+                    </div>
+                    <div>
+                      <span className="medicine-view-label">Form</span>
+                      <strong>{selectedMedicine.formLabel}</strong>
+                    </div>
+                    <div>
+                      <span className="medicine-view-label">Created By</span>
+                      <strong>{selectedMedicine.createdByName || "-"}</strong>
+                    </div>
+                    <div>
+                      <span className="medicine-view-label">Updated By</span>
+                      <strong>{selectedMedicine.updatedByName || "-"}</strong>
+                    </div>
+                    <div>
+                      <span className="medicine-view-label">Last Updated</span>
+                      <strong>{selectedMedicine.updatedAt || "-"}</strong>
+                    </div>
+                    <div className="full">
+                      <span className="medicine-view-label">Default Note</span>
+                      <p>{selectedMedicine.defaultNotes || "-"}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-actions">
@@ -529,30 +643,32 @@ export default function MedicineManagementWorkspace({
                       }
                     />
                   </div>
-                  <div className="form-span-2 medicine-status-row">
-                    <label>Status</label>
-                    <div className="radio-group">
-                      {MEDICINE_STATUSES.map((item) => (
-                        <label className="radio-option" key={item}>
-                          <input
-                            type="radio"
-                            name="medicine-status"
-                            checked={form.status === item}
-                            onChange={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                status: item as MedicineStatus,
-                              }))
-                            }
-                          />
-                          <span className="custom-radio" />
-                          <span className="radio-text">
-                            {item.charAt(0).toUpperCase() + item.slice(1)}
-                          </span>
-                        </label>
-                      ))}
+                  {modalMode === "create" ? (
+                    <div className="form-span-2 medicine-status-row">
+                      <label>Status</label>
+                      <div className="radio-group">
+                        {MEDICINE_STATUSES.map((item) => (
+                          <label className="radio-option" key={item}>
+                            <input
+                              type="radio"
+                              name="medicine-status"
+                              checked={form.status === item}
+                              onChange={() =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  status: item as MedicineStatus,
+                                }))
+                              }
+                            />
+                            <span className="custom-radio" />
+                            <span className="radio-text">
+                              {item.charAt(0).toUpperCase() + item.slice(1)}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
 
                 <div className="modal-actions">
@@ -572,6 +688,47 @@ export default function MedicineManagementWorkspace({
           </div>
         </div>
       )}
+
+      {pendingStatusChange ? (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (!updatingStatusId) {
+              setPendingStatusChange(null);
+            }
+          }}
+        >
+          <div
+            className="modal-card compact-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <StatusConfirmModal
+              userName={formatMedicineStatusName(pendingStatusChange.medicine)}
+              userLabel="Medicine"
+              currentStatus={pendingStatusChange.medicine.status}
+              nextStatus={pendingStatusChange.status}
+              title={
+                pendingStatusChange.status === "active"
+                  ? "Activate medicine?"
+                  : "Deactivate medicine?"
+              }
+              description={
+                pendingStatusChange.status === "active"
+                  ? `${formatMedicineStatusName(pendingStatusChange.medicine)} will be available for prescriptions again.`
+                  : `${formatMedicineStatusName(pendingStatusChange.medicine)} will be marked inactive and unavailable for new selections.`
+              }
+              isSaving={Boolean(updatingStatusId)}
+              onCancel={() => setPendingStatusChange(null)}
+              onConfirm={() =>
+                void updateMedicineStatus(
+                  pendingStatusChange.medicine,
+                  pendingStatusChange.status,
+                )
+              }
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
